@@ -37,7 +37,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install commitizen
-        run: pip install commitizen==4.13.10
+        run: pip install commitizen==4.16.4
       - name: Check commit messages
         run: cz check --rev-range origin/main..HEAD
 
