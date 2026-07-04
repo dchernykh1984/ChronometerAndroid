@@ -93,3 +93,26 @@ The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
   ./gradlew installDebug
   adb shell am start -n com.dchernykh.chronometer/.MainActivity
   ```
+
+### 6. Set up pre-commit hooks (contributors)
+
+Install [pre-commit](https://pre-commit.com/) (`brew install pre-commit`, or
+`pipx install pre-commit`), then register the hooks:
+
+```bash
+pre-commit install
+pre-commit install --hook-type commit-msg
+pre-commit install --hook-type pre-push
+```
+
+After that the hooks run automatically:
+
+- **on commit** - file formatting, YAML/TOML checks, and a non-ASCII guard;
+- **on the commit message** - Conventional Commits validation (commitizen);
+- **on push** - `ktlintCheck` and `detekt` (these need the JDK + Android SDK).
+
+To run all checks manually across every file:
+
+```bash
+pre-commit run --all-files
+```
