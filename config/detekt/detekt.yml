@@ -1,0 +1,8 @@
+# detekt configuration. Overrides layer on top of detekt's bundled defaults
+# (build-upon-default-config = true in app/build.gradle.kts).
+
+style:
+  # The scaffolding code is intentionally trivial (e.g. the sample unit test);
+  # magic-number noise is not useful until real logic exists.
+  MagicNumber:
+    active: false
