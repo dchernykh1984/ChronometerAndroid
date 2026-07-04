@@ -2,7 +2,7 @@
 # versions. Referenced from the build scripts as `libs.<alias>`.
 
 [versions]
-agp = "8.13.2"
+agp = "9.2.1"
 kotlin = "2.2.20"
 junit = "4.13.2"
 ktlint-gradle = "14.2.0"
