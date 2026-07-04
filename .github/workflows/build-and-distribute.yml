@@ -83,6 +83,16 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk \
             "dist/chronometer-${{ steps.version.outputs.name }}.apk"
 
+      - name: Verify APK signature
+        run: |
+          APKSIGNER=$(find "$ANDROID_SDK_ROOT/build-tools" -name apksigner | sort -r | head -1)
+          if [ -z "$APKSIGNER" ]; then
+            echo "::error::apksigner not found in the Android SDK build-tools."
+            exit 1
+          fi
+          "$APKSIGNER" verify --verbose --print-certs \
+            "dist/chronometer-${{ steps.version.outputs.name }}.apk"
+
       - name: Attest build provenance
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/attest-build-provenance@v4
