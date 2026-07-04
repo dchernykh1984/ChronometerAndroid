@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -58,10 +60,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     lint {
         // Fail the build on lint errors; warnings stay non-fatal for now and can
         // be promoted to errors once the codebase stabilises.
@@ -69,6 +67,12 @@ android {
         warningsAsErrors = false
         // lintDebug in CI covers analysis; skip the duplicate release lint pass.
         checkReleaseBuilds = false
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
     }
 }
 
