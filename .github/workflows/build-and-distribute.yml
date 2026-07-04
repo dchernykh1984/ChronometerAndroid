@@ -10,6 +10,8 @@ on:
 
 permissions:
   contents: write # required to create a Release and upload the APK asset
+  id-token: write # required to sign the build provenance attestation
+  attestations: write # required to record the attestation
 
 concurrency:
   group: release-${{ github.ref }}
@@ -67,6 +69,12 @@ jobs:
           mkdir -p dist
           cp app/build/outputs/apk/release/app-release.apk \
             "dist/chronometer-${{ steps.version.outputs.name }}.apk"
+
+      - name: Attest build provenance
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/chronometer-*.apk
 
       - name: Publish APK to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
