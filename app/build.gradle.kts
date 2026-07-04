@@ -99,6 +99,21 @@ kover {
     }
 }
 
+// Pin transitive dependency versions for reproducible builds. Only the shipped
+// and unit-test runtime classpaths are locked (Android's internal configurations
+// are intentionally left out). Regenerate app/gradle.lockfile with the
+// "Update lockfiles" workflow or `./gradlew :app:dependencies --write-locks`.
+listOf(
+    "debugRuntimeClasspath",
+    "releaseRuntimeClasspath",
+    "debugUnitTestRuntimeClasspath",
+    "releaseUnitTestRuntimeClasspath",
+).forEach { configurationName ->
+    configurations.matching { it.name == configurationName }.configureEach {
+        resolutionStrategy.activateDependencyLocking()
+    }
+}
+
 dependencies {
     testImplementation(libs.junit)
 }
