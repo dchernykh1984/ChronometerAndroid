@@ -1,0 +1,25 @@
+name: Release Please
+
+# On every push to main, release-please maintains a "release PR" that bumps the
+# version and updates CHANGELOG.md from the Conventional Commits. Merging that PR
+# tags the release and creates a GitHub Release.
+#
+# Note: a tag created with the default GITHUB_TOKEN does NOT trigger the
+# Build and Distribute workflow. To auto-build the APK on release, provide a PAT
+# as the `token` below (and as `RELEASE_PLEASE_TOKEN`), or run Build and
+# Distribute manually / re-push the tag.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
