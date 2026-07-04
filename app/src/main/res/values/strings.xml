@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Chronometer</string>
+    <string name="placeholder_message">Chronometer skeleton. UI is not implemented yet.</string>
+</resources>
