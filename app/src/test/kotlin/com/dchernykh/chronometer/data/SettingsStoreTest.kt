@@ -56,6 +56,17 @@ class SettingsStoreTest {
     }
 
     @Test
+    fun finishModeDefaultsToFalse() {
+        assertFalse(store.load().finishMode)
+    }
+
+    @Test
+    fun persistsFinishModeAcrossRestart() {
+        store.save(store.load().copy(finishMode = true))
+        assertTrue(SettingsStore(RuntimeEnvironment.getApplication()).load().finishMode)
+    }
+
+    @Test
     fun clientRevisionIncrementsAndPersists() {
         val start = store.clientRevision()
         assertEquals(start + 1, store.nextClientRevision())

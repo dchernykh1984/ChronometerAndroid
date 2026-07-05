@@ -44,7 +44,8 @@ class ChronometerViewModel(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), UploadStatus.IDLE)
 
     fun recordCutoff(number: String) {
-        viewModelScope.launch { repository.record(number, CutoffEvent.NEXT_LAP) }
+        val event = CutoffEvent.lapEvent(settingsState.value.finishMode)
+        viewModelScope.launch { repository.record(number, event) }
     }
 
     fun recordDisqualification(number: String) {
