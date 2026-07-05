@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,6 +16,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -78,53 +80,56 @@ fun MainScreen(
                     .fillMaxSize()
                     .padding(16.dp),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                OutlinedTextField(
-                    value = number,
-                    onValueChange = { input -> number = input.filter(Char::isDigit) },
-                    label = { Text(stringResource(R.string.number)) },
-                    singleLine = true,
-                    keyboardOptions =
-                        KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = ImeAction.Done,
-                        ),
-                    keyboardActions =
-                        KeyboardActions(
-                            onDone = {
-                                viewModel.recordCutoff(number)
-                                clearAndRefocus()
-                            },
-                        ),
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .focusRequester(focusRequester)
-                            .testTag("numberField"),
-                )
-                Button(
-                    onClick = {
-                        viewModel.recordCutoff(number)
-                        clearAndRefocus()
-                    },
-                    modifier = Modifier.testTag("cutoffButton"),
-                ) { Text(stringResource(R.string.cutoff)) }
-            }
+            OutlinedTextField(
+                value = number,
+                onValueChange = { input -> number = input.filter(Char::isDigit) },
+                label = { Text(stringResource(R.string.number)) },
+                singleLine = true,
+                keyboardOptions =
+                    KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done,
+                    ),
+                keyboardActions =
+                    KeyboardActions(
+                        onDone = {
+                            viewModel.recordCutoff(number)
+                            clearAndRefocus()
+                        },
+                    ),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester)
+                        .testTag("numberField"),
+            )
 
+            // The cutoff is the primary, high-frequency action: make it big.
             Button(
+                onClick = {
+                    viewModel.recordCutoff(number)
+                    clearAndRefocus()
+                },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(72.dp)
+                        .padding(top = 8.dp)
+                        .testTag("cutoffButton"),
+            ) { Text(stringResource(R.string.cutoff), style = MaterialTheme.typography.titleLarge) }
+
+            // Disqualification is rare: keep it small and secondary to avoid mis-taps.
+            OutlinedButton(
                 onClick = {
                     viewModel.recordDisqualification(number)
                     clearAndRefocus()
                 },
                 modifier =
                     Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp)
+                        .align(Alignment.End)
+                        .padding(top = 4.dp)
                         .testTag("dsqButton"),
-            ) { Text(stringResource(R.string.disqualify)) }
+            ) { Text(stringResource(R.string.disqualify), style = MaterialTheme.typography.labelLarge) }
 
             Diagnostics(
                 uploadStatus = uploadStatus,
