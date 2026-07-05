@@ -16,6 +16,10 @@
     <string name="number_input_digits">Ввод номера: цифры</string>
     <string name="number_input_text">Ввод номера: текст</string>
     <string name="finish_mode">Режим финиша: писать finish вместо nextLap</string>
+    <string name="theme">Тема оформления</string>
+    <string name="theme_system">Системная</string>
+    <string name="theme_light">Светлая</string>
+    <string name="theme_dark">Тёмная</string>
     <string name="send_enabled">Отправлять на сайт</string>
     <string name="send_requires_url_token">Для отправки укажите адрес (http://…) и токен</string>
     <string name="storage_permission_needed">Нужен доступ к файлам, чтобы сохранять отсечки</string>

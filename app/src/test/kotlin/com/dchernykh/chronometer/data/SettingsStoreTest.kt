@@ -67,6 +67,17 @@ class SettingsStoreTest {
     }
 
     @Test
+    fun themeModeDefaultsToSystem() {
+        assertEquals(ThemeMode.SYSTEM, store.load().themeMode)
+    }
+
+    @Test
+    fun persistsThemeModeAcrossRestart() {
+        store.save(store.load().copy(themeMode = ThemeMode.DARK))
+        assertEquals(ThemeMode.DARK, SettingsStore(RuntimeEnvironment.getApplication()).load().themeMode)
+    }
+
+    @Test
     fun clientRevisionIncrementsAndPersists() {
         val start = store.clientRevision()
         assertEquals(start + 1, store.nextClientRevision())

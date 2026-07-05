@@ -36,6 +36,7 @@ class SettingsStore(
             sendEnabled = prefs.getBoolean(KEY_SEND, false),
             numericInput = prefs.getBoolean(KEY_NUMERIC, true),
             finishMode = prefs.getBoolean(KEY_FINISH, false),
+            themeMode = readThemeMode(),
         )
     }
 
@@ -49,8 +50,13 @@ class SettingsStore(
             putBoolean(KEY_SEND, settings.sendEnabled)
             putBoolean(KEY_NUMERIC, settings.numericInput)
             putBoolean(KEY_FINISH, settings.finishMode)
+            putString(KEY_THEME, settings.themeMode.name)
         }
     }
+
+    private fun readThemeMode(): ThemeMode =
+        runCatching { ThemeMode.valueOf(prefs.getString(KEY_THEME, null) ?: ThemeMode.SYSTEM.name) }
+            .getOrDefault(ThemeMode.SYSTEM)
 
     /** Current highest revision (the server rejects a stale one with HTTP 409). */
     fun clientRevision(): Int = prefs.getInt(KEY_REV, 0)
@@ -77,6 +83,7 @@ class SettingsStore(
         const val KEY_SEND = "send_enabled"
         const val KEY_NUMERIC = "numeric_input"
         const val KEY_FINISH = "finish_mode"
+        const val KEY_THEME = "theme_mode"
         const val KEY_REV = "client_revision"
     }
 }

@@ -8,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dchernykh.chronometer.ui.ChronometerViewModel
 import com.dchernykh.chronometer.ui.MainScreen
@@ -17,21 +18,20 @@ import com.dchernykh.chronometer.ui.theme.ChronometerTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            ChronometerTheme {
-                AppRoot()
-            }
-        }
+        setContent { AppRoot() }
     }
 }
 
 @Composable
 private fun AppRoot() {
     val viewModel: ChronometerViewModel = viewModel()
-    var showSettings by rememberSaveable { mutableStateOf(false) }
-    if (showSettings) {
-        SettingsScreen(viewModel, onBack = { showSettings = false })
-    } else {
-        MainScreen(viewModel, onOpenSettings = { showSettings = true })
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    ChronometerTheme(themeMode = settings.themeMode) {
+        var showSettings by rememberSaveable { mutableStateOf(false) }
+        if (showSettings) {
+            SettingsScreen(viewModel, onBack = { showSettings = false })
+        } else {
+            MainScreen(viewModel, onOpenSettings = { showSettings = true })
+        }
     }
 }
