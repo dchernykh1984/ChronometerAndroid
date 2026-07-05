@@ -52,6 +52,7 @@ fun MainScreen(
     val cutoffs by viewModel.cutoffs.collectAsStateWithLifecycle()
     val uploadStatus by viewModel.uploadStatus.collectAsStateWithLifecycle()
     val backupFailed by viewModel.backupFailed.collectAsStateWithLifecycle()
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
     var number by rememberSaveable { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
 
@@ -82,12 +83,14 @@ fun MainScreen(
         ) {
             OutlinedTextField(
                 value = number,
-                onValueChange = { input -> number = input.filter(Char::isDigit) },
+                onValueChange = { input ->
+                    number = if (settings.numericInput) input.filter(Char::isDigit) else input
+                },
                 label = { Text(stringResource(R.string.number)) },
                 singleLine = true,
                 keyboardOptions =
                     KeyboardOptions(
-                        keyboardType = KeyboardType.Number,
+                        keyboardType = if (settings.numericInput) KeyboardType.Number else KeyboardType.Text,
                         imeAction = ImeAction.Done,
                     ),
                 keyboardActions =

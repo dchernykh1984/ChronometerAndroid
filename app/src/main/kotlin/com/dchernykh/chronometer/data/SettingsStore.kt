@@ -34,6 +34,7 @@ class SettingsStore(
             deviceUuid = prefs.getString(KEY_UUID, "").orEmpty(),
             folderPath = prefs.getString(KEY_FOLDER, null) ?: defaultFolderPath(),
             sendEnabled = prefs.getBoolean(KEY_SEND, false),
+            numericInput = prefs.getBoolean(KEY_NUMERIC, true),
         )
     }
 
@@ -45,6 +46,7 @@ class SettingsStore(
             putString(KEY_UUID, settings.deviceUuid.ifBlank { UUID.randomUUID().toString() })
             putString(KEY_FOLDER, settings.folderPath.ifBlank { defaultFolderPath() })
             putBoolean(KEY_SEND, settings.sendEnabled)
+            putBoolean(KEY_NUMERIC, settings.numericInput)
         }
     }
 
@@ -71,6 +73,7 @@ class SettingsStore(
         const val KEY_UUID = "device_uuid"
         const val KEY_FOLDER = "folder_path"
         const val KEY_SEND = "send_enabled"
+        const val KEY_NUMERIC = "numeric_input"
         const val KEY_REV = "client_revision"
     }
 }

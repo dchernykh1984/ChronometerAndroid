@@ -1,6 +1,7 @@
 package com.dchernykh.chronometer.data
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -40,6 +41,18 @@ class SettingsStoreTest {
         assertEquals(3, loaded.pointNumber)
         assertEquals("/folder", loaded.folderPath)
         assertTrue(loaded.sendEnabled)
+    }
+
+    @Test
+    fun numericInputDefaultsToTrue() {
+        assertTrue(store.load().numericInput)
+    }
+
+    @Test
+    fun persistsNumericInputAcrossRestart() {
+        store.save(store.load().copy(numericInput = false))
+        // A fresh store reads the same SharedPreferences, i.e. survives a restart.
+        assertFalse(SettingsStore(RuntimeEnvironment.getApplication()).load().numericInput)
     }
 
     @Test
