@@ -53,7 +53,7 @@ class CutoffRepository(
             backupWriter.writeSnapshot(settings.folderPath, items, now)
         }
 
-        if (settings.sendEnabled && settings.siteUrl.isNotBlank()) {
+        if (settings.isUploadReady) {
             enqueueUpload()
         }
     }

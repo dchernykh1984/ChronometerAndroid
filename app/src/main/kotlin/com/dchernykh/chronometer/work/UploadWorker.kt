@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.dchernykh.chronometer.ChronometerApp
+import com.dchernykh.chronometer.data.isUploadReady
 import com.dchernykh.chronometer.net.UploadResult
 
 /**
@@ -20,7 +21,7 @@ class UploadWorker(
     override suspend fun doWork(): Result {
         val app = applicationContext as ChronometerApp
         val settings = app.settingsStore.load()
-        if (!settings.sendEnabled || settings.siteUrl.isBlank()) {
+        if (!settings.isUploadReady) {
             return Result.success()
         }
         val items =
