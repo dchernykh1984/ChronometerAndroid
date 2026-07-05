@@ -17,4 +17,10 @@
     <string name="send_requires_url_token">Для отправки укажите адрес сайта и токен</string>
     <string name="storage_permission_needed">Нужен доступ к файлам, чтобы сохранять отсечки</string>
     <string name="grant_storage">Предоставить доступ</string>
+    <string name="diag_upload_idle">Отправка: —</string>
+    <string name="diag_upload_pending">Отправка: в очереди</string>
+    <string name="diag_upload_running">Отправка…</string>
+    <string name="diag_upload_sent">Отправка: отправлено</string>
+    <string name="diag_upload_failed">Отправка: ошибка</string>
+    <string name="diag_backup_failed">Внимание: файл отсечек не сохранён</string>
 </resources>

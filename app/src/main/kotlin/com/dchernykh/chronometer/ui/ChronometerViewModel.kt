@@ -10,6 +10,7 @@ import com.dchernykh.chronometer.data.CutoffRepository
 import com.dchernykh.chronometer.data.Settings
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -26,6 +27,14 @@ class ChronometerViewModel(
             SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
             emptyList(),
         )
+
+    /** Diagnostics (do not affect recording): last backup outcome + upload state. */
+    val backupFailed: StateFlow<Boolean> = repository.backupFailed
+
+    val uploadStatus: StateFlow<UploadStatus> =
+        repository.uploadWorkInfo
+            .map { infos -> uploadStatusOf(infos.map { it.state }) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), UploadStatus.IDLE)
 
     fun recordCutoff(number: String) {
         viewModelScope.launch { repository.record(number, CutoffEvent.NEXT_LAP) }
