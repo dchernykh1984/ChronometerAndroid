@@ -1,0 +1,71 @@
+package com.dchernykh.chronometer.data
+
+import android.content.Context
+import android.os.Environment
+import androidx.core.content.edit
+import java.io.File
+import java.util.UUID
+
+/**
+ * Persists [Settings] plus the internal `client_revision` counter in
+ * SharedPreferences. A device UUID is generated on first use if none is set.
+ */
+class SettingsStore(
+    context: Context,
+) {
+    private val prefs =
+        context.applicationContext.getSharedPreferences("chronometer_settings", Context.MODE_PRIVATE)
+
+    /** Default local folder: `android_chronometer` in the phone's shared storage root. */
+    fun defaultFolderPath(): String =
+        File(Environment.getExternalStorageDirectory(), "android_chronometer").absolutePath
+
+    fun load(): Settings {
+        ensureDeviceUuid()
+        return Settings(
+            siteUrl = prefs.getString(KEY_URL, "").orEmpty(),
+            token = prefs.getString(KEY_TOKEN, "").orEmpty(),
+            pointNumber = prefs.getInt(KEY_POINT, 0),
+            deviceUuid = prefs.getString(KEY_UUID, "").orEmpty(),
+            folderPath = prefs.getString(KEY_FOLDER, null) ?: defaultFolderPath(),
+            sendEnabled = prefs.getBoolean(KEY_SEND, false),
+        )
+    }
+
+    fun save(settings: Settings) {
+        prefs.edit {
+            putString(KEY_URL, settings.siteUrl.trim())
+            putString(KEY_TOKEN, settings.token.trim())
+            putInt(KEY_POINT, settings.pointNumber)
+            putString(KEY_UUID, settings.deviceUuid.ifBlank { UUID.randomUUID().toString() })
+            putString(KEY_FOLDER, settings.folderPath.ifBlank { defaultFolderPath() })
+            putBoolean(KEY_SEND, settings.sendEnabled)
+        }
+    }
+
+    /** Current highest revision (the server rejects a stale one with HTTP 409). */
+    fun clientRevision(): Int = prefs.getInt(KEY_REV, 0)
+
+    /** Bump the revision on each cutoff so the newest snapshot is always accepted. */
+    fun nextClientRevision(): Int {
+        val next = clientRevision() + 1
+        prefs.edit { putInt(KEY_REV, next) }
+        return next
+    }
+
+    private fun ensureDeviceUuid() {
+        if (prefs.getString(KEY_UUID, "").isNullOrBlank()) {
+            prefs.edit { putString(KEY_UUID, UUID.randomUUID().toString()) }
+        }
+    }
+
+    private companion object {
+        const val KEY_URL = "site_url"
+        const val KEY_TOKEN = "token"
+        const val KEY_POINT = "point_number"
+        const val KEY_UUID = "device_uuid"
+        const val KEY_FOLDER = "folder_path"
+        const val KEY_SEND = "send_enabled"
+        const val KEY_REV = "client_revision"
+    }
+}

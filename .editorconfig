@@ -14,6 +14,8 @@ indent_size = 2
 [*.{kt,kts}]
 ktlint_code_style = ktlint_official
 max_line_length = 120
+# @Composable functions are PascalCase by convention.
+ktlint_function_naming_ignore_when_annotated_with = Composable
 
 [*.bat]
 end_of_line = crlf
