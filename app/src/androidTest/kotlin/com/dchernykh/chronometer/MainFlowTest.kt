@@ -14,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -186,6 +187,19 @@ class MainFlowTest {
     }
 
     @Test
+    fun logScrollsToTopAfterNewCutoff() {
+        assumePhone()
+        // Fill the log so it scrolls, then move away from the top.
+        repeat(LOG_FILL) { i -> recordAndAwait("cutoffButton", (10_000 + i).toString()) }
+        composeRule.onNodeWithTag("cutoffLog").performScrollToIndex(LOG_FILL - 1)
+        composeRule.waitForIdle()
+
+        // A new cutoff must bring the log back to the top so the latest is visible.
+        recordAndAwait("cutoffButton", "55555")
+        composeRule.onNodeWithText("55555").assertIsDisplayed()
+    }
+
+    @Test
     fun languageChoiceChangesSettingsText() {
         assumePhone()
         openSettings()
@@ -298,5 +312,8 @@ class MainFlowTest {
 
         // sw >= 600dp is the standard tablet breakpoint.
         const val TABLET_SW_DP = 600
+
+        // Enough rows to make the log scrollable on a phone.
+        const val LOG_FILL = 12
     }
 }
