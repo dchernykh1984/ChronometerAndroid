@@ -4,6 +4,7 @@ import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -36,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.dchernykh.chronometer.R
+import com.dchernykh.chronometer.data.ThemeMode
 import com.dchernykh.chronometer.data.isUploadConfigured
 import java.util.UUID
 
@@ -133,6 +136,20 @@ fun SettingsScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().testTag("folderField"),
             )
+
+            Text(stringResource(R.string.theme))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ThemeChip(R.string.theme_system, "themeSystem", settings.themeMode == ThemeMode.SYSTEM) {
+                    settings = settings.copy(themeMode = ThemeMode.SYSTEM)
+                }
+                ThemeChip(R.string.theme_light, "themeLight", settings.themeMode == ThemeMode.LIGHT) {
+                    settings = settings.copy(themeMode = ThemeMode.LIGHT)
+                }
+                ThemeChip(R.string.theme_dark, "themeDark", settings.themeMode == ThemeMode.DARK) {
+                    settings = settings.copy(themeMode = ThemeMode.DARK)
+                }
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -206,4 +223,19 @@ fun SettingsScreen(
             ) { Text(stringResource(R.string.save)) }
         }
     }
+}
+
+@Composable
+private fun ThemeChip(
+    @StringRes labelRes: Int,
+    tag: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(stringResource(labelRes)) },
+        modifier = Modifier.testTag(tag),
+    )
 }

@@ -1,5 +1,21 @@
 package com.dchernykh.chronometer.data
 
+/** Which color scheme the app uses; SYSTEM follows the device setting. */
+enum class ThemeMode {
+    SYSTEM,
+    LIGHT,
+    DARK,
+    ;
+
+    /** Resolve to a dark scheme, consulting the system flag only in SYSTEM mode. */
+    fun resolvesToDark(systemInDark: Boolean): Boolean =
+        when (this) {
+            SYSTEM -> systemInDark
+            LIGHT -> false
+            DARK -> true
+        }
+}
+
 /** User-facing configuration needed to record and push cutoffs. */
 data class Settings(
     val siteUrl: String,
@@ -12,6 +28,8 @@ data class Settings(
     val numericInput: Boolean = true,
     /** Record `finish` instead of `nextLap` for a regular cutoff press. */
     val finishMode: Boolean = false,
+    /** Color scheme selection (default follows the system). */
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
 )
 
 private val ALLOWED_UPLOAD_SCHEMES = setOf("http", "https")
