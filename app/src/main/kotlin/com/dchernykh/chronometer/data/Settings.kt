@@ -1,5 +1,21 @@
 package com.dchernykh.chronometer.data
 
+/** UI language; SYSTEM follows the device locale, others force that language. */
+enum class AppLanguage(
+    val tag: String,
+) {
+    SYSTEM(""),
+    RU("ru"),
+    EN("en"),
+    KK("kk"),
+    ;
+
+    companion object {
+        /** Parse a stored enum name back to a language, defaulting to SYSTEM. */
+        fun fromName(name: String?): AppLanguage = entries.firstOrNull { it.name == name } ?: SYSTEM
+    }
+}
+
 /** Which color scheme the app uses; SYSTEM follows the device setting. */
 enum class ThemeMode {
     SYSTEM,
@@ -30,6 +46,8 @@ data class Settings(
     val finishMode: Boolean = false,
     /** Color scheme selection (default follows the system). */
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    /** UI language selection (default follows the system). */
+    val language: AppLanguage = AppLanguage.SYSTEM,
 )
 
 private val ALLOWED_UPLOAD_SCHEMES = setOf("http", "https")

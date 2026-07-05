@@ -101,6 +101,17 @@ class SettingsStoreTest {
     }
 
     @Test
+    fun languageDefaultsToSystem() {
+        assertEquals(AppLanguage.SYSTEM, store.load().language)
+    }
+
+    @Test
+    fun persistsLanguageAcrossRestart() {
+        store.save(store.load().copy(language = AppLanguage.KK))
+        assertEquals(AppLanguage.KK, SettingsStore(RuntimeEnvironment.getApplication()).load().language)
+    }
+
+    @Test
     fun clientRevisionIncrementsAndPersists() {
         val start = store.clientRevision()
         assertEquals(start + 1, store.nextClientRevision())

@@ -37,6 +37,7 @@ class SettingsStore(
             numericInput = prefs.getBoolean(KEY_NUMERIC, true),
             finishMode = prefs.getBoolean(KEY_FINISH, false),
             themeMode = readThemeMode(),
+            language = AppLanguage.fromName(prefs.getString(KEY_LANG, null)),
         )
     }
 
@@ -51,6 +52,7 @@ class SettingsStore(
             putBoolean(KEY_NUMERIC, settings.numericInput)
             putBoolean(KEY_FINISH, settings.finishMode)
             putString(KEY_THEME, settings.themeMode.name)
+            putString(KEY_LANG, settings.language.name)
         }
     }
 
@@ -97,6 +99,7 @@ class SettingsStore(
         const val KEY_NUMERIC = "numeric_input"
         const val KEY_FINISH = "finish_mode"
         const val KEY_THEME = "theme_mode"
+        const val KEY_LANG = "language"
         const val KEY_REV = "client_revision"
     }
 }
