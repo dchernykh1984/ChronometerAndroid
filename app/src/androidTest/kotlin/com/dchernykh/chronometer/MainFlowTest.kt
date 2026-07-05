@@ -8,13 +8,14 @@ import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
+import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.dchernykh.chronometer.data.AppLanguage
@@ -29,7 +30,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
+import org.junit.rules.TestRule
+import org.junit.runner.Description
 import org.junit.runner.RunWith
+import org.junit.runners.model.Statement
 import java.io.File
 
 /**
@@ -38,17 +43,26 @@ import java.io.File
  * (`connectedAndroidTest` against each AVD). Recording is async (Room insert ->
  * Flow -> recomposition), so we wait until the row appears rather than relying on
  * waitForIdle, and check existence (the soft keyboard can cover the list).
+ *
+ * `Activity.recreate()` is racy on the slower tablet AVD: interacting before the
+ * recreated activity's Compose owner is registered lands on the old, detached
+ * tree. [recreateAndSettle] resumes the new activity and waits for a single fresh
+ * `numberField` before any interaction; [RetryRule] retries an occasional
+ * emulator hiccup.
  */
 @RunWith(AndroidJUnit4::class)
 class MainFlowTest {
+    private val composeRule = createAndroidComposeRule<MainActivity>()
+
+    // composeRule is outer so the activity launches once; RetryRule re-runs the
+    // @Before/test/@After block (each @Before recreates a fresh activity anyway).
     @get:Rule
-    val composeRule = createAndroidComposeRule<MainActivity>()
+    val rules: RuleChain = RuleChain.outerRule(composeRule).around(RetryRule(MAX_ATTEMPTS))
 
     @Before
     fun resetBeforeTest() {
         resetStoredSettings()
-        composeRule.activityRule.scenario.recreate()
-        composeRule.waitForIdle()
+        recreateAndSettle()
     }
 
     @After
@@ -57,11 +71,21 @@ class MainFlowTest {
         resetStoredSettings()
     }
 
+    /** Recreate the activity and wait until the fresh main screen is interactive. */
+    private fun recreateAndSettle() {
+        composeRule.activityRule.scenario.recreate()
+        composeRule.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
+        composeRule.waitForIdle()
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            composeRule.onAllNodesWithTag("numberField").fetchSemanticsNodes().size == 1
+        }
+    }
+
     private fun recordAndAwait(
         tag: String,
         number: String,
     ) {
-        composeRule.onNodeWithTag("numberField").performTextInput(number)
+        composeRule.onNodeWithTag("numberField").performTextReplacement(number)
         composeRule.onNodeWithTag(tag).performClick()
         composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
             composeRule.onAllNodesWithText(number).fetchSemanticsNodes().isNotEmpty()
@@ -87,7 +111,9 @@ class MainFlowTest {
 
     private fun openSettings() {
         composeRule.onNodeWithTag("settingsButton").performClick()
-        composeRule.waitForIdle()
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            composeRule.onAllNodesWithTag("siteUrlField").fetchSemanticsNodes().isNotEmpty()
+        }
         composeRule.onNodeWithTag("siteUrlField").assertIsDisplayed()
     }
 
@@ -140,10 +166,7 @@ class MainFlowTest {
 
     @Test
     fun opensSettingsScreen() {
-        composeRule.onNodeWithTag("settingsButton").performClick()
-        composeRule.waitForIdle()
-        // The URL field is at the top of the settings screen, always on-screen.
-        composeRule.onNodeWithTag("siteUrlField").assertIsDisplayed()
+        openSettings()
     }
 
     @Test
@@ -154,6 +177,7 @@ class MainFlowTest {
         saveSettings()
 
         waitForText(localizedString(AppLanguage.KK, R.string.settings))
+        openSettings()
         composeRule.onNodeWithTag("langKk").performScrollTo().assertIsSelected()
     }
 
@@ -163,8 +187,7 @@ class MainFlowTest {
         composeRule.onNodeWithTag("themeDark").performScrollTo().performClick()
 
         saveSettings()
-        composeRule.activityRule.scenario.recreate()
-        composeRule.waitForIdle()
+        recreateAndSettle()
         openSettings()
 
         composeRule.onNodeWithTag("themeDark").performScrollTo().assertIsSelected()
@@ -177,8 +200,7 @@ class MainFlowTest {
         setToggle("finishModeCheckbox", enabled = true)
 
         saveSettings()
-        composeRule.activityRule.scenario.recreate()
-        composeRule.waitForIdle()
+        recreateAndSettle()
         recordAndAwait("cutoffButton", "93123")
 
         composeRule.onNodeWithText(CutoffEvent.FINISH).assertExists()
@@ -190,8 +212,7 @@ class MainFlowTest {
         setToggle("numericInputSwitch", enabled = false)
 
         saveSettings()
-        composeRule.activityRule.scenario.recreate()
-        composeRule.waitForIdle()
+        recreateAndSettle()
         recordAndAwait("cutoffButton", "A12")
 
         composeRule.onNodeWithText("A12").assertExists()
@@ -210,8 +231,7 @@ class MainFlowTest {
         replaceSettingsText("tokenField", "ui-token")
         replaceSettingsText("pointField", "7")
         saveSettings()
-        composeRule.activityRule.scenario.recreate()
-        composeRule.waitForIdle()
+        recreateAndSettle()
         recordAndAwait("cutoffButton", number)
         composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
             backupDir.listFiles()?.isNotEmpty() == true
@@ -249,10 +269,34 @@ class MainFlowTest {
         }
     }
 
+    /** Retries a test a few times to absorb rare emulator/recreate hiccups. */
+    private class RetryRule(
+        private val attempts: Int,
+    ) : TestRule {
+        override fun apply(
+            base: Statement,
+            description: Description,
+        ): Statement =
+            object : Statement() {
+                override fun evaluate() {
+                    var lastError: Throwable? = null
+                    repeat(attempts) {
+                        try {
+                            base.evaluate()
+                            return
+                        } catch (error: Throwable) {
+                            lastError = error
+                        }
+                    }
+                    throw lastError ?: IllegalStateException("no attempts run")
+                }
+            }
+    }
+
     private companion object {
         // The tablet AVD is markedly slower; give the async record -> Room -> Flow
-        // pipeline and post-recreate recompositions generous headroom so waits do
-        // not time out (the same suite passes comfortably on the phone profile).
-        const val AWAIT_MS = 30_000L
+        // pipeline and post-recreate recompositions generous headroom.
+        const val AWAIT_MS = 20_000L
+        const val MAX_ATTEMPTS = 3
     }
 }
