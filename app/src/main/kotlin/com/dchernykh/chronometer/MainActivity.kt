@@ -1,18 +1,37 @@
 package com.dchernykh.chronometer
 
-import android.app.Activity
 import android.os.Bundle
-import android.widget.TextView
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.dchernykh.chronometer.ui.ChronometerViewModel
+import com.dchernykh.chronometer.ui.MainScreen
+import com.dchernykh.chronometer.ui.SettingsScreen
+import com.dchernykh.chronometer.ui.theme.ChronometerTheme
 
-/**
- * Placeholder launcher activity. It exists only so the skeleton produces a
- * runnable APK for the CI and release wiring; the real UI is future work.
- */
-class MainActivity : Activity() {
+class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val message = TextView(this)
-        message.text = getString(R.string.placeholder_message)
-        setContentView(message)
+        setContent {
+            ChronometerTheme {
+                AppRoot()
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppRoot() {
+    val viewModel: ChronometerViewModel = viewModel()
+    var showSettings by rememberSaveable { mutableStateOf(false) }
+    if (showSettings) {
+        SettingsScreen(viewModel, onBack = { showSettings = false })
+    } else {
+        MainScreen(viewModel, onOpenSettings = { showSettings = true })
     }
 }

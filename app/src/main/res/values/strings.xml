@@ -1,4 +1,20 @@
 <resources>
-    <string name="app_name">Chronometer</string>
-    <string name="placeholder_message">Chronometer skeleton. UI is not implemented yet.</string>
+    <string name="app_name">Хронометр</string>
+    <string name="settings">Настройки</string>
+    <string name="number">Номер</string>
+    <string name="cutoff">Отсечка</string>
+    <string name="disqualify">Дисквалификация</string>
+    <string name="dsq">ДИСКВ</string>
+    <string name="log_empty">Отсечек пока нет</string>
+    <string name="back">Назад</string>
+    <string name="save">Сохранить</string>
+    <string name="site_url">Адрес сайта</string>
+    <string name="token">Токен отправки</string>
+    <string name="point_number">Номер контрольной точки</string>
+    <string name="device_uuid">UUID устройства</string>
+    <string name="generate">Сгенерировать</string>
+    <string name="folder_path">Папка для файлов</string>
+    <string name="send_enabled">Отправлять на сайт</string>
+    <string name="storage_permission_needed">Нужен доступ к файлам, чтобы сохранять отсечки</string>
+    <string name="grant_storage">Предоставить доступ</string>
 </resources>
