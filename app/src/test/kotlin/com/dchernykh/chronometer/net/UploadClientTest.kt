@@ -87,6 +87,12 @@ class UploadClientTest {
         assertEquals(UploadResult.GIVE_UP, UploadClient().upload("not-a-url", "t", "d", 0, listOf("x"), 1))
     }
 
+    @Test
+    fun uploadGivesUpOnDisallowedScheme() {
+        assertEquals(UploadResult.GIVE_UP, UploadClient().upload("ftp://host", "t", "d", 0, listOf("x"), 1))
+        assertEquals(UploadResult.GIVE_UP, UploadClient().upload("file:///tmp/x", "t", "d", 0, listOf("x"), 1))
+    }
+
     private fun withServer(
         responseCode: Int,
         block: (server: MockWebServer, baseUrl: String) -> Unit,
