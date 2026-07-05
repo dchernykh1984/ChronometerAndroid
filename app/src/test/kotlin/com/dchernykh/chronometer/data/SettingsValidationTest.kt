@@ -40,6 +40,30 @@ class SettingsValidationTest {
         assertFalse(settings(token = "").isUploadConfigured)
     }
 
+    @Test
+    fun configuredWithHttpsScheme() {
+        assertTrue(settings(siteUrl = "https://host").isUploadConfigured)
+    }
+
+    @Test
+    fun notConfiguredWithFtpScheme() {
+        assertFalse(settings(siteUrl = "ftp://host").isUploadConfigured)
+    }
+
+    @Test
+    fun notConfiguredWithoutScheme() {
+        assertFalse(settings(siteUrl = "host.example").isUploadConfigured)
+    }
+
+    @Test
+    fun schemeCheckAcceptsOnlyHttpAndHttps() {
+        assertTrue(hasAllowedUploadScheme("http://x"))
+        assertTrue(hasAllowedUploadScheme("HTTPS://x"))
+        assertFalse(hasAllowedUploadScheme("ftp://x"))
+        assertFalse(hasAllowedUploadScheme("file:///x"))
+        assertFalse(hasAllowedUploadScheme("noscheme"))
+    }
+
     private fun settings(
         siteUrl: String = "http://site",
         token: String = "tok",

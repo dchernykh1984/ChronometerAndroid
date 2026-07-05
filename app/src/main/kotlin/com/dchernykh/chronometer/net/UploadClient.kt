@@ -1,5 +1,6 @@
 package com.dchernykh.chronometer.net
 
+import com.dchernykh.chronometer.data.hasAllowedUploadScheme
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.MalformedURLException
@@ -32,11 +33,16 @@ class UploadClient {
         pointNumber: Int,
         items: List<String>,
         clientRevision: Int,
-    ): UploadResult =
-        post(
+    ): UploadResult {
+        if (!hasAllowedUploadScheme(siteUrl)) {
+            // ftp://, file://, or scheme-less: never openable as HTTP - give up.
+            return UploadResult.GIVE_UP
+        }
+        return post(
             endpointFor(siteUrl, pointNumber),
             buildPayload(token, deviceId, pointNumber, items, clientRevision),
         )
+    }
 
     private fun post(
         endpoint: String,
