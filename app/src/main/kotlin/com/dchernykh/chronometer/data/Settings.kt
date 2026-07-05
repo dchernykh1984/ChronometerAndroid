@@ -10,6 +10,8 @@ data class Settings(
     val sendEnabled: Boolean,
     /** Number field accepts digits only (true) or any text (false). */
     val numericInput: Boolean = true,
+    /** Record `finish` instead of `nextLap` for a regular cutoff press. */
+    val finishMode: Boolean = false,
 )
 
 private val ALLOWED_UPLOAD_SCHEMES = setOf("http", "https")

@@ -14,6 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -147,6 +148,20 @@ fun SettingsScreen(
                     onCheckedChange = { settings = settings.copy(numericInput = it) },
                     modifier = Modifier.testTag("numericInputSwitch"),
                 )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Checkbox(
+                    checked = settings.finishMode,
+                    onCheckedChange = { settings = settings.copy(finishMode = it) },
+                    modifier = Modifier.testTag("finishModeCheckbox"),
+                )
+                // finish/nextLap are protocol tokens: kept in English in every locale.
+                Text(stringResource(R.string.finish_mode))
             }
 
             Row(

@@ -11,8 +11,11 @@ object CutoffEvent {
     /** A disqualification. */
     const val DSQ = "DSQ"
 
-    /** A finish crossing. Not exposed in the UI yet. */
+    /** A finish crossing. Recorded by a regular press when finish-mode is on. */
     const val FINISH = "finish"
+
+    /** Which event a regular cutoff press records, per the finish-mode toggle. */
+    fun lapEvent(finishMode: Boolean): String = if (finishMode) FINISH else NEXT_LAP
 }
 
 /**
