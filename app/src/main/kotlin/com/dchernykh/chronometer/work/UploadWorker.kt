@@ -4,12 +4,14 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.dchernykh.chronometer.ChronometerApp
+import com.dchernykh.chronometer.net.UploadResult
 
 /**
  * Uploads the current snapshot of cutoffs. Enqueued with a CONNECTED constraint
  * so it runs off the UI thread and is retried automatically when the network
- * returns (even after the app was closed). Returns retry on a failed send so
- * WorkManager backs off and tries again.
+ * returns (even after the app was closed). Transient failures return retry;
+ * permanent (configuration) failures return failure so WorkManager stops
+ * retrying them.
  */
 class UploadWorker(
     context: Context,
@@ -29,7 +31,7 @@ class UploadWorker(
         if (items.isEmpty()) {
             return Result.success()
         }
-        val sent =
+        val outcome =
             app.uploadClient.upload(
                 siteUrl = settings.siteUrl,
                 token = settings.token,
@@ -38,6 +40,10 @@ class UploadWorker(
                 items = items,
                 clientRevision = app.settingsStore.clientRevision(),
             )
-        return if (sent) Result.success() else Result.retry()
+        return when (outcome) {
+            UploadResult.SUCCESS -> Result.success()
+            UploadResult.RETRY -> Result.retry()
+            UploadResult.GIVE_UP -> Result.failure()
+        }
     }
 }
