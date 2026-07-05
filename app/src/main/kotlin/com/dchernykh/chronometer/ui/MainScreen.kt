@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -64,6 +65,14 @@ fun MainScreen(
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     var number by rememberSaveable { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
+    val logState = rememberLazyListState()
+
+    // Keep the newest cutoff in view: jump the log back to the top on each new one.
+    LaunchedEffect(cutoffs.firstOrNull()?.id) {
+        if (cutoffs.isNotEmpty()) {
+            logState.animateScrollToItem(0)
+        }
+    }
 
     val context = LocalContext.current
     var eventActive by rememberSaveable { mutableStateOf(false) }
@@ -182,7 +191,7 @@ fun MainScreen(
             if (cutoffs.isEmpty()) {
                 Text(stringResource(R.string.log_empty))
             } else {
-                LazyColumn(modifier = Modifier.testTag("cutoffLog")) {
+                LazyColumn(state = logState, modifier = Modifier.testTag("cutoffLog")) {
                     items(cutoffs, key = { it.id }) { cutoff -> CutoffRow(cutoff) }
                 }
             }
