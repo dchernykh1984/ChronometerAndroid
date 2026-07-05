@@ -63,7 +63,7 @@ class MainFlowTest {
     ) {
         composeRule.onNodeWithTag("numberField").performTextInput(number)
         composeRule.onNodeWithTag(tag).performClick()
-        composeRule.waitUntil(timeoutMillis = 5_000) {
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
             composeRule.onAllNodesWithText(number).fetchSemanticsNodes().isNotEmpty()
         }
     }
@@ -115,7 +115,7 @@ class MainFlowTest {
     }
 
     private fun waitForText(text: String) {
-        composeRule.waitUntil(timeoutMillis = 5_000) {
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
             composeRule.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
         }
     }
@@ -213,14 +213,14 @@ class MainFlowTest {
         composeRule.activityRule.scenario.recreate()
         composeRule.waitForIdle()
         recordAndAwait("cutoffButton", number)
-        composeRule.waitUntil(timeoutMillis = 5_000) {
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
             backupDir.listFiles()?.isNotEmpty() == true
         }
 
         openSettings()
         composeRule.onNodeWithTag("newCompetitionButton").performScrollTo().performClick()
         composeRule.onNodeWithTag("confirmNewCompetition").performClick()
-        composeRule.waitUntil(timeoutMillis = 5_000) {
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
             val settings = SettingsStore(context).load()
             settings.token.isEmpty() &&
                 settings.pointNumber == 0 &&
@@ -231,7 +231,7 @@ class MainFlowTest {
         assertEquals("", resultsFile.readText())
         assertTrue(backupDir.listFiles()?.isNotEmpty() == true)
         composeRule.onNodeWithTag("backButton").performClick()
-        composeRule.waitUntil(timeoutMillis = 5_000) {
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
             composeRule.onAllNodesWithText(number).fetchSemanticsNodes().isEmpty()
         }
     }
@@ -247,5 +247,12 @@ class MainFlowTest {
         } finally {
             RaceService.stop(context)
         }
+    }
+
+    private companion object {
+        // The tablet AVD is markedly slower; give the async record -> Room -> Flow
+        // pipeline and post-recreate recompositions generous headroom so waits do
+        // not time out (the same suite passes comfortably on the phone profile).
+        const val AWAIT_MS = 15_000L
     }
 }
