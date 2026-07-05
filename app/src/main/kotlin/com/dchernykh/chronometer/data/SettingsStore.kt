@@ -9,6 +9,11 @@ import java.util.UUID
 /**
  * Persists [Settings] plus the internal `client_revision` counter in
  * SharedPreferences. A device UUID is generated on first use if none is set.
+ *
+ * SECURITY TECH DEBT: the upload [Settings.token] is stored in plain
+ * SharedPreferences. That storage is app-private and Auto Backup is disabled
+ * (see AndroidManifest `allowBackup=false`), but the token should be moved to
+ * Android Keystore-backed storage before wider distribution.
  */
 class SettingsStore(
     context: Context,
