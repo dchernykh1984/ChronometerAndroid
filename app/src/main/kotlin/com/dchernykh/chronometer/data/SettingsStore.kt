@@ -18,8 +18,12 @@ import java.util.UUID
 class SettingsStore(
     context: Context,
 ) {
+    // applicationContext is null while an Activity is still in attachBaseContext
+    // (where we read the language), so fall back to the given context; both map to
+    // the same per-app SharedPreferences file.
     private val prefs =
-        context.applicationContext.getSharedPreferences("chronometer_settings", Context.MODE_PRIVATE)
+        (context.applicationContext ?: context)
+            .getSharedPreferences("chronometer_settings", Context.MODE_PRIVATE)
 
     /** Default local folder: `android_chronometer` in the phone's shared storage root. */
     fun defaultFolderPath(): String =
