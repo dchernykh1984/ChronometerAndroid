@@ -1,5 +1,10 @@
 package com.dchernykh.chronometer.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,15 +38,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dchernykh.chronometer.R
 import com.dchernykh.chronometer.data.CutoffEntity
 import com.dchernykh.chronometer.data.CutoffEvent
+import com.dchernykh.chronometer.service.RaceService
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,6 +64,30 @@ fun MainScreen(
     var number by rememberSaveable { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
 
+    val context = LocalContext.current
+    var eventActive by rememberSaveable { mutableStateOf(false) }
+    val notificationLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+            // Start regardless: without the permission the notification is just hidden.
+            RaceService.start(context)
+            eventActive = true
+        }
+
+    fun toggleEvent() {
+        if (eventActive) {
+            RaceService.stop(context)
+            eventActive = false
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            RaceService.start(context)
+            eventActive = true
+        }
+    }
+
     fun clearAndRefocus() {
         number = ""
         focusRequester.requestFocus()
@@ -66,6 +98,10 @@ fun MainScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.app_name)) },
                 actions = {
+                    TextButton(
+                        onClick = ::toggleEvent,
+                        modifier = Modifier.testTag("eventToggle"),
+                    ) { Text(stringResource(if (eventActive) R.string.event_stop else R.string.event_start)) }
                     TextButton(
                         onClick = onOpenSettings,
                         modifier = Modifier.testTag("settingsButton"),

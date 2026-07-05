@@ -40,4 +40,8 @@
     <string name="language_ru">Русский</string>
     <string name="language_kk">Қазақша</string>
     <string name="language_en">English</string>
+    <string name="race_channel_name">Active event</string>
+    <string name="race_notification_text">Timing is active</string>
+    <string name="event_start">Start event</string>
+    <string name="event_stop">Stop event</string>
 </resources>
