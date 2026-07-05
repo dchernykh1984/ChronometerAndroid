@@ -118,4 +118,18 @@ class SettingsStoreTest {
         assertEquals(start + 2, store.nextClientRevision())
         assertEquals(start + 2, store.clientRevision())
     }
+
+    @Test
+    fun newCompetitionRestartsTheRevisionStreamFromOne() {
+        // Contract: a new competition (new token) starts a fresh revision stream.
+        // The server keys idempotency on (competition_token, device_id, point) so
+        // these low revisions are never stale. See docs/server-protocol.md.
+        store.nextClientRevision()
+        store.nextClientRevision()
+
+        store.resetForNewCompetition()
+
+        assertEquals(0, store.clientRevision())
+        assertEquals(1, store.nextClientRevision())
+    }
 }
