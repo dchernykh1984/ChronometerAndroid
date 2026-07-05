@@ -3,6 +3,7 @@ package com.dchernykh.chronometer
 import android.app.Application
 import androidx.room.Room
 import com.dchernykh.chronometer.data.AppDatabase
+import com.dchernykh.chronometer.data.MIGRATION_1_2
 import com.dchernykh.chronometer.data.SettingsStore
 import com.dchernykh.chronometer.io.BackupWriter
 import com.dchernykh.chronometer.net.UploadClient
@@ -22,9 +23,8 @@ class ChronometerApp : Application() {
         database =
             Room
                 .databaseBuilder(this, AppDatabase::class.java, "chronometer.db")
-                // Pre-release schema still evolves; recorded cutoffs are disposable
-                // test data for now. Replace with real migrations before release.
-                .fallbackToDestructiveMigration(dropAllTables = true)
+                // Migrate rather than drop data: recorded cutoffs must never be lost.
+                .addMigrations(MIGRATION_1_2)
                 .build()
         settingsStore = SettingsStore(this)
     }
