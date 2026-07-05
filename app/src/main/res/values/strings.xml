@@ -20,6 +20,11 @@
     <string name="theme_system">Системная</string>
     <string name="theme_light">Светлая</string>
     <string name="theme_dark">Тёмная</string>
+    <string name="new_competition">Новое соревнование</string>
+    <string name="new_competition_confirm">Список отсечек и токен отправки будут очищены, номер точки сброшен на 0. Файлы бэкапов останутся на месте.</string>
+    <string name="data_folder_size">Размер папки с данными: %1$s</string>
+    <string name="confirm">Подтвердить</string>
+    <string name="cancel">Отмена</string>
     <string name="send_enabled">Отправлять на сайт</string>
     <string name="send_requires_url_token">Для отправки укажите адрес (http://…) и токен</string>
     <string name="storage_permission_needed">Нужен доступ к файлам, чтобы сохранять отсечки</string>

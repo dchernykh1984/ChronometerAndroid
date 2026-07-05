@@ -78,6 +78,29 @@ class SettingsStoreTest {
     }
 
     @Test
+    fun newCompetitionClearsTokenPointRevisionAndKeepsRest() {
+        store.save(
+            store.load().copy(
+                siteUrl = "http://s",
+                token = "tok",
+                pointNumber = 5,
+                numericInput = false,
+            ),
+        )
+        store.nextClientRevision()
+
+        store.resetForNewCompetition()
+
+        val loaded = store.load()
+        assertEquals("", loaded.token)
+        assertEquals(0, loaded.pointNumber)
+        assertEquals(0, store.clientRevision())
+        // Unrelated preferences are preserved.
+        assertEquals("http://s", loaded.siteUrl)
+        assertFalse(loaded.numericInput)
+    }
+
+    @Test
     fun clientRevisionIncrementsAndPersists() {
         val start = store.clientRevision()
         assertEquals(start + 1, store.nextClientRevision())

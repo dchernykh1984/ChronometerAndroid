@@ -74,6 +74,24 @@ class CutoffRepository(
         }
     }
 
+    /**
+     * Start a new competition: clear cutoffs and empty `results.txt`, drop the
+     * token, reset the point number and revision. Backups on disk are preserved.
+     */
+    suspend fun startNewCompetition() {
+        dao.deleteAll()
+        settingsStore.resetForNewCompetition()
+        val folder = settingsStore.load().folderPath
+        withContext(Dispatchers.IO) { backupWriter.resetResults(folder) }
+        backupFailedState.value = false
+    }
+
+    /** Size of the data folder (results + backups) for the settings info line. */
+    suspend fun dataFolderSizeBytes(): Long =
+        withContext(Dispatchers.IO) {
+            backupWriter.folderSizeBytes(settingsStore.load().folderPath)
+        }
+
     private fun enqueueUpload() {
         val request =
             OneTimeWorkRequestBuilder<UploadWorker>()

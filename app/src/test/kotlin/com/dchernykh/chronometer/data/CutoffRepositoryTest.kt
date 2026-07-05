@@ -109,4 +109,23 @@ class CutoffRepositoryTest {
             assertTrue(repository.backupFailed.value)
             assertEquals(1, db.cutoffDao().getAll().size)
         }
+
+    @Test
+    fun startNewCompetitionClearsCutoffsAndResultsButKeepsBackups() =
+        runTest {
+            configure(sendEnabled = false)
+            repository.record("1", CutoffEvent.NEXT_LAP)
+            repository.record("2", CutoffEvent.NEXT_LAP)
+            val backupCount = File(folder, "backup").listFiles()?.size ?: 0
+            assertTrue(backupCount >= 2)
+
+            repository.startNewCompetition()
+
+            assertTrue(db.cutoffDao().getAll().isEmpty())
+            assertEquals("", File(folder, "results.txt").readText())
+            // Backups are preserved; the token is cleared and the point reset.
+            assertEquals(backupCount, File(folder, "backup").listFiles()?.size ?: 0)
+            assertEquals("", store.load().token)
+            assertEquals(0, store.load().pointNumber)
+        }
 }
