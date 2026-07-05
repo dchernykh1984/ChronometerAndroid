@@ -28,7 +28,7 @@ class CutoffRepository(
      */
     suspend fun record(
         number: String,
-        disqualified: Boolean,
+        event: String,
     ) {
         val trimmed = number.trim()
         if (trimmed.isEmpty()) {
@@ -41,7 +41,7 @@ class CutoffRepository(
             CutoffEntity(
                 number = trimmed,
                 timeStr = timeStr,
-                disqualified = disqualified,
+                event = event,
                 createdAt = now,
             ),
         )

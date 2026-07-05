@@ -19,7 +19,13 @@ class ChronometerApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        database = Room.databaseBuilder(this, AppDatabase::class.java, "chronometer.db").build()
+        database =
+            Room
+                .databaseBuilder(this, AppDatabase::class.java, "chronometer.db")
+                // Pre-release schema still evolves; recorded cutoffs are disposable
+                // test data for now. Replace with real migrations before release.
+                .fallbackToDestructiveMigration(dropAllTables = true)
+                .build()
         settingsStore = SettingsStore(this)
     }
 }
