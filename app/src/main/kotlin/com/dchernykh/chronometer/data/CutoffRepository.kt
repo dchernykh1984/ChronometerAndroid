@@ -75,15 +75,23 @@ class CutoffRepository(
     }
 
     /**
-     * Start a new competition: clear cutoffs and empty `results.txt`, drop the
-     * token, reset the point number and revision. Backups on disk are preserved.
+     * Start a new competition: empty `results.txt`, clear cutoffs, drop the token,
+     * reset the point number and revision. Backups on disk are preserved.
+     *
+     * The file reset happens first. If it fails, the existing Room/settings state is
+     * kept intact so the referee does not lose the current competition.
      */
-    suspend fun startNewCompetition() {
+    suspend fun startNewCompetition(): Boolean {
+        val folder = settingsStore.load().folderPath
+        val resetOk = withContext(Dispatchers.IO) { backupWriter.resetResults(folder) }
+        if (!resetOk) {
+            backupFailedState.value = true
+            return false
+        }
         dao.deleteAll()
         settingsStore.resetForNewCompetition()
-        val folder = settingsStore.load().folderPath
-        withContext(Dispatchers.IO) { backupWriter.resetResults(folder) }
         backupFailedState.value = false
+        return true
     }
 
     /** Size of the data folder (results + backups) for the settings info line. */

@@ -59,6 +59,7 @@ fun SettingsScreen(
     var folderRefresh by remember { mutableStateOf(0) }
     val folderSizeBytes by produceState(0L, folderRefresh) { value = viewModel.dataFolderSizeBytes() }
     var confirmNewCompetition by remember { mutableStateOf(false) }
+    var newCompetitionFailed by remember { mutableStateOf(false) }
     val initialLanguage = remember { viewModel.loadSettings().language }
 
     val manageLauncher =
@@ -247,6 +248,13 @@ fun SettingsScreen(
                 onClick = { confirmNewCompetition = true },
                 modifier = Modifier.fillMaxWidth().testTag("newCompetitionButton"),
             ) { Text(stringResource(R.string.new_competition)) }
+            if (newCompetitionFailed) {
+                Text(
+                    text = stringResource(R.string.new_competition_failed),
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.testTag("newCompetitionError"),
+                )
+            }
 
             Button(
                 onClick = {
@@ -272,9 +280,12 @@ fun SettingsScreen(
                     TextButton(
                         onClick = {
                             confirmNewCompetition = false
-                            viewModel.startNewCompetition {
-                                settings = viewModel.loadSettings()
-                                folderRefresh++
+                            viewModel.startNewCompetition { success ->
+                                newCompetitionFailed = !success
+                                if (success) {
+                                    settings = viewModel.loadSettings()
+                                    folderRefresh++
+                                }
                             }
                         },
                         modifier = Modifier.testTag("confirmNewCompetition"),
