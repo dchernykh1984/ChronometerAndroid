@@ -1,6 +1,7 @@
 package com.dchernykh.chronometer.ui
 
 import android.Manifest
+import android.app.Activity
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -41,6 +42,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.dchernykh.chronometer.R
+import com.dchernykh.chronometer.data.AppLanguage
 import com.dchernykh.chronometer.data.ThemeMode
 import com.dchernykh.chronometer.data.isUploadConfigured
 import java.util.UUID
@@ -57,6 +59,7 @@ fun SettingsScreen(
     var folderRefresh by remember { mutableStateOf(0) }
     val folderSizeBytes by produceState(0L, folderRefresh) { value = viewModel.dataFolderSizeBytes() }
     var confirmNewCompetition by remember { mutableStateOf(false) }
+    val initialLanguage = remember { viewModel.loadSettings().language }
 
     val manageLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -143,15 +146,31 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth().testTag("folderField"),
             )
 
+            Text(stringResource(R.string.language))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ChoiceChip(R.string.language_system, "langSystem", settings.language == AppLanguage.SYSTEM) {
+                    settings = settings.copy(language = AppLanguage.SYSTEM)
+                }
+                ChoiceChip(R.string.language_ru, "langRu", settings.language == AppLanguage.RU) {
+                    settings = settings.copy(language = AppLanguage.RU)
+                }
+                ChoiceChip(R.string.language_kk, "langKk", settings.language == AppLanguage.KK) {
+                    settings = settings.copy(language = AppLanguage.KK)
+                }
+                ChoiceChip(R.string.language_en, "langEn", settings.language == AppLanguage.EN) {
+                    settings = settings.copy(language = AppLanguage.EN)
+                }
+            }
+
             Text(stringResource(R.string.theme))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ThemeChip(R.string.theme_system, "themeSystem", settings.themeMode == ThemeMode.SYSTEM) {
+                ChoiceChip(R.string.theme_system, "themeSystem", settings.themeMode == ThemeMode.SYSTEM) {
                     settings = settings.copy(themeMode = ThemeMode.SYSTEM)
                 }
-                ThemeChip(R.string.theme_light, "themeLight", settings.themeMode == ThemeMode.LIGHT) {
+                ChoiceChip(R.string.theme_light, "themeLight", settings.themeMode == ThemeMode.LIGHT) {
                     settings = settings.copy(themeMode = ThemeMode.LIGHT)
                 }
-                ThemeChip(R.string.theme_dark, "themeDark", settings.themeMode == ThemeMode.DARK) {
+                ChoiceChip(R.string.theme_dark, "themeDark", settings.themeMode == ThemeMode.DARK) {
                     settings = settings.copy(themeMode = ThemeMode.DARK)
                 }
             }
@@ -232,7 +251,12 @@ fun SettingsScreen(
             Button(
                 onClick = {
                     viewModel.saveSettings(settings)
-                    onBack()
+                    if (settings.language != initialLanguage) {
+                        // Re-run attachBaseContext with the new locale.
+                        (context as? Activity)?.recreate()
+                    } else {
+                        onBack()
+                    }
                 },
                 enabled = !sendMisconfigured,
                 modifier = Modifier.fillMaxWidth().testTag("saveButton"),
@@ -275,7 +299,7 @@ private fun formatBytes(bytes: Long): String =
     }
 
 @Composable
-private fun ThemeChip(
+private fun ChoiceChip(
     @StringRes labelRes: Int,
     tag: String,
     selected: Boolean,
