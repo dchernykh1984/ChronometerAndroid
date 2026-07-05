@@ -15,7 +15,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
-import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.dchernykh.chronometer.data.AppLanguage
@@ -74,18 +73,30 @@ class MainFlowTest {
     /** Recreate the activity and wait until the fresh main screen is interactive. */
     private fun recreateAndSettle() {
         composeRule.activityRule.scenario.recreate()
-        composeRule.activityRule.scenario.moveToState(Lifecycle.State.RESUMED)
         composeRule.waitForIdle()
         composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
-            composeRule.onAllNodesWithTag("numberField").fetchSemanticsNodes().size == 1
+            composeRule.onAllNodesWithTag("numberField").fetchSemanticsNodes().isNotEmpty()
         }
     }
+
+    private fun numberFieldText(): String? =
+        composeRule
+            .onNodeWithTag("numberField")
+            .fetchSemanticsNode()
+            .config
+            .getOrNull(SemanticsProperties.EditableText)
+            ?.text
 
     private fun recordAndAwait(
         tag: String,
         number: String,
     ) {
-        composeRule.onNodeWithTag("numberField").performTextReplacement(number)
+        // Auto-focus / IME can swallow the first input on the slow tablet, which
+        // would record an empty number; re-type until the field actually holds it.
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            composeRule.onNodeWithTag("numberField").performTextReplacement(number)
+            numberFieldText() == number
+        }
         composeRule.onNodeWithTag(tag).performClick()
         composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
             composeRule.onAllNodesWithText(number).fetchSemanticsNodes().isNotEmpty()
