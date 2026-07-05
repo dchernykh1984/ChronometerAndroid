@@ -48,6 +48,8 @@ fun MainScreen(
     onOpenSettings: () -> Unit,
 ) {
     val cutoffs by viewModel.cutoffs.collectAsStateWithLifecycle()
+    val uploadStatus by viewModel.uploadStatus.collectAsStateWithLifecycle()
+    val backupFailed by viewModel.backupFailed.collectAsStateWithLifecycle()
     var number by rememberSaveable { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
 
@@ -124,6 +126,12 @@ fun MainScreen(
                         .testTag("dsqButton"),
             ) { Text(stringResource(R.string.disqualify)) }
 
+            Diagnostics(
+                uploadStatus = uploadStatus,
+                backupFailed = backupFailed,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
             if (cutoffs.isEmpty()) {
@@ -166,3 +174,39 @@ private fun CutoffRow(cutoff: CutoffEntity) {
         )
     }
 }
+
+@Composable
+private fun Diagnostics(
+    uploadStatus: UploadStatus,
+    backupFailed: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = uploadStatusLabel(uploadStatus),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testTag("uploadStatus"),
+        )
+        if (backupFailed) {
+            Text(
+                text = stringResource(R.string.diag_backup_failed),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.testTag("backupWarning"),
+            )
+        }
+    }
+}
+
+@Composable
+private fun uploadStatusLabel(status: UploadStatus): String =
+    stringResource(
+        when (status) {
+            UploadStatus.IDLE -> R.string.diag_upload_idle
+            UploadStatus.PENDING -> R.string.diag_upload_pending
+            UploadStatus.RUNNING -> R.string.diag_upload_running
+            UploadStatus.SENT -> R.string.diag_upload_sent
+            UploadStatus.FAILED -> R.string.diag_upload_failed
+        },
+    )
