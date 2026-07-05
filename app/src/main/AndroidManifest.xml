@@ -17,7 +17,8 @@
         android:label="@string/app_name"
         android:requestLegacyExternalStorage="true"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Chronometer">
+        android:theme="@style/Theme.Chronometer"
+        android:usesCleartextTraffic="true"><!-- referees configure a plain http:// site -->
 
         <activity
             android:name=".MainActivity"
