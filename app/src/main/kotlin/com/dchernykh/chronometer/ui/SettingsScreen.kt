@@ -35,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.dchernykh.chronometer.R
+import com.dchernykh.chronometer.data.isUploadConfigured
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -144,6 +145,15 @@ fun SettingsScreen(
                 )
             }
 
+            val sendMisconfigured = settings.sendEnabled && !settings.isUploadConfigured
+            if (sendMisconfigured) {
+                Text(
+                    text = stringResource(R.string.send_requires_url_token),
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.testTag("sendError"),
+                )
+            }
+
             if (!storageGranted) {
                 Text(
                     text = stringResource(R.string.storage_permission_needed),
@@ -159,6 +169,7 @@ fun SettingsScreen(
                     viewModel.saveSettings(settings)
                     onBack()
                 },
+                enabled = !sendMisconfigured,
                 modifier = Modifier.fillMaxWidth().testTag("saveButton"),
             ) { Text(stringResource(R.string.save)) }
         }

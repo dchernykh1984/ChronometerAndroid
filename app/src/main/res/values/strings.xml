@@ -14,6 +14,7 @@
     <string name="generate">Сгенерировать</string>
     <string name="folder_path">Папка для файлов</string>
     <string name="send_enabled">Отправлять на сайт</string>
+    <string name="send_requires_url_token">Для отправки укажите адрес сайта и токен</string>
     <string name="storage_permission_needed">Нужен доступ к файлам, чтобы сохранять отсечки</string>
     <string name="grant_storage">Предоставить доступ</string>
 </resources>
