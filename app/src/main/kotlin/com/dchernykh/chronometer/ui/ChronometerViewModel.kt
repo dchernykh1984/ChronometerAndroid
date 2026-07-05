@@ -60,6 +60,18 @@ class ChronometerViewModel(
         settingsState.value = app.settingsStore.load()
     }
 
+    /** Reset cutoffs/results/token/point for a new competition, keeping backups. */
+    fun startNewCompetition(onDone: () -> Unit) {
+        viewModelScope.launch {
+            repository.startNewCompetition()
+            settingsState.value = app.settingsStore.load()
+            onDone()
+        }
+    }
+
+    /** Current on-disk size of the data folder (results + backups), in bytes. */
+    suspend fun dataFolderSizeBytes(): Long = repository.dataFolderSizeBytes()
+
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L
     }

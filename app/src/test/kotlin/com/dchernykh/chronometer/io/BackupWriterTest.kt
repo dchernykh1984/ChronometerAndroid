@@ -70,4 +70,26 @@ class BackupWriterTest {
         assertTrue(File(folder, "results.txt").isDirectory)
         assertFalse(File(folder, "results.txt.tmp").exists())
     }
+
+    @Test
+    fun resetResultsEmptiesResultsButKeepsBackups() {
+        val folder = temp.newFolder("data")
+        writer.writeSnapshot(folder.path, listOf("1#t#nextLap#"), 111)
+        assertTrue(writer.resetResults(folder.path))
+        assertEquals("", File(folder, "results.txt").readText())
+        assertTrue(File(folder, "backup/111.txt").exists())
+    }
+
+    @Test
+    fun folderSizeSumsEveryFile() {
+        val folder = temp.newFolder("data")
+        writer.writeSnapshot(folder.path, listOf("1#t#nextLap#"), 111)
+        val expected = File(folder, "results.txt").length() + File(folder, "backup/111.txt").length()
+        assertEquals(expected, writer.folderSizeBytes(folder.path))
+    }
+
+    @Test
+    fun folderSizeIsZeroForMissingFolder() {
+        assertEquals(0L, writer.folderSizeBytes(File(temp.root, "missing").path))
+    }
 }

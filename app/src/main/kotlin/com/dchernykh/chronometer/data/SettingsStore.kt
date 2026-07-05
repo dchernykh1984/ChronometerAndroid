@@ -58,6 +58,19 @@ class SettingsStore(
         runCatching { ThemeMode.valueOf(prefs.getString(KEY_THEME, null) ?: ThemeMode.SYSTEM.name) }
             .getOrDefault(ThemeMode.SYSTEM)
 
+    /**
+     * Start a new competition: clear the upload token, reset the control point to
+     * 0 and the revision counter. Folder, device id and preferences are kept; the
+     * on-disk backups are not touched here (the caller only resets `results.txt`).
+     */
+    fun resetForNewCompetition() {
+        prefs.edit {
+            putString(KEY_TOKEN, "")
+            putInt(KEY_POINT, 0)
+            putInt(KEY_REV, 0)
+        }
+    }
+
     /** Current highest revision (the server rejects a stale one with HTTP 409). */
     fun clientRevision(): Int = prefs.getInt(KEY_REV, 0)
 

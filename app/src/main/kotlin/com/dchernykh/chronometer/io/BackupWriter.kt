@@ -32,6 +32,27 @@ class BackupWriter {
             true
         }.getOrDefault(false)
 
+    /**
+     * Reset `results.txt` to empty for a new competition. The `backup/` snapshots
+     * are intentionally left untouched. Returns false if the file cannot be written.
+     */
+    fun resetResults(folderPath: String): Boolean =
+        runCatching {
+            val folder = File(folderPath)
+            folder.mkdirs()
+            writeAtomically(File(folder, "results.txt"), "")
+            true
+        }.getOrDefault(false)
+
+    /** Total size in bytes of the data folder (results + all backups), 0 if missing. */
+    fun folderSizeBytes(folderPath: String): Long {
+        val folder = File(folderPath)
+        if (!folder.exists()) {
+            return 0
+        }
+        return folder.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+    }
+
     private fun writeAtomically(
         target: File,
         body: String,
