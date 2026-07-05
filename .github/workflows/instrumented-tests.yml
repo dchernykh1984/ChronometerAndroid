@@ -17,10 +17,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Phone runs a modern API so the POST_NOTIFICATIONS (33+), all-files
+          # access and foreground-service (34+) code paths are actually exercised.
           - name: phone
             profile: pixel_6
+            api-level: 34
+            target: google_apis
+          # Tablet keeps a stable API for large-screen layout coverage.
           - name: tablet
             profile: pixel_c
+            api-level: 30
+            target: default
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v5
@@ -36,7 +43,8 @@ jobs:
       - name: ${{ matrix.name }} instrumented tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 30
+          api-level: ${{ matrix.api-level }}
+          target: ${{ matrix.target }}
           arch: x86_64
           profile: ${{ matrix.profile }}
           script: ./gradlew connectedDebugAndroidTest
