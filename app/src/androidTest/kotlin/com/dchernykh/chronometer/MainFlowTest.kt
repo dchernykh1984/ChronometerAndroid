@@ -253,6 +253,6 @@ class MainFlowTest {
         // The tablet AVD is markedly slower; give the async record -> Room -> Flow
         // pipeline and post-recreate recompositions generous headroom so waits do
         // not time out (the same suite passes comfortably on the phone profile).
-        const val AWAIT_MS = 15_000L
+        const val AWAIT_MS = 30_000L
     }
 }
