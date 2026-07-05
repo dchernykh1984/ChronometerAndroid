@@ -82,6 +82,12 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 kotlin {
@@ -108,14 +114,26 @@ kover {
     reports {
         filters {
             excludes {
-                // Generated code is not meaningful to cover.
-                classes("*.BuildConfig", "*.R", "*.R$*")
+                // Generated code, plus Compose UI / Android glue that unit tests do
+                // not exercise (it is covered by the instrumented tests instead).
+                classes(
+                    "*.BuildConfig",
+                    "*.R",
+                    "*.R$*",
+                    "com.dchernykh.chronometer.ChronometerApp",
+                    "com.dchernykh.chronometer.MainActivity*",
+                    "com.dchernykh.chronometer.ui.MainScreenKt",
+                    "com.dchernykh.chronometer.ui.SettingsScreenKt",
+                    "com.dchernykh.chronometer.ui.ChronometerViewModel",
+                    "com.dchernykh.chronometer.ui.StoragePermission",
+                    "com.dchernykh.chronometer.ui.theme.*",
+                )
             }
         }
         verify {
             rule {
-                // Raise this bound as unit-test coverage of the domain logic grows.
-                minBound(0)
+                // Domain logic (data, io, net, util, work) is unit-tested (~68%).
+                minBound(65)
             }
         }
     }
@@ -161,6 +179,8 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockwebserver)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.work.testing)
 
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.core.ktx)
