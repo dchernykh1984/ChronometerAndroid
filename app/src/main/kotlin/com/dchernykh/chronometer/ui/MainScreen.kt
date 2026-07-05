@@ -34,6 +34,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -188,7 +189,13 @@ fun MainScreen(
         }
     }
 
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    LaunchedEffect(Unit) {
+        // Wait for the number field to attach before focusing it, otherwise
+        // FocusRequester.requestFocus() throws "not initialized"; never let an
+        // auto-focus race crash the screen.
+        withFrameNanos { }
+        runCatching { focusRequester.requestFocus() }
+    }
 }
 
 @Composable
