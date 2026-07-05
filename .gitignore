@@ -59,6 +59,12 @@ build/
 .kotlin/
 app/release/
 
+# Only app/gradle.lockfile is intentionally version-controlled (see the locking
+# setup in app/build.gradle.kts). The settings/version-catalog lockfile that
+# `--write-locks` also emits is not part of that scope, so ignore it to keep the
+# working tree clean instead of tracking an unused artifact.
+settings-gradle.lockfile
+
 # Native build cache
 .cxx/
 
