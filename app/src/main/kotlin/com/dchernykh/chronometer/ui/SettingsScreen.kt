@@ -137,6 +137,23 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
+                Text(
+                    stringResource(
+                        if (settings.numericInput) R.string.number_input_digits else R.string.number_input_text,
+                    ),
+                )
+                Switch(
+                    checked = settings.numericInput,
+                    onCheckedChange = { settings = settings.copy(numericInput = it) },
+                    modifier = Modifier.testTag("numericInputSwitch"),
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
                 Text(stringResource(R.string.send_enabled))
                 Switch(
                     checked = settings.sendEnabled,

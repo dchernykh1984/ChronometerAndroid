@@ -8,8 +8,10 @@ import com.dchernykh.chronometer.data.CutoffEntity
 import com.dchernykh.chronometer.data.CutoffEvent
 import com.dchernykh.chronometer.data.CutoffRepository
 import com.dchernykh.chronometer.data.Settings
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -20,6 +22,11 @@ class ChronometerViewModel(
     private val app = application as ChronometerApp
     private val repository =
         CutoffRepository(app, app.database.cutoffDao(), app.settingsStore, app.backupWriter)
+
+    private val settingsState = MutableStateFlow(app.settingsStore.load())
+
+    /** Reactive settings so the UI (input type, theme, language) updates on save. */
+    val settings: StateFlow<Settings> = settingsState.asStateFlow()
 
     val cutoffs: StateFlow<List<CutoffEntity>> =
         repository.cutoffs.stateIn(
@@ -46,7 +53,11 @@ class ChronometerViewModel(
 
     fun loadSettings(): Settings = app.settingsStore.load()
 
-    fun saveSettings(settings: Settings) = app.settingsStore.save(settings)
+    fun saveSettings(settings: Settings) {
+        app.settingsStore.save(settings)
+        // Re-read so normalized values (generated uuid, default folder) propagate.
+        settingsState.value = app.settingsStore.load()
+    }
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L

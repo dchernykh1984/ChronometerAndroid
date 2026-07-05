@@ -8,6 +8,8 @@ data class Settings(
     val deviceUuid: String,
     val folderPath: String,
     val sendEnabled: Boolean,
+    /** Number field accepts digits only (true) or any text (false). */
+    val numericInput: Boolean = true,
 )
 
 private val ALLOWED_UPLOAD_SCHEMES = setOf("http", "https")
