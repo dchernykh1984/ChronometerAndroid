@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dchernykh.chronometer.R
 import com.dchernykh.chronometer.data.CutoffEntity
+import com.dchernykh.chronometer.data.CutoffEvent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -153,12 +154,15 @@ private fun CutoffRow(cutoff: CutoffEntity) {
             modifier = Modifier.width(72.dp),
         )
         Text(text = cutoff.timeStr, modifier = Modifier.weight(1f))
-        if (cutoff.disqualified) {
-            Text(
-                text = stringResource(R.string.dsq),
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.labelLarge,
-            )
-        }
+        Text(
+            text = cutoff.event,
+            color =
+                if (cutoff.event == CutoffEvent.DSQ) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            style = MaterialTheme.typography.labelLarge,
+        )
     }
 }

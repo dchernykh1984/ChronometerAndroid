@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.dchernykh.chronometer.ChronometerApp
 import com.dchernykh.chronometer.data.CutoffEntity
+import com.dchernykh.chronometer.data.CutoffEvent
 import com.dchernykh.chronometer.data.CutoffRepository
 import com.dchernykh.chronometer.data.Settings
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,11 +28,11 @@ class ChronometerViewModel(
         )
 
     fun recordCutoff(number: String) {
-        viewModelScope.launch { repository.record(number, disqualified = false) }
+        viewModelScope.launch { repository.record(number, CutoffEvent.NEXT_LAP) }
     }
 
     fun recordDisqualification(number: String) {
-        viewModelScope.launch { repository.record(number, disqualified = true) }
+        viewModelScope.launch { repository.record(number, CutoffEvent.DSQ) }
     }
 
     fun loadSettings(): Settings = app.settingsStore.load()

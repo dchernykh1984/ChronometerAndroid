@@ -4,7 +4,6 @@
     <string name="number">Номер</string>
     <string name="cutoff">Отсечка</string>
     <string name="disqualify">Дисквалификация</string>
-    <string name="dsq">ДИСКВ</string>
     <string name="log_empty">Отсечек пока нет</string>
     <string name="back">Назад</string>
     <string name="save">Сохранить</string>

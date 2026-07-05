@@ -33,12 +33,11 @@ class MainFlowTest {
     @Test
     fun disqualificationShowsMarker() {
         val number = "80123"
-        val dsqMarker = composeRule.activity.getString(R.string.dsq)
         composeRule.onNodeWithTag("numberField").performTextInput(number)
         composeRule.onNodeWithTag("dsqButton").performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithText(number).assertIsDisplayed()
-        composeRule.onNodeWithText(dsqMarker).assertIsDisplayed()
+        composeRule.onNodeWithText("DSQ").assertIsDisplayed()
     }
 
     @Test
