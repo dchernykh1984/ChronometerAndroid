@@ -40,4 +40,8 @@
     <string name="language_ru">Русский</string>
     <string name="language_kk">Қазақша</string>
     <string name="language_en">English</string>
+    <string name="race_channel_name">Белсенді оқиға</string>
+    <string name="race_notification_text">Хронометраж жүріп жатыр</string>
+    <string name="event_start">Оқиғаны бастау</string>
+    <string name="event_stop">Оқиғаны тоқтату</string>
 </resources>
