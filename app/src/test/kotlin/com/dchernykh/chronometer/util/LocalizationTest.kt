@@ -3,40 +3,44 @@ package com.dchernykh.chronometer.util
 import com.dchernykh.chronometer.R
 import com.dchernykh.chronometer.data.AppLanguage
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
-import org.robolectric.annotation.Config
 
+// Non-ASCII (Cyrillic) literals are banned in source by the no-non-ascii hook, so
+// these tests assert that each language resolves to a *distinct* localized string
+// rather than hard-coding the translated text.
 @RunWith(RobolectricTestRunner::class)
 class LocalizationTest {
     private fun context() = RuntimeEnvironment.getApplication()
 
+    private fun settingsIn(language: AppLanguage): String =
+        LocaleContext.wrap(context(), language).getString(R.string.settings)
+
     @Test
-    @Config(qualifiers = "en")
     fun englishIsTheDefaultResource() {
-        assertEquals("Settings", context().getString(R.string.settings))
+        assertEquals("Settings", settingsIn(AppLanguage.EN))
     }
 
     @Test
-    @Config(qualifiers = "ru")
-    fun russianStringsResolve() {
-        assertEquals("Настройки", context().getString(R.string.settings))
+    fun eachLanguageResolvesToADistinctString() {
+        val en = settingsIn(AppLanguage.EN)
+        val ru = settingsIn(AppLanguage.RU)
+        val kk = settingsIn(AppLanguage.KK)
+        assertNotEquals(en, ru)
+        assertNotEquals(en, kk)
+        assertNotEquals(ru, kk)
+        assertTrue(ru.isNotBlank())
+        assertTrue(kk.isNotBlank())
     }
 
     @Test
-    @Config(qualifiers = "kk")
-    fun kazakhStringsResolve() {
-        assertEquals("Баптаулар", context().getString(R.string.settings))
-    }
-
-    @Test
-    @Config(qualifiers = "ru")
     fun protocolTokensStayEnglishInEveryLocale() {
-        val label = context().getString(R.string.finish_mode)
+        val label = LocaleContext.wrap(context(), AppLanguage.RU).getString(R.string.finish_mode)
         assertTrue(label.contains("finish"))
         assertTrue(label.contains("nextLap"))
     }
@@ -49,7 +53,6 @@ class LocalizationTest {
             wrapped.resources.configuration.locales[0]
                 .language,
         )
-        assertEquals("Баптаулар", wrapped.getString(R.string.settings))
     }
 
     @Test
