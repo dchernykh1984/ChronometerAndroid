@@ -50,4 +50,24 @@ class BackupWriterTest {
         val ok = writer.writeSnapshot(File(notADir, "sub").path, listOf("x"), 1)
         assertFalse(ok)
     }
+
+    @Test
+    fun overwritingReplacesContentAtomically() {
+        val folder = temp.newFolder("data")
+        writer.writeSnapshot(folder.path, listOf("first#t#nextLap#"), 1)
+        writer.writeSnapshot(folder.path, listOf("second#t#DSQ#"), 2)
+        assertEquals("second#t#DSQ#\n", File(folder, "results.txt").readText())
+        assertFalse(File(folder, "results.txt.tmp").exists())
+    }
+
+    @Test
+    fun failedReplaceLeavesPreviousFileAndReturnsFalse() {
+        val folder = temp.newFolder("data")
+        // results.txt is a directory, so the file cannot be moved onto it.
+        File(folder, "results.txt").mkdir()
+        val ok = writer.writeSnapshot(folder.path, listOf("x"), 1)
+        assertFalse(ok)
+        assertTrue(File(folder, "results.txt").isDirectory)
+        assertFalse(File(folder, "results.txt.tmp").exists())
+    }
 }

@@ -1,15 +1,20 @@
 package com.dchernykh.chronometer.io
 
+import android.os.Build
 import java.io.File
+import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 /**
  * Writes the timing files into the user-configured folder (all-files access):
  *  - `<folder>/results.txt`         current list, the input for existing tools;
  *  - `<folder>/backup/<millis>.txt` an immutable per-press snapshot.
  *
- * Both are written atomically (temp file + rename, fsync) so a crash mid-write
- * cannot corrupt them. Failures never throw: the cutoff is already durable in
- * Room, so file problems must not disrupt timing.
+ * Each file is written to a temp file (fsynced) and then atomically replaced, so
+ * a crash mid-write cannot leave a partially written file. Failures never throw
+ * out of [writeSnapshot]: the cutoff is already durable in Room, so file
+ * problems must not disrupt timing - they are reported via the return value.
  */
 class BackupWriter {
     fun writeSnapshot(
@@ -37,9 +42,30 @@ class BackupWriter {
             out.flush()
             out.fd.sync()
         }
-        if (!tmp.renameTo(target)) {
-            target.writeText(body, Charsets.UTF_8)
+        if (!atomicReplace(tmp, target)) {
+            // Could not replace atomically: leave the previous file untouched and
+            // report the failure instead of a partial direct overwrite.
             tmp.delete()
+            throw IOException("atomic replace failed for ${target.name}")
         }
     }
+
+    private fun atomicReplace(
+        tmp: File,
+        target: File,
+    ): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            runCatching {
+                Files.move(
+                    tmp.toPath(),
+                    target.toPath(),
+                    StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING,
+                )
+                true
+            }.getOrDefault(false)
+        } else {
+            // File.renameTo maps to POSIX rename(2) on Android: an atomic replace.
+            tmp.renameTo(target)
+        }
 }
