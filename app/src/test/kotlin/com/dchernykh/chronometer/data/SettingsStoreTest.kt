@@ -1,0 +1,52 @@
+package com.dchernykh.chronometer.data
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+
+@RunWith(RobolectricTestRunner::class)
+class SettingsStoreTest {
+    private val store = SettingsStore(RuntimeEnvironment.getApplication())
+
+    @Test
+    fun generatesDeviceUuidOnFirstLoad() {
+        assertTrue(store.load().deviceUuid.isNotBlank())
+    }
+
+    @Test
+    fun deviceUuidIsStableAcrossLoads() {
+        assertEquals(store.load().deviceUuid, store.load().deviceUuid)
+    }
+
+    @Test
+    fun savesAndReloadsSettings() {
+        val uuid = store.load().deviceUuid
+        store.save(
+            Settings(
+                siteUrl = "http://site",
+                token = "tok",
+                pointNumber = 3,
+                deviceUuid = uuid,
+                folderPath = "/folder",
+                sendEnabled = true,
+            ),
+        )
+        val loaded = store.load()
+        assertEquals("http://site", loaded.siteUrl)
+        assertEquals("tok", loaded.token)
+        assertEquals(3, loaded.pointNumber)
+        assertEquals("/folder", loaded.folderPath)
+        assertTrue(loaded.sendEnabled)
+    }
+
+    @Test
+    fun clientRevisionIncrementsAndPersists() {
+        val start = store.clientRevision()
+        assertEquals(start + 1, store.nextClientRevision())
+        assertEquals(start + 2, store.nextClientRevision())
+        assertEquals(start + 2, store.clientRevision())
+    }
+}
