@@ -119,7 +119,7 @@ class CutoffRepositoryTest {
             val backupCount = File(folder, "backup").listFiles()?.size ?: 0
             assertTrue(backupCount >= 2)
 
-            repository.startNewCompetition()
+            assertTrue(repository.startNewCompetition())
 
             assertTrue(db.cutoffDao().getAll().isEmpty())
             assertEquals("", File(folder, "results.txt").readText())
@@ -127,5 +127,37 @@ class CutoffRepositoryTest {
             assertEquals(backupCount, File(folder, "backup").listFiles()?.size ?: 0)
             assertEquals("", store.load().token)
             assertEquals(0, store.load().pointNumber)
+        }
+
+    @Test
+    fun startNewCompetitionKeepsStateWhenResultsResetFails() =
+        runTest {
+            val blocker =
+                File(
+                    RuntimeEnvironment.getApplication().cacheDir,
+                    "new-competition-blocker-${System.nanoTime()}",
+                )
+            blocker.writeText("x")
+            configure(sendEnabled = false, folderPath = File(blocker, "sub").path)
+            store.save(store.load().copy(token = "tok", pointNumber = 5))
+            db
+                .cutoffDao()
+                .insert(
+                    CutoffEntity(
+                        number = "11",
+                        timeStr = "t",
+                        event = CutoffEvent.NEXT_LAP,
+                        createdAt = 1,
+                    ),
+                )
+
+            assertFalse(repository.startNewCompetition())
+
+            val all = db.cutoffDao().getAll()
+            assertEquals(1, all.size)
+            assertEquals("11", all[0].number)
+            assertEquals("tok", store.load().token)
+            assertEquals(5, store.load().pointNumber)
+            assertTrue(repository.backupFailed.value)
         }
 }
