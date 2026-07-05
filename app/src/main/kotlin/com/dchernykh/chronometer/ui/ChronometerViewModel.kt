@@ -58,6 +58,8 @@ class ChronometerViewModel(
         app.settingsStore.save(settings)
         // Re-read so normalized values (generated uuid, default folder) propagate.
         settingsState.value = app.settingsStore.load()
+        // Flush cutoffs recorded while sending was off/misconfigured.
+        viewModelScope.launch { repository.uploadPendingCutoffs() }
     }
 
     /** Reset cutoffs/results/token/point for a new competition, keeping backups. */
