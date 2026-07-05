@@ -75,6 +75,17 @@ class CutoffRepository(
     }
 
     /**
+     * Enqueue an upload for cutoffs already stored in Room. Called after the user
+     * turns on or fixes the upload settings, so data recorded while sending was
+     * off/misconfigured is pushed without waiting for the next new cutoff.
+     */
+    suspend fun uploadPendingCutoffs() {
+        if (settingsStore.load().isUploadReady && dao.getAll().isNotEmpty()) {
+            enqueueUpload()
+        }
+    }
+
+    /**
      * Start a new competition: empty `results.txt`, clear cutoffs, drop the token,
      * reset the point number and revision. Backups on disk are preserved.
      *

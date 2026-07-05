@@ -111,6 +111,36 @@ class CutoffRepositoryTest {
         }
 
     @Test
+    fun uploadPendingEnqueuesWhenSettingsBecomeReadyWithExistingCutoffs() =
+        runTest {
+            configure(sendEnabled = false)
+            repository.record("5", CutoffEvent.NEXT_LAP)
+            assertTrue(uploadWork().isEmpty())
+
+            configure(sendEnabled = true)
+            repository.uploadPendingCutoffs()
+
+            assertTrue(uploadWork().isNotEmpty())
+        }
+
+    @Test
+    fun uploadPendingDoesNothingWithoutCutoffs() =
+        runTest {
+            configure(sendEnabled = true)
+            repository.uploadPendingCutoffs()
+            assertTrue(uploadWork().isEmpty())
+        }
+
+    @Test
+    fun uploadPendingDoesNothingWhenNotReady() =
+        runTest {
+            configure(sendEnabled = false)
+            repository.record("5", CutoffEvent.NEXT_LAP)
+            repository.uploadPendingCutoffs()
+            assertTrue(uploadWork().isEmpty())
+        }
+
+    @Test
     fun startNewCompetitionClearsCutoffsAndResultsButKeepsBackups() =
         runTest {
             configure(sendEnabled = false)
