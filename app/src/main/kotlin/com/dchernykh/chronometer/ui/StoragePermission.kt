@@ -15,6 +15,13 @@ import androidx.core.content.ContextCompat
  * storage (`/sdcard/android_chronometer` by default). API 30+ uses
  * MANAGE_EXTERNAL_STORAGE (granted from a system screen); API 24-29 uses the
  * runtime WRITE_EXTERNAL_STORAGE permission.
+ *
+ * All-files access (over SAF) is a deliberate product decision so the timing
+ * files live at a plain, predictable path that referees can inspect with a file
+ * manager and that the desktop tools consume unchanged. See
+ * `docs/storage-access-decision.md`. A missing or revoked grant is detected by
+ * [isGranted] (surfaced as a "grant" button in Settings) and, at the write
+ * layer, by BackupWriter reporting failure without ever blocking a cutoff.
  */
 object StoragePermission {
     fun isGranted(context: Context): Boolean =
