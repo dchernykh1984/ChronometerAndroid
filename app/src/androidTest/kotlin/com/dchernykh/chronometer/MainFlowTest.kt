@@ -29,11 +29,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.RuleChain
-import org.junit.rules.TestRule
-import org.junit.runner.Description
 import org.junit.runner.RunWith
-import org.junit.runners.model.Statement
 import java.io.File
 
 /**
@@ -43,20 +39,14 @@ import java.io.File
  * Flow -> recomposition), so we wait until the row appears rather than relying on
  * waitForIdle, and check existence (the soft keyboard can cover the list).
  *
- * `Activity.recreate()` is racy on the slower tablet AVD: interacting before the
- * recreated activity's Compose owner is registered lands on the old, detached
- * tree. [recreateAndSettle] resumes the new activity and waits for a single fresh
- * `numberField` before any interaction; [RetryRule] retries an occasional
- * emulator hiccup.
+ * The soft keyboard / auto-focus can swallow the first input on the slower
+ * tablet AVD, so [recordAndAwait] re-types the number until the field actually
+ * holds it before pressing a record button.
  */
 @RunWith(AndroidJUnit4::class)
 class MainFlowTest {
-    private val composeRule = createAndroidComposeRule<MainActivity>()
-
-    // composeRule is outer so the activity launches once; RetryRule re-runs the
-    // @Before/test/@After block (each @Before recreates a fresh activity anyway).
     @get:Rule
-    val rules: RuleChain = RuleChain.outerRule(composeRule).around(RetryRule(MAX_ATTEMPTS))
+    val composeRule = createAndroidComposeRule<MainActivity>()
 
     @Before
     fun resetBeforeTest() {
@@ -280,34 +270,9 @@ class MainFlowTest {
         }
     }
 
-    /** Retries a test a few times to absorb rare emulator/recreate hiccups. */
-    private class RetryRule(
-        private val attempts: Int,
-    ) : TestRule {
-        override fun apply(
-            base: Statement,
-            description: Description,
-        ): Statement =
-            object : Statement() {
-                override fun evaluate() {
-                    var lastError: Throwable? = null
-                    repeat(attempts) {
-                        try {
-                            base.evaluate()
-                            return
-                        } catch (error: Throwable) {
-                            lastError = error
-                        }
-                    }
-                    throw lastError ?: IllegalStateException("no attempts run")
-                }
-            }
-    }
-
     private companion object {
         // The tablet AVD is markedly slower; give the async record -> Room -> Flow
         // pipeline and post-recreate recompositions generous headroom.
         const val AWAIT_MS = 20_000L
-        const val MAX_ATTEMPTS = 3
     }
 }
