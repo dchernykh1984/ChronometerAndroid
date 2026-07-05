@@ -48,3 +48,10 @@ jobs:
           arch: x86_64
           profile: ${{ matrix.profile }}
           script: ./gradlew connectedDebugAndroidTest
+      - name: Upload test report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: connected-report-${{ matrix.name }}
+          path: app/build/reports/androidTests/connected/
+          if-no-files-found: ignore
