@@ -214,6 +214,7 @@ class MainFlowTest {
 
     @Test
     fun finishModeRecordsFinishAfterActivityRecreate() {
+        assumePhone()
         openSettings()
         setToggle("finishModeCheckbox", enabled = true)
 
@@ -226,6 +227,7 @@ class MainFlowTest {
 
     @Test
     fun textNumberInputAllowsLettersAfterActivityRecreate() {
+        assumePhone()
         openSettings()
         setToggle("numericInputSwitch", enabled = false)
 
@@ -238,6 +240,7 @@ class MainFlowTest {
 
     @Test
     fun newCompetitionClearsStateAndKeepsBackups() {
+        assumePhone()
         val context = appContext()
         val number = "99123"
         val folder = File(context.cacheDir, "ui-competition-${System.nanoTime()}").apply { mkdirs() }
@@ -276,6 +279,7 @@ class MainFlowTest {
 
     @Test
     fun recordingWorksWhileEventServiceActive() {
+        assumePhone()
         // Start the foreground service directly (no permission dialog), then record.
         val context = ApplicationProvider.getApplicationContext<Context>()
         RaceService.start(context)
