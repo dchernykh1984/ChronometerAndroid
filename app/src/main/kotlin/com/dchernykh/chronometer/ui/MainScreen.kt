@@ -49,6 +49,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -123,18 +124,14 @@ fun MainScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.app_name)) },
+                title = {
+                    Text(
+                        stringResource(R.string.app_name),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
                 actions = {
-                    TextButton(
-                        onClick = ::toggleTimingMode,
-                        modifier = Modifier.testTag("timingModeToggle"),
-                    ) {
-                        Text(
-                            stringResource(
-                                if (timingModeOn) R.string.timing_mode_stop else R.string.timing_mode_start,
-                            ),
-                        )
-                    }
                     TextButton(
                         onClick = onOpenSettings,
                         modifier = Modifier.testTag("settingsButton"),
@@ -150,6 +147,23 @@ fun MainScreen(
                     .fillMaxSize()
                     .padding(16.dp),
         ) {
+            // Session-wide control; full width in the content so its long label is
+            // never squeezed by the app-bar title.
+            OutlinedButton(
+                onClick = ::toggleTimingMode,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                        .testTag("timingModeToggle"),
+            ) {
+                Text(
+                    stringResource(
+                        if (timingModeOn) R.string.timing_mode_stop else R.string.timing_mode_start,
+                    ),
+                )
+            }
+
             OutlinedTextField(
                 value = number,
                 onValueChange = { input ->

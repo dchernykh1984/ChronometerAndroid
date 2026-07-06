@@ -9,6 +9,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -48,7 +50,7 @@ import com.dchernykh.chronometer.data.ThemeMode
 import com.dchernykh.chronometer.data.isUploadConfigured
 import java.util.UUID
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     viewModel: ChronometerViewModel,
@@ -175,7 +177,10 @@ fun SettingsScreen(
             )
 
             Text(stringResource(R.string.language))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 ChoiceChip(R.string.language_system, "langSystem", settings.language == AppLanguage.SYSTEM) {
                     settings = settings.copy(language = AppLanguage.SYSTEM)
                 }
@@ -191,7 +196,10 @@ fun SettingsScreen(
             }
 
             Text(stringResource(R.string.theme))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 ChoiceChip(R.string.theme_system, "themeSystem", settings.themeMode == ThemeMode.SYSTEM) {
                     settings = settings.copy(themeMode = ThemeMode.SYSTEM)
                 }
@@ -386,7 +394,7 @@ private fun ChoiceChip(
     FilterChip(
         selected = selected,
         onClick = onClick,
-        label = { Text(stringResource(labelRes)) },
+        label = { Text(stringResource(labelRes), maxLines = 1) },
         modifier = Modifier.testTag(tag),
     )
 }
