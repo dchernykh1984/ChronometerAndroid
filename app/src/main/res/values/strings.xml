@@ -41,8 +41,13 @@
     <string name="language_ru">Русский</string>
     <string name="language_kk">Қазақша</string>
     <string name="language_en">English</string>
-    <string name="race_channel_name">Active event</string>
-    <string name="race_notification_text">Timing is active</string>
-    <string name="event_start">Start event</string>
-    <string name="event_stop">Stop event</string>
+    <string name="race_channel_name">Timing mode</string>
+    <string name="race_notification_text">Timing mode is on</string>
+    <string name="timing_mode_start">Enable timing mode</string>
+    <string name="timing_mode_stop">Finish timing mode</string>
+    <string name="timing_dnd_title">Timing mode on</string>
+    <string name="timing_dnd_message">The screen will stay on and the phone will not lock. We recommend turning on Do Not Disturb so an unexpected call or notification does not interrupt timing the race.</string>
+    <string name="timing_done_title">Timing finished</string>
+    <string name="timing_done_message">If you turned on Do Not Disturb, you can turn it off now. Thank you for timing the race!</string>
+    <string name="dialog_ok">OK</string>
 </resources>

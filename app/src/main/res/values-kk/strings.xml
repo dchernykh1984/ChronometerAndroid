@@ -41,8 +41,13 @@
     <string name="language_ru">Русский</string>
     <string name="language_kk">Қазақша</string>
     <string name="language_en">English</string>
-    <string name="race_channel_name">Белсенді оқиға</string>
+    <string name="race_channel_name">Хронометраж режимі</string>
     <string name="race_notification_text">Хронометраж жүріп жатыр</string>
-    <string name="event_start">Оқиғаны бастау</string>
-    <string name="event_stop">Оқиғаны тоқтату</string>
+    <string name="timing_mode_start">Хронометраж режимін қосу</string>
+    <string name="timing_mode_stop">Хронометраж режимін аяқтау</string>
+    <string name="timing_dnd_title">Хронометраж режимі қосылды</string>
+    <string name="timing_dnd_message">Экран сөнбейді және телефон құлыпталмайды. Кенеттен қоңырау немесе хабарландыру жарысты хронометраждауға кедергі жасамауы үшін «Мазаламау» режимін қосуды ұсынамыз.</string>
+    <string name="timing_done_title">Хронометраж аяқталды</string>
+    <string name="timing_done_message">Егер «Мазаламау» режимін қосқан болсаңыз, оны енді өшіруге болады. Жарыс хронометражы үшін рахмет!</string>
+    <string name="dialog_ok">Жарайды</string>
 </resources>

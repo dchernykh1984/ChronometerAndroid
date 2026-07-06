@@ -1,6 +1,8 @@
 package com.dchernykh.chronometer
 
+import android.Manifest
 import android.content.Context
+import android.os.Build
 import androidx.annotation.StringRes
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -19,6 +21,7 @@ import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.work.WorkManager
 import com.dchernykh.chronometer.data.AppLanguage
 import com.dchernykh.chronometer.data.CutoffEvent
@@ -305,6 +308,41 @@ class MainFlowTest {
             composeRule.onNodeWithText("90123").assertExists()
         } finally {
             RaceService.stop(context)
+        }
+    }
+
+    @Test
+    fun timingButtonReflectsServiceStateAcrossRecreate() {
+        val stopLabel = localizedString(AppLanguage.EN, R.string.timing_mode_stop)
+        RaceService.start(appContext())
+        try {
+            // The real service state drives the button, not a local UI flag.
+            waitForText(stopLabel)
+            recreateAndSettle()
+            waitForText(stopLabel)
+        } finally {
+            RaceService.stop(appContext())
+        }
+    }
+
+    @Test
+    fun enablingTimingModeShowsDoNotDisturbHint() {
+        grantNotificationPermission()
+        composeRule.onNodeWithTag("timingModeToggle").performClick()
+        try {
+            waitForText(localizedString(AppLanguage.EN, R.string.timing_dnd_title))
+            composeRule.onNodeWithTag("timingOnDialogOk").performClick()
+        } finally {
+            RaceService.stop(appContext())
+        }
+    }
+
+    private fun grantNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            InstrumentationRegistry
+                .getInstrumentation()
+                .uiAutomation
+                .grantRuntimePermission(appContext().packageName, Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 
