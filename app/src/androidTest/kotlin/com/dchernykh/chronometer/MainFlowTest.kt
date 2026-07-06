@@ -30,7 +30,6 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -46,7 +45,10 @@ import java.io.File
  *
  * The soft keyboard / auto-focus can swallow the first input on the slower
  * tablet AVD, so [recordAndAwait] re-types the number until the field actually
- * holds it before pressing a record button.
+ * holds it before pressing a record button. Settings (theme, finish mode, input
+ * type, folder) apply reactively via the settings flow, so those tests avoid an
+ * `Activity.recreate()` and run reliably on both profiles; only the language test
+ * relies on the recreate the locale change itself triggers.
  */
 @RunWith(AndroidJUnit4::class)
 class MainFlowTest {
@@ -111,18 +113,6 @@ class MainFlowTest {
 
     private fun appContext(): Context = ApplicationProvider.getApplicationContext()
 
-    /**
-     * Skip on large screens (tablet). Assertions on control selection state right
-     * after an Activity recreate are flaky on the tablet AVD; the phone profile
-     * (modern API) plus the SettingsStore unit tests cover the persistence.
-     */
-    private fun assumePhone() {
-        assumeFalse(
-            "Runs on the phone profile only",
-            appContext().resources.configuration.smallestScreenWidthDp >= TABLET_SW_DP,
-        )
-    }
-
     private fun resetStoredSettings() {
         val store = SettingsStore(appContext())
         store.save(
@@ -175,6 +165,17 @@ class MainFlowTest {
         }
     }
 
+    /** Wait until the tagged node reports itself selected (survives recompositions). */
+    private fun waitUntilSelected(tag: String) {
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            composeRule
+                .onNodeWithTag(tag)
+                .fetchSemanticsNode()
+                .config
+                .getOrNull(SemanticsProperties.Selected) == true
+        }
+    }
+
     private fun localizedString(
         language: AppLanguage,
         @StringRes stringRes: Int,
@@ -201,7 +202,6 @@ class MainFlowTest {
 
     @Test
     fun logScrollsToTopAfterNewCutoff() {
-        assumePhone()
         // Fill the log so it scrolls, then move away from the top.
         repeat(LOG_FILL) { i -> recordAndAwait("cutoffButton", (10_000 + i).toString()) }
         composeRule.onNodeWithTag("cutoffLog").performScrollToIndex(LOG_FILL - 1)
@@ -214,7 +214,6 @@ class MainFlowTest {
 
     @Test
     fun languageChoiceChangesSettingsText() {
-        assumePhone()
         openSettings()
         composeRule.onNodeWithTag("langKk").performScrollTo().performClick()
 
@@ -222,52 +221,45 @@ class MainFlowTest {
         saveSettings()
 
         waitForText(localizedString(AppLanguage.KK, R.string.settings))
+        waitUntilSelected("langKk")
         composeRule.onNodeWithTag("langKk").performScrollTo().assertIsSelected()
     }
 
     @Test
-    fun themeChoicePersistsAfterActivityRecreate() {
-        assumePhone()
+    fun themeChoiceIsAppliedAndReflectedInSettings() {
         openSettings()
         composeRule.onNodeWithTag("themeDark").performScrollTo().performClick()
-
         saveSettings()
-        recreateAndSettle()
-        openSettings()
 
+        // The theme is reactive (no recreate); reopening shows it selected + stored.
+        openSettings()
+        waitUntilSelected("themeDark")
         composeRule.onNodeWithTag("themeDark").performScrollTo().assertIsSelected()
         assertEquals(ThemeMode.DARK, SettingsStore(appContext()).load().themeMode)
     }
 
     @Test
-    fun finishModeRecordsFinishAfterActivityRecreate() {
-        assumePhone()
+    fun finishModeRecordsFinish() {
         openSettings()
         setToggle("finishModeCheckbox", enabled = true)
-
         saveSettings()
-        recreateAndSettle()
-        recordAndAwait("cutoffButton", "93123")
 
+        recordAndAwait("cutoffButton", "93123")
         composeRule.onNodeWithText(CutoffEvent.FINISH).assertExists()
     }
 
     @Test
-    fun textNumberInputAllowsLettersAfterActivityRecreate() {
-        assumePhone()
+    fun textNumberInputAllowsLetters() {
         openSettings()
         setToggle("numericInputSwitch", enabled = false)
-
         saveSettings()
-        recreateAndSettle()
-        recordAndAwait("cutoffButton", "A12")
 
+        recordAndAwait("cutoffButton", "A12")
         composeRule.onNodeWithText("A12").assertExists()
     }
 
     @Test
     fun newCompetitionClearsStateAndKeepsBackups() {
-        assumePhone()
         val context = appContext()
         val number = "99123"
         val folder = File(context.cacheDir, "ui-competition-${System.nanoTime()}").apply { mkdirs() }
@@ -279,7 +271,6 @@ class MainFlowTest {
         replaceSettingsText("tokenField", "ui-token")
         replaceSettingsText("pointField", "7")
         saveSettings()
-        recreateAndSettle()
         recordAndAwait("cutoffButton", number)
         composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
             backupDir.listFiles()?.isNotEmpty() == true
@@ -306,7 +297,6 @@ class MainFlowTest {
 
     @Test
     fun recordingWorksWhileEventServiceActive() {
-        assumePhone()
         // Start the foreground service directly (no permission dialog), then record.
         val context = ApplicationProvider.getApplicationContext<Context>()
         RaceService.start(context)
@@ -320,13 +310,10 @@ class MainFlowTest {
 
     private companion object {
         // The tablet AVD is markedly slower; give the async record -> Room -> Flow
-        // pipeline and post-recreate recompositions generous headroom.
+        // pipeline and recompositions generous headroom.
         const val AWAIT_MS = 20_000L
 
-        // sw >= 600dp is the standard tablet breakpoint.
-        const val TABLET_SW_DP = 600
-
-        // Enough rows to make the log scrollable on a phone.
+        // Enough rows to make the log scrollable on either profile.
         const val LOG_FILL = 12
     }
 }
