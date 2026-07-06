@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.2.0...chronometer-android-v0.3.0) (2026-07-06)
+
+
+### Features
+
+* add app launcher icon from the Windows chronometer ([766b983](https://github.com/dchernykh1984/ChronometerAndroid/commit/766b9832b4a676bb692e4f7282f93e3c30fc774a))
+
+
+### Bug Fixes
+
+* compact the main screen in landscape so the cutoff log stays visible ([2b70637](https://github.com/dchernykh1984/ChronometerAndroid/commit/2b70637a52416e63b72075cdb720274eb8a5c6d0))
+* stop the app title and language chips from overflowing on narrow screens ([f0a8939](https://github.com/dchernykh1984/ChronometerAndroid/commit/f0a8939137026a7439d9ffc20f4333b65cf2d6ac))
+
 ## [0.2.0](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.1.0...chronometer-android-v0.2.0) (2026-07-06)
 
 
