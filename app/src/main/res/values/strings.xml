@@ -26,6 +26,9 @@
     <string name="data_folder_size">Data folder size: %1$s</string>
     <string name="confirm">Confirm</string>
     <string name="cancel">Cancel</string>
+    <string name="discard">Discard</string>
+    <string name="unsaved_changes_title">Unsaved changes</string>
+    <string name="unsaved_changes_message">You changed the settings. Save your changes?</string>
     <string name="send_enabled">Upload to site</string>
     <string name="send_requires_url_token">To upload, set a URL (http://…) and a token</string>
     <string name="storage_permission_needed">File access is needed to save cutoffs</string>

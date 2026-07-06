@@ -168,6 +168,12 @@ class MainFlowTest {
         }
     }
 
+    private fun waitForTag(tag: String) {
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            composeRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
     /** Wait until the tagged node reports itself selected (survives recompositions). */
     private fun waitUntilSelected(tag: String) {
         composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
@@ -201,6 +207,44 @@ class MainFlowTest {
     @Test
     fun opensSettingsScreen() {
         openSettings()
+    }
+
+    @Test
+    fun backWithUnsavedChangesPromptsThenDiscards() {
+        openSettings()
+        replaceSettingsText("tokenField", "unsaved-token")
+        composeRule.onNodeWithTag("backButton").performClick()
+
+        waitForTag("unsavedChangesDialog")
+        composeRule.onNodeWithTag("discardChangesButton").performClick()
+
+        // Back on the main screen and the edit was NOT persisted.
+        waitForTag("cutoffButton")
+        assertEquals("", SettingsStore(appContext()).load().token)
+    }
+
+    @Test
+    fun backWithUnsavedChangesCanSave() {
+        openSettings()
+        replaceSettingsText("tokenField", "saved-token")
+        composeRule.onNodeWithTag("backButton").performClick()
+
+        waitForTag("unsavedChangesDialog")
+        composeRule.onNodeWithTag("saveChangesButton").performClick()
+
+        waitForTag("cutoffButton")
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            SettingsStore(appContext()).load().token == "saved-token"
+        }
+    }
+
+    @Test
+    fun backWithoutChangesReturnsWithoutDialog() {
+        openSettings()
+        composeRule.onNodeWithTag("backButton").performClick()
+
+        waitForTag("cutoffButton")
+        assertTrue(composeRule.onAllNodesWithTag("unsavedChangesDialog").fetchSemanticsNodes().isEmpty())
     }
 
     @Test
