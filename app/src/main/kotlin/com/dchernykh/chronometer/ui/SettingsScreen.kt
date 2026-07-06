@@ -3,6 +3,7 @@ package com.dchernykh.chronometer.ui
 import android.Manifest
 import android.app.Activity
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
@@ -54,13 +55,15 @@ fun SettingsScreen(
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
-    var settings by remember { mutableStateOf(viewModel.loadSettings()) }
+    // Baseline to detect edits; reset after a save or a "New competition".
+    var initialSettings by remember { mutableStateOf(viewModel.loadSettings()) }
+    var settings by remember { mutableStateOf(initialSettings) }
     var storageGranted by remember { mutableStateOf(StoragePermission.isGranted(context)) }
     var folderRefresh by remember { mutableStateOf(0) }
     val folderSizeBytes by produceState(0L, folderRefresh) { value = viewModel.dataFolderSizeBytes() }
     var confirmNewCompetition by remember { mutableStateOf(false) }
     var newCompetitionFailed by remember { mutableStateOf(false) }
-    val initialLanguage = remember { viewModel.loadSettings().language }
+    var showUnsavedDialog by remember { mutableStateOf(false) }
 
     val manageLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -79,12 +82,36 @@ fun SettingsScreen(
         }
     }
 
+    val sendMisconfigured = settings.sendEnabled && !settings.isUploadConfigured
+    val hasUnsavedChanges = settings != initialSettings
+
+    fun saveAndExit() {
+        viewModel.saveSettings(settings)
+        if (settings.language != initialSettings.language) {
+            // Re-run attachBaseContext with the new locale.
+            (context as? Activity)?.recreate()
+        } else {
+            onBack()
+        }
+    }
+
+    // Going back with pending edits asks to save/discard instead of dropping them.
+    fun attemptBack() {
+        if (hasUnsavedChanges) {
+            showUnsavedDialog = true
+        } else {
+            onBack()
+        }
+    }
+
+    BackHandler { attemptBack() }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.settings)) },
                 navigationIcon = {
-                    TextButton(onClick = onBack, modifier = Modifier.testTag("backButton")) {
+                    TextButton(onClick = { attemptBack() }, modifier = Modifier.testTag("backButton")) {
                         Text(stringResource(R.string.back))
                     }
                 },
@@ -220,7 +247,6 @@ fun SettingsScreen(
                 )
             }
 
-            val sendMisconfigured = settings.sendEnabled && !settings.isUploadConfigured
             if (sendMisconfigured) {
                 Text(
                     text = stringResource(R.string.send_requires_url_token),
@@ -257,47 +283,88 @@ fun SettingsScreen(
             }
 
             Button(
-                onClick = {
-                    viewModel.saveSettings(settings)
-                    if (settings.language != initialLanguage) {
-                        // Re-run attachBaseContext with the new locale.
-                        (context as? Activity)?.recreate()
-                    } else {
-                        onBack()
-                    }
-                },
+                onClick = { saveAndExit() },
                 enabled = !sendMisconfigured,
                 modifier = Modifier.fillMaxWidth().testTag("saveButton"),
             ) { Text(stringResource(R.string.save)) }
         }
 
-        if (confirmNewCompetition) {
-            AlertDialog(
-                onDismissRequest = { confirmNewCompetition = false },
-                title = { Text(stringResource(R.string.new_competition)) },
-                text = { Text(stringResource(R.string.new_competition_confirm)) },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            confirmNewCompetition = false
-                            viewModel.startNewCompetition { success ->
-                                newCompetitionFailed = !success
-                                if (success) {
-                                    settings = viewModel.loadSettings()
-                                    folderRefresh++
-                                }
-                            }
-                        },
-                        modifier = Modifier.testTag("confirmNewCompetition"),
-                    ) { Text(stringResource(R.string.confirm)) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { confirmNewCompetition = false }) {
-                        Text(stringResource(R.string.cancel))
+        SettingsDialogs(
+            confirmNewCompetition = confirmNewCompetition,
+            showUnsavedDialog = showUnsavedDialog,
+            saveEnabled = !sendMisconfigured,
+            onConfirmNewCompetition = {
+                confirmNewCompetition = false
+                viewModel.startNewCompetition { success ->
+                    newCompetitionFailed = !success
+                    if (success) {
+                        // Persisted already: reset the baseline so a later back
+                        // press does not re-prompt to save.
+                        settings = viewModel.loadSettings()
+                        initialSettings = settings
+                        folderRefresh++
                     }
-                },
-            )
-        }
+                }
+            },
+            onDismissNewCompetition = { confirmNewCompetition = false },
+            onSaveChanges = {
+                showUnsavedDialog = false
+                saveAndExit()
+            },
+            onDiscardChanges = {
+                showUnsavedDialog = false
+                onBack()
+            },
+            onDismissUnsaved = { showUnsavedDialog = false },
+        )
+    }
+}
+
+@Composable
+private fun SettingsDialogs(
+    confirmNewCompetition: Boolean,
+    showUnsavedDialog: Boolean,
+    saveEnabled: Boolean,
+    onConfirmNewCompetition: () -> Unit,
+    onDismissNewCompetition: () -> Unit,
+    onSaveChanges: () -> Unit,
+    onDiscardChanges: () -> Unit,
+    onDismissUnsaved: () -> Unit,
+) {
+    if (confirmNewCompetition) {
+        AlertDialog(
+            onDismissRequest = onDismissNewCompetition,
+            title = { Text(stringResource(R.string.new_competition)) },
+            text = { Text(stringResource(R.string.new_competition_confirm)) },
+            confirmButton = {
+                TextButton(onClick = onConfirmNewCompetition, modifier = Modifier.testTag("confirmNewCompetition")) {
+                    Text(stringResource(R.string.confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissNewCompetition) { Text(stringResource(R.string.cancel)) }
+            },
+        )
+    }
+    if (showUnsavedDialog) {
+        AlertDialog(
+            onDismissRequest = onDismissUnsaved,
+            title = { Text(stringResource(R.string.unsaved_changes_title)) },
+            text = { Text(stringResource(R.string.unsaved_changes_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = onSaveChanges,
+                    enabled = saveEnabled,
+                    modifier = Modifier.testTag("saveChangesButton"),
+                ) { Text(stringResource(R.string.save)) }
+            },
+            dismissButton = {
+                TextButton(onClick = onDiscardChanges, modifier = Modifier.testTag("discardChangesButton")) {
+                    Text(stringResource(R.string.discard))
+                }
+            },
+            modifier = Modifier.testTag("unsavedChangesDialog"),
+        )
     }
 }
 

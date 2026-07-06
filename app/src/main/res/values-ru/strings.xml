@@ -26,6 +26,9 @@
     <string name="data_folder_size">Размер папки с данными: %1$s</string>
     <string name="confirm">Подтвердить</string>
     <string name="cancel">Отмена</string>
+    <string name="discard">Отклонить</string>
+    <string name="unsaved_changes_title">Несохранённые изменения</string>
+    <string name="unsaved_changes_message">Вы изменили настройки. Сохранить внесённые изменения?</string>
     <string name="send_enabled">Отправлять на сайт</string>
     <string name="send_requires_url_token">Для отправки укажите адрес (http://…) и токен</string>
     <string name="storage_permission_needed">Нужен доступ к файлам, чтобы сохранять отсечки</string>

@@ -26,6 +26,9 @@
     <string name="data_folder_size">Деректер қалтасының өлшемі: %1$s</string>
     <string name="confirm">Растау</string>
     <string name="cancel">Болдырмау</string>
+    <string name="discard">Қабылдамау</string>
+    <string name="unsaved_changes_title">Сақталмаған өзгерістер</string>
+    <string name="unsaved_changes_message">Сіз баптауларды өзгерттіңіз. Өзгерістерді сақтайсыз ба?</string>
     <string name="send_enabled">Сайтқа жіберу</string>
     <string name="send_requires_url_token">Жіберу үшін мекенжай (http://…) және токен көрсетіңіз</string>
     <string name="storage_permission_needed">Белгілерді сақтау үшін файлдарға рұқсат қажет</string>
