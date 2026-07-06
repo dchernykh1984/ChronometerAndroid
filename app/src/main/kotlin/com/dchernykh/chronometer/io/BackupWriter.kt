@@ -8,8 +8,8 @@ import java.nio.file.StandardCopyOption
 
 /**
  * Writes the timing files into the user-configured folder (all-files access):
- *  - `<folder>/results.txt`         current list, the input for existing tools;
- *  - `<folder>/backup/<millis>.txt` an immutable per-press snapshot.
+ *  - `<folder>/results.txt`        current list, the input for existing tools;
+ *  - `<folder>/backup/<stamp>.txt` an immutable per-press snapshot.
  *
  * Each file is written to a temp file (fsynced) and then atomically replaced, so
  * a crash mid-write cannot leave a partially written file. Failures never throw
@@ -20,7 +20,7 @@ class BackupWriter {
     fun writeSnapshot(
         folderPath: String,
         items: List<String>,
-        stampMs: Long,
+        stamp: Long,
     ): Boolean =
         runCatching {
             val folder = File(folderPath)
@@ -28,9 +28,26 @@ class BackupWriter {
             val body = if (items.isEmpty()) "" else items.joinToString(separator = "\n", postfix = "\n")
             writeAtomically(File(folder, "results.txt"), body)
             val backupDir = File(folder, "backup").apply { mkdirs() }
-            writeAtomically(File(backupDir, "$stampMs.txt"), body)
+            // Never overwrite an existing snapshot (e.g. two presses on the same
+            // stamp): pick a free "<stamp>.txt" / "<stamp>-N.txt" name instead.
+            writeAtomically(freeBackupFile(backupDir, stamp), body)
             true
         }.getOrDefault(false)
+
+    private fun freeBackupFile(
+        backupDir: File,
+        stamp: Long,
+    ): File {
+        val base = File(backupDir, "$stamp.txt")
+        if (!base.exists()) {
+            return base
+        }
+        var suffix = 1
+        while (File(backupDir, "$stamp-$suffix.txt").exists()) {
+            suffix++
+        }
+        return File(backupDir, "$stamp-$suffix.txt")
+    }
 
     /**
      * Reset `results.txt` to empty for a new competition. The `backup/` snapshots

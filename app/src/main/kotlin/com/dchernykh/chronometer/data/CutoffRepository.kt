@@ -51,21 +51,24 @@ class CutoffRepository(
         val now = System.currentTimeMillis()
         val timeStr = TimeFormatter.currentTimeString(now)
 
-        dao.insert(
-            CutoffEntity(
-                number = trimmed,
-                timeStr = timeStr,
-                event = event,
-                createdAt = now,
-            ),
-        )
+        val id =
+            dao.insert(
+                CutoffEntity(
+                    number = trimmed,
+                    timeStr = timeStr,
+                    event = event,
+                    createdAt = now,
+                ),
+            )
         settingsStore.nextClientRevision()
 
         val settings = settingsStore.load()
         val items = dao.getAll().map { it.toItem() }
+        // Name the snapshot by the unique row id, not the millisecond clock, so two
+        // presses in the same millisecond never collide.
         val backupOk =
             withContext(Dispatchers.IO) {
-                backupWriter.writeSnapshot(settings.folderPath, items, now)
+                backupWriter.writeSnapshot(settings.folderPath, items, id)
             }
         backupFailedState.value = !backupOk
 
