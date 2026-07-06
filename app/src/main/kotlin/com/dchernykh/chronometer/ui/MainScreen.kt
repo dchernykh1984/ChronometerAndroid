@@ -2,6 +2,7 @@ package com.dchernykh.chronometer.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -43,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
@@ -71,6 +73,9 @@ fun MainScreen(
     var number by rememberSaveable { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
     val logState = rememberLazyListState()
+    // Landscape has little vertical room, so shrink the input controls to keep the
+    // cutoff log on screen.
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     // Keep the newest cutoff in view: jump the log back to the top on each new one.
     LaunchedEffect(cutoffs.firstOrNull()?.id) {
@@ -145,7 +150,7 @@ fun MainScreen(
                 Modifier
                     .padding(padding)
                     .fillMaxSize()
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp, vertical = if (landscape) 8.dp else 16.dp),
         ) {
             // Session-wide control; full width in the content so its long label is
             // never squeezed by the app-bar title.
@@ -199,7 +204,7 @@ fun MainScreen(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(72.dp)
+                        .height(if (landscape) 52.dp else 72.dp)
                         .padding(top = 8.dp)
                         .testTag("cutoffButton"),
             ) { Text(stringResource(R.string.cutoff), style = MaterialTheme.typography.titleLarge) }
@@ -223,12 +228,15 @@ fun MainScreen(
                 modifier = Modifier.padding(top = 8.dp),
             )
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = if (landscape) 6.dp else 12.dp))
 
             if (cutoffs.isEmpty()) {
-                Text(stringResource(R.string.log_empty))
+                Text(stringResource(R.string.log_empty), modifier = Modifier.weight(1f))
             } else {
-                LazyColumn(state = logState, modifier = Modifier.testTag("cutoffLog")) {
+                LazyColumn(
+                    state = logState,
+                    modifier = Modifier.weight(1f).testTag("cutoffLog"),
+                ) {
                     items(cutoffs, key = { it.id }) { cutoff -> CutoffRow(cutoff) }
                 }
             }
@@ -243,20 +251,35 @@ fun MainScreen(
         runCatching { focusRequester.requestFocus() }
     }
 
-    if (showTimingOnDialog) {
+    TimingDialogs(
+        showTimingOn = showTimingOnDialog,
+        showTimingDone = showTimingDoneDialog,
+        onDismissOn = { showTimingOnDialog = false },
+        onDismissDone = { showTimingDoneDialog = false },
+    )
+}
+
+@Composable
+private fun TimingDialogs(
+    showTimingOn: Boolean,
+    showTimingDone: Boolean,
+    onDismissOn: () -> Unit,
+    onDismissDone: () -> Unit,
+) {
+    if (showTimingOn) {
         InfoDialog(
             titleRes = R.string.timing_dnd_title,
             messageRes = R.string.timing_dnd_message,
             tag = "timingOnDialog",
-            onDismiss = { showTimingOnDialog = false },
+            onDismiss = onDismissOn,
         )
     }
-    if (showTimingDoneDialog) {
+    if (showTimingDone) {
         InfoDialog(
             titleRes = R.string.timing_done_title,
             messageRes = R.string.timing_done_message,
             tag = "timingDoneDialog",
-            onDismiss = { showTimingDoneDialog = false },
+            onDismiss = onDismissDone,
         )
     }
 }
