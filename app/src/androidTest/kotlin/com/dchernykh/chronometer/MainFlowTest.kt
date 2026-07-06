@@ -155,10 +155,17 @@ class MainFlowTest {
         tag: String,
         enabled: Boolean,
     ) {
-        val node = composeRule.onNodeWithTag(tag).performScrollTo()
-        val current = node.fetchSemanticsNode().config.getOrNull(SemanticsProperties.ToggleableState)
-        if ((current == ToggleableState.On) != enabled) {
-            node.performClick()
+        val target = if (enabled) ToggleableState.On else ToggleableState.Off
+        // A single tap can be dropped on the slow tablet, leaving the setting
+        // unchanged; keep tapping until the control actually reaches the target.
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            val node = composeRule.onNodeWithTag(tag).performScrollTo()
+            if (node.fetchSemanticsNode().config.getOrNull(SemanticsProperties.ToggleableState) == target) {
+                true
+            } else {
+                node.performClick()
+                false
+            }
         }
     }
 
