@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -29,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -75,18 +79,31 @@ fun MainScreen(
     }
 
     val context = LocalContext.current
-    var eventActive by rememberSaveable { mutableStateOf(false) }
+    // Source of truth is the real service, so the button is correct across
+    // recompositions, navigation, recreate and START_STICKY restarts.
+    val timingModeOn by RaceService.runningState.collectAsStateWithLifecycle()
+    var showTimingOnDialog by remember { mutableStateOf(false) }
+    var showTimingDoneDialog by remember { mutableStateOf(false) }
+
+    // While timing mode is on and the app is on screen, keep the screen awake so
+    // the phone does not dim or auto-lock during the race.
+    val view = LocalView.current
+    DisposableEffect(timingModeOn) {
+        view.keepScreenOn = timingModeOn
+        onDispose { view.keepScreenOn = false }
+    }
+
     val notificationLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
             // Start regardless: without the permission the notification is just hidden.
             RaceService.start(context)
-            eventActive = true
+            showTimingOnDialog = true
         }
 
-    fun toggleEvent() {
-        if (eventActive) {
+    fun toggleTimingMode() {
+        if (timingModeOn) {
             RaceService.stop(context)
-            eventActive = false
+            showTimingDoneDialog = true
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
@@ -94,7 +111,7 @@ fun MainScreen(
             notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else {
             RaceService.start(context)
-            eventActive = true
+            showTimingOnDialog = true
         }
     }
 
@@ -109,9 +126,15 @@ fun MainScreen(
                 title = { Text(stringResource(R.string.app_name)) },
                 actions = {
                     TextButton(
-                        onClick = ::toggleEvent,
-                        modifier = Modifier.testTag("eventToggle"),
-                    ) { Text(stringResource(if (eventActive) R.string.event_stop else R.string.event_start)) }
+                        onClick = ::toggleTimingMode,
+                        modifier = Modifier.testTag("timingModeToggle"),
+                    ) {
+                        Text(
+                            stringResource(
+                                if (timingModeOn) R.string.timing_mode_stop else R.string.timing_mode_start,
+                            ),
+                        )
+                    }
                     TextButton(
                         onClick = onOpenSettings,
                         modifier = Modifier.testTag("settingsButton"),
@@ -205,6 +228,43 @@ fun MainScreen(
         withFrameNanos { }
         runCatching { focusRequester.requestFocus() }
     }
+
+    if (showTimingOnDialog) {
+        InfoDialog(
+            titleRes = R.string.timing_dnd_title,
+            messageRes = R.string.timing_dnd_message,
+            tag = "timingOnDialog",
+            onDismiss = { showTimingOnDialog = false },
+        )
+    }
+    if (showTimingDoneDialog) {
+        InfoDialog(
+            titleRes = R.string.timing_done_title,
+            messageRes = R.string.timing_done_message,
+            tag = "timingDoneDialog",
+            onDismiss = { showTimingDoneDialog = false },
+        )
+    }
+}
+
+@Composable
+private fun InfoDialog(
+    @StringRes titleRes: Int,
+    @StringRes messageRes: Int,
+    tag: String,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(titleRes)) },
+        text = { Text(stringResource(messageRes)) },
+        confirmButton = {
+            TextButton(onClick = onDismiss, modifier = Modifier.testTag("${tag}Ok")) {
+                Text(stringResource(R.string.dialog_ok))
+            }
+        },
+        modifier = Modifier.testTag(tag),
+    )
 }
 
 @Composable

@@ -41,8 +41,13 @@
     <string name="language_ru">Русский</string>
     <string name="language_kk">Қазақша</string>
     <string name="language_en">English</string>
-    <string name="race_channel_name">Активное событие</string>
+    <string name="race_channel_name">Режим хронометража</string>
     <string name="race_notification_text">Идёт хронометраж</string>
-    <string name="event_start">Начать событие</string>
-    <string name="event_stop">Остановить событие</string>
+    <string name="timing_mode_start">Включить режим хронометража</string>
+    <string name="timing_mode_stop">Завершить режим хронометража</string>
+    <string name="timing_dnd_title">Режим хронометража включён</string>
+    <string name="timing_dnd_message">Экран не будет гаснуть, а телефон не заблокируется. Рекомендуем включить режим «Не беспокоить», чтобы неожиданный звонок или уведомление не помешали отсекать гонку.</string>
+    <string name="timing_done_title">Хронометраж завершён</string>
+    <string name="timing_done_message">Если вы включали режим «Не беспокоить», теперь его можно выключить. Спасибо за проведённый хронометраж гонки!</string>
+    <string name="dialog_ok">ОК</string>
 </resources>
