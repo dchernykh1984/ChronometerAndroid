@@ -5,6 +5,7 @@ import androidx.annotation.StringRes
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -18,12 +19,14 @@ import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.work.WorkManager
 import com.dchernykh.chronometer.data.AppLanguage
 import com.dchernykh.chronometer.data.CutoffEvent
 import com.dchernykh.chronometer.data.SettingsStore
 import com.dchernykh.chronometer.data.ThemeMode
 import com.dchernykh.chronometer.service.RaceService
 import com.dchernykh.chronometer.util.LocaleContext
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -52,6 +55,7 @@ class MainFlowTest {
 
     @Before
     fun resetBeforeTest() {
+        clearAppData()
         resetStoredSettings()
         recreateAndSettle()
     }
@@ -59,7 +63,15 @@ class MainFlowTest {
     @After
     fun resetAfterTest() {
         RaceService.stop(appContext())
+        clearAppData()
         resetStoredSettings()
+    }
+
+    /** Hermetic start: wipe cutoffs and pending work left by earlier tests/runs. */
+    private fun clearAppData() {
+        val app = appContext() as ChronometerApp
+        runBlocking { app.database.cutoffDao().deleteAll() }
+        runCatching { WorkManager.getInstance(appContext()).cancelAllWork() }
     }
 
     /** Recreate the activity and wait until the fresh main screen is interactive. */
@@ -178,7 +190,8 @@ class MainFlowTest {
     fun disqualificationShowsMarker() {
         recordAndAwait("dsqButton", "80123")
         composeRule.onNodeWithText("80123").assertExists()
-        composeRule.onNodeWithText("DSQ").assertExists()
+        // Hermetic start means exactly one DSQ row - the one we just recorded.
+        composeRule.onAllNodesWithText("DSQ").assertCountEquals(1)
     }
 
     @Test
