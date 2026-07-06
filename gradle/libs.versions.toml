@@ -23,7 +23,7 @@ coreKtx = "1.18.0"
 # train); 1.11.0 is the highest that stays on the pinned lifecycle 2.8.7 /
 # compose 1.7.6 (see the dependabot ignore for androidx.activity).
 activityCompose = "1.11.0"
-composeBom = "2024.12.01"
+composeBom = "2026.06.01"
 lifecycle = "2.8.7"
 work = "2.10.0"
 room = "2.8.4"
