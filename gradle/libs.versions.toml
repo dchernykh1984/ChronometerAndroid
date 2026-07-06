@@ -16,7 +16,7 @@ kover = "0.9.8"
 # Pinned to the compileSdk-36-compatible AndroidX train: the 2026 releases
 # require AGP 9.1+ / compileSdk 37 (hence Gradle 9), which detekt does not yet
 # support stably. Bump these together with AGP once that changes.
-coreKtx = "1.15.0"
+coreKtx = "1.19.0"
 activityCompose = "1.9.3"
 composeBom = "2024.12.01"
 lifecycle = "2.8.7"
