@@ -32,4 +32,24 @@ class UploadStatusTest {
     fun failedIsFailed() {
         assertEquals(UploadStatus.FAILED, uploadStatusOf(listOf(WorkInfo.State.FAILED)))
     }
+
+    @Test
+    fun succeededIsNotMaskedByAnOlderFailedWork() {
+        assertEquals(
+            UploadStatus.SENT,
+            uploadStatusOf(listOf(WorkInfo.State.FAILED, WorkInfo.State.SUCCEEDED)),
+        )
+        assertEquals(
+            UploadStatus.SENT,
+            uploadStatusOf(listOf(WorkInfo.State.SUCCEEDED, WorkInfo.State.FAILED)),
+        )
+    }
+
+    @Test
+    fun queuedRetryTakesPriorityOverAnOlderFailure() {
+        assertEquals(
+            UploadStatus.PENDING,
+            uploadStatusOf(listOf(WorkInfo.State.FAILED, WorkInfo.State.ENQUEUED)),
+        )
+    }
 }
