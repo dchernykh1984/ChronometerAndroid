@@ -10,6 +10,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import java.util.Locale
 
 // Non-ASCII (Cyrillic) literals are banned in source by the no-non-ascii hook, so
 // these tests assert that each language resolves to a *distinct* localized string
@@ -59,5 +60,18 @@ class LocalizationTest {
     fun wrapWithSystemLeavesContextUnchanged() {
         val base = context()
         assertSame(base, LocaleContext.wrap(base, AppLanguage.SYSTEM))
+    }
+
+    @Test
+    fun switchingBackToSystemDoesNotLeaveDefaultLocaleStuck() {
+        val original = Locale.getDefault()
+        // Pick manual languages, then return to SYSTEM.
+        LocaleContext.wrap(context(), AppLanguage.KK)
+        LocaleContext.wrap(context(), AppLanguage.RU)
+        val system = LocaleContext.wrap(context(), AppLanguage.SYSTEM)
+
+        // The process-wide default locale is never mutated by UI localization.
+        assertEquals(original, Locale.getDefault())
+        assertSame(context(), system)
     }
 }
