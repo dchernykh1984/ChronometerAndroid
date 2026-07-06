@@ -92,4 +92,22 @@ class BackupWriterTest {
     fun folderSizeIsZeroForMissingFolder() {
         assertEquals(0L, writer.folderSizeBytes(File(temp.root, "missing").path))
     }
+
+    @Test
+    fun sameStampKeepsBothBackupsInsteadOfOverwriting() {
+        val folder = temp.newFolder("data")
+        writer.writeSnapshot(folder.path, listOf("1#t#nextLap#"), 42)
+        writer.writeSnapshot(folder.path, listOf("2#t#nextLap#"), 42)
+
+        val backups =
+            File(folder, "backup")
+                .listFiles()
+                .orEmpty()
+                .map { it.name }
+                .filter { it.endsWith(".txt") }
+                .sorted()
+        assertEquals(listOf("42-1.txt", "42.txt"), backups)
+        assertEquals("1#t#nextLap#\n", File(folder, "backup/42.txt").readText())
+        assertEquals("2#t#nextLap#\n", File(folder, "backup/42-1.txt").readText())
+    }
 }
