@@ -4,8 +4,28 @@ Offline-first Android chronometer for bike-event timing. It captures split
 times without a network connection and auto-forwards them to the server once
 connectivity returns.
 
-> **Status:** project scaffolding and engineering practices only. Application
-> functionality is not implemented yet.
+## Features
+
+- Record split times ("cutoffs") offline with a big, hard-to-miss **Cutoff**
+  button; a small secondary button records a **DSQ** (disqualification). Every
+  cutoff is written to a local Room database first, so nothing is lost on a
+  crash, and the log auto-scrolls to the newest entry.
+- **Finish mode** records `finish` instead of `nextLap`, and the participant
+  number field accepts digits (default) or free text.
+- Mirrors each press to plain files in a user-chosen folder: `results.txt` (the
+  format the desktop referee tools consume) plus an immutable `backup/<id>.txt`
+  snapshot per press, written atomically.
+- Optionally uploads the accumulated snapshot to a server over HTTP(S) via
+  WorkManager when connectivity is available; turning uploads on also flushes
+  cutoffs recorded while offline. See
+  [docs/server-protocol.md](docs/server-protocol.md).
+- **Timing mode**: a foreground service with an ongoing notification keeps the
+  app alive during a long race; while it is on, the screen stays awake and the
+  app suggests enabling Do Not Disturb.
+- UI localized in **English, Russian and Kazakh** (switchable in settings,
+  defaults to the system language); light / dark / system theme; and a "New
+  competition" reset. Settings, cutoffs and in-progress input survive minimize
+  and restart.
 
 ## Setup
 
@@ -116,6 +136,51 @@ To run all checks manually across every file:
 ```bash
 pre-commit run --all-files
 ```
+
+## Using the app
+
+Open **Settings** (top bar) to configure the site URL and upload token, the
+control-point number, the data folder, the number input type, finish mode, theme
+and language, and to grant file access. Recording works without any of this;
+uploads require a URL and a token.
+
+On the main screen, **Enable timing mode** starts the foreground service (keeping
+the app alive and the screen awake for the race) and reminds you to turn on Do
+Not Disturb; **Finish timing mode** stops it. Type a number and tap **Cutoff**
+(or press Enter); the small button records a **DSQ**.
+
+### Permissions
+
+- **All-files access** (`MANAGE_EXTERNAL_STORAGE` on API 30+, or
+  `WRITE_EXTERNAL_STORAGE` on API 24-29) to write into the chosen shared-storage
+  folder. This is a deliberate choice over SAF - see
+  [docs/storage-access-decision.md](docs/storage-access-decision.md).
+- **Notifications** (`POST_NOTIFICATIONS`, API 33+) for the timing-mode
+  notification; recording still works if it is denied.
+- Foreground-service permissions for timing mode, and `INTERNET` for uploads.
+
+### Data files
+
+In the configured folder (default `/sdcard/android_chronometer`):
+
+- `results.txt` - the current list of cutoffs, one `number#time#event#` per line;
+- `backup/<id>.txt` - one immutable snapshot per press.
+
+"New competition" clears the cutoff list, the upload token and the point number
+but **keeps the backups**; settings show the data folder's size so you can clean
+old backups up manually.
+
+## Continuous integration and releases
+
+Pull requests must pass the required checks before review: the Gradle gate
+(`android` - ktlint, detekt, Android Lint, unit tests, Kover coverage, assemble),
+instrumented UI tests on both a phone and a tablet emulator, CodeQL, an OSV
+dependency scan, actionlint, pre-commit and commitizen.
+
+Releases are automated. `release-please` maintains a version-bump PR from the
+Conventional Commits; merging it tags a GitHub Release, and the **Build and
+Distribute** workflow (called automatically) attaches a signed, attested APK -
+no manual tag push required.
 
 ## Contributing
 
