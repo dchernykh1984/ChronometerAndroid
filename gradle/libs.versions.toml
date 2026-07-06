@@ -19,7 +19,10 @@ kover = "0.9.8"
 # core-ktx 1.19.0 already needs compileSdk 37; 1.18.0 is the highest that builds
 # against 36 (see the dependabot ignore for androidx.core).
 coreKtx = "1.18.0"
-activityCompose = "1.9.3"
+# activity-compose 1.12.0+ drags lifecycle 2.9.x and compose 1.9.x (the 2026
+# train); 1.11.0 is the highest that stays on the pinned lifecycle 2.8.7 /
+# compose 1.7.6 (see the dependabot ignore for androidx.activity).
+activityCompose = "1.11.0"
 composeBom = "2024.12.01"
 lifecycle = "2.8.7"
 work = "2.10.0"
