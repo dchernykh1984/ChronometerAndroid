@@ -22,6 +22,10 @@ updates:
         versions: [">=1.19"]
       - dependency-name: "androidx.core:core"
         versions: [">=1.19"]
+      # activity-compose 1.12.0+ pulls the 2026 train (lifecycle 2.9.x, compose
+      # 1.9.x); 1.11.x is the highest that stays on the pinned lifecycle 2.8.7.
+      - dependency-name: "androidx.activity:activity-compose"
+        versions: [">=1.12"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
