@@ -22,6 +22,10 @@ updates:
         versions: [">=9"]
       - dependency-name: "com.android.tools.build:gradle"
         versions: [">=9"]
+      # The Gradle wrapper itself: AGP 8.13.2 and detekt 1.23.8 do not run on
+      # Gradle 9 yet. Dependabot names the wrapper update "gradle".
+      - dependency-name: "gradle"
+        versions: [">=9"]
       - dependency-name: "org.jetbrains.kotlin.android"
         versions: [">=2.3"]
       - dependency-name: "org.jetbrains.kotlin:*"
@@ -41,6 +45,11 @@ updates:
       # is the highest that stays on the pinned lifecycle 2.8.7.
       - dependency-name: "androidx.compose:compose-bom"
         versions: [">=2025.08"]
+      # lifecycle 2.9.0+ is the 2026 train: it breaks the androidTest classpath
+      # (concurrent-futures 1.1.0 vs espresso's 1.2.0) the same way compose 1.9.x
+      # does; 2.8.7 is the highest that stays on the pinned compileSdk-36 train.
+      - dependency-name: "androidx.lifecycle:*"
+        versions: [">=2.9"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
