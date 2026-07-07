@@ -21,9 +21,13 @@ kover = "0.9.8"
 coreKtx = "1.18.0"
 # activity-compose 1.12.0+ drags lifecycle 2.9.x and compose 1.9.x (the 2026
 # train); 1.11.0 is the highest that stays on the pinned lifecycle 2.8.7 /
-# compose 1.7.6 (see the dependabot ignore for androidx.activity).
+# compose 1.8.x (see the dependabot ignore for androidx.activity).
 activityCompose = "1.11.0"
-composeBom = "2026.06.01"
+# compose-bom 2025.08.00+ pulls compose 1.9.x, which drags lifecycle 2.9.x (the
+# 2026 train) and breaks the androidTest classpath (concurrent-futures 1.1.0 vs
+# espresso's 1.2.0); 2025.07.00 (compose 1.8.3) is the highest that stays on the
+# pinned lifecycle 2.8.7 (see the dependabot ignore for androidx.compose).
+composeBom = "2025.07.00"
 lifecycle = "2.8.7"
 work = "2.10.0"
 room = "2.8.4"
