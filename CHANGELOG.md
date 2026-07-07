@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.3.0...chronometer-android-v0.4.0) (2026-07-07)
+
+
+### Features
+
+* lock phones to portrait, leave large screens unrestricted ([552b257](https://github.com/dchernykh1984/ChronometerAndroid/commit/552b25701ba64d6ec15b2769a9c9876320630bf2))
+
 ## [0.3.0](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.2.0...chronometer-android-v0.3.0) (2026-07-06)
 
 
