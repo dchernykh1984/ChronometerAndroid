@@ -28,7 +28,10 @@ activityCompose = "1.11.0"
 # espresso's 1.2.0); 2025.07.00 (compose 1.8.3) is the highest that stays on the
 # pinned lifecycle 2.8.7 (see the dependabot ignore for androidx.compose).
 composeBom = "2025.07.00"
-lifecycle = "2.11.0"
+# lifecycle 2.9.0+ is the 2026 train (breaks the androidTest classpath the same
+# way compose 1.9.x does); 2.8.7 is the highest compatible pin (see the
+# dependabot ignore for androidx.lifecycle).
+lifecycle = "2.8.7"
 work = "2.11.2"
 room = "2.8.4"
 coroutines = "1.11.0"
