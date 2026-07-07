@@ -36,6 +36,11 @@ updates:
       # 1.9.x); 1.11.x is the highest that stays on the pinned lifecycle 2.8.7.
       - dependency-name: "androidx.activity:activity-compose"
         versions: [">=1.12"]
+      # compose-bom 2025.08.00+ pulls compose 1.9.x (lifecycle 2.9.x, the 2026
+      # train) and breaks the androidTest classpath; 2025.07.00 (compose 1.8.3)
+      # is the highest that stays on the pinned lifecycle 2.8.7.
+      - dependency-name: "androidx.compose:compose-bom"
+        versions: [">=2025.08"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
