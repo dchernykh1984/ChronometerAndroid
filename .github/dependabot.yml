@@ -28,6 +28,10 @@ updates:
         versions: [">=9"]
       - dependency-name: "org.jetbrains.kotlin.android"
         versions: [">=2.3"]
+      # Shares the single `kotlin` catalog version with kotlin.android, so it has
+      # to be ignored too or Dependabot bumps `kotlin` through this plugin id.
+      - dependency-name: "org.jetbrains.kotlin.plugin.compose"
+        versions: [">=2.3"]
       - dependency-name: "org.jetbrains.kotlin:*"
         versions: [">=2.3"]
       # androidx.core 1.19.0+ requires compileSdk 37 / AGP 9.1; 1.18.x is the
