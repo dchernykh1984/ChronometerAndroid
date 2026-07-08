@@ -51,10 +51,22 @@ private fun AppRoot() {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     ChronometerTheme(themeMode = settings.themeMode) {
         var showSettings by rememberSaveable { mutableStateOf(false) }
+        // Held here, not in MainScreen: opening Settings swaps MainScreen out of
+        // the composition, which would reset its own state. Hoisting the pending
+        // number and DSQ reason to this stable parent keeps them across the trip.
+        var number by rememberSaveable { mutableStateOf("") }
+        var dsqReason by rememberSaveable { mutableStateOf("") }
         if (showSettings) {
             SettingsScreen(viewModel, onBack = { showSettings = false })
         } else {
-            MainScreen(viewModel, onOpenSettings = { showSettings = true })
+            MainScreen(
+                viewModel = viewModel,
+                onOpenSettings = { showSettings = true },
+                number = number,
+                onNumberChange = { number = it },
+                dsqReason = dsqReason,
+                onDsqReasonChange = { dsqReason = it },
+            )
         }
     }
 }

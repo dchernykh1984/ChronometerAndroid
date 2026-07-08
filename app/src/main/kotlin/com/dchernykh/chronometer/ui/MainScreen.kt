@@ -37,7 +37,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -65,13 +64,15 @@ import com.dchernykh.chronometer.service.RaceService
 fun MainScreen(
     viewModel: ChronometerViewModel,
     onOpenSettings: () -> Unit,
+    number: String,
+    onNumberChange: (String) -> Unit,
+    dsqReason: String,
+    onDsqReasonChange: (String) -> Unit,
 ) {
     val cutoffs by viewModel.cutoffs.collectAsStateWithLifecycle()
     val uploadStatus by viewModel.uploadStatus.collectAsStateWithLifecycle()
     val backupFailed by viewModel.backupFailed.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
-    var number by rememberSaveable { mutableStateOf("") }
-    var dsqReason by rememberSaveable { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
     val logState = rememberLazyListState()
     // Landscape has little vertical room, so shrink the input controls to keep the
@@ -123,7 +124,7 @@ fun MainScreen(
     }
 
     fun clearAndRefocus() {
-        number = ""
+        onNumberChange("")
         focusRequester.requestFocus()
     }
 
@@ -173,7 +174,7 @@ fun MainScreen(
             OutlinedTextField(
                 value = number,
                 onValueChange = { input ->
-                    number = if (settings.numericInput) input.filter(Char::isDigit) else input
+                    onNumberChange(if (settings.numericInput) input.filter(Char::isDigit) else input)
                 },
                 label = { Text(stringResource(R.string.number)) },
                 singleLine = true,
@@ -220,7 +221,7 @@ fun MainScreen(
             ) {
                 OutlinedTextField(
                     value = dsqReason,
-                    onValueChange = { dsqReason = it },
+                    onValueChange = { onDsqReasonChange(it) },
                     placeholder = { Text(stringResource(R.string.dsq_reason_hint)) },
                     singleLine = true,
                     modifier =
@@ -231,7 +232,7 @@ fun MainScreen(
                 OutlinedButton(
                     onClick = {
                         viewModel.recordDisqualification(number, dsqReason)
-                        dsqReason = ""
+                        onDsqReasonChange("")
                         clearAndRefocus()
                     },
                     modifier = Modifier.testTag("dsqButton"),
