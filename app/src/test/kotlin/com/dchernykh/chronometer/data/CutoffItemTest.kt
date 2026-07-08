@@ -17,6 +17,12 @@ class CutoffItemTest {
     }
 
     @Test
+    fun disqualifiedWithReasonItem() {
+        val cutoff = cutoff(CutoffEvent.dsq("cut the course"))
+        assertEquals("42#1 2:3:4.005#DSQ: cut the course#", cutoff.toItem())
+    }
+
+    @Test
     fun finishItem() {
         val cutoff = cutoff(CutoffEvent.FINISH)
         assertEquals("42#1 2:3:4.005#finish#", cutoff.toItem())

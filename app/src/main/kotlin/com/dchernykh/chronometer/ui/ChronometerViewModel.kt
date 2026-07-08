@@ -48,8 +48,11 @@ class ChronometerViewModel(
         viewModelScope.launch { repository.record(number, event) }
     }
 
-    fun recordDisqualification(number: String) {
-        viewModelScope.launch { repository.record(number, CutoffEvent.DSQ) }
+    fun recordDisqualification(
+        number: String,
+        reason: String = "",
+    ) {
+        viewModelScope.launch { repository.record(number, CutoffEvent.dsq(reason)) }
     }
 
     fun loadSettings(): Settings = app.settingsStore.load()

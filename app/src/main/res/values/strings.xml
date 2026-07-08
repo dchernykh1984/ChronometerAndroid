@@ -4,6 +4,7 @@
     <string name="number">Number</string>
     <string name="cutoff">Cutoff</string>
     <string name="disqualify">Disqualify</string>
+    <string name="dsq_reason_hint">Disqualification reason</string>
     <string name="log_empty">No cutoffs yet</string>
     <string name="back">Back</string>
     <string name="save">Save</string>

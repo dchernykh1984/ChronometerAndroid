@@ -4,6 +4,7 @@
     <string name="number">Нөмір</string>
     <string name="cutoff">Белгілеу</string>
     <string name="disqualify">Дисквалификация</string>
+    <string name="dsq_reason_hint">Дисквалификация себебі</string>
     <string name="log_empty">Әзірге белгілер жоқ</string>
     <string name="back">Артқа</string>
     <string name="save">Сақтау</string>

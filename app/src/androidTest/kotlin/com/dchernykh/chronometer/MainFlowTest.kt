@@ -212,6 +212,20 @@ class MainFlowTest {
     }
 
     @Test
+    fun disqualificationWithReasonShowsReasonInLog() {
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            composeRule.onNodeWithTag("numberField").performTextReplacement("80124")
+            numberFieldText() == "80124"
+        }
+        composeRule.onNodeWithTag("dsqReasonField").performTextReplacement("cut the course")
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            composeRule.onNodeWithTag("dsqButton").performClick()
+            composeRule.onAllNodesWithText("80124").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithText("DSQ: cut the course").assertExists()
+    }
+
+    @Test
     fun opensSettingsScreen() {
         openSettings()
     }

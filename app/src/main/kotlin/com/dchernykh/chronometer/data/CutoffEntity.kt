@@ -16,6 +16,21 @@ object CutoffEvent {
 
     /** Which event a regular cutoff press records, per the finish-mode toggle. */
     fun lapEvent(finishMode: Boolean): String = if (finishMode) FINISH else NEXT_LAP
+
+    /**
+     * The disqualification event: bare [DSQ] when no reason is given (backward compatible)
+     * or `DSQ: <reason>`. `#` and line breaks are stripped from the reason so it can never
+     * break the `#`-delimited `number#time#event#` record; surrounding space is trimmed.
+     */
+    fun dsq(reason: String = ""): String {
+        val cleaned =
+            reason
+                .replace('#', ' ')
+                .replace('\n', ' ')
+                .replace('\r', ' ')
+                .trim()
+        return if (cleaned.isEmpty()) DSQ else "$DSQ: $cleaned"
+    }
 }
 
 /**

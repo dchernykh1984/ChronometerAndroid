@@ -71,6 +71,7 @@ fun MainScreen(
     val backupFailed by viewModel.backupFailed.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     var number by rememberSaveable { mutableStateOf("") }
+    var dsqReason by rememberSaveable { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
     val logState = rememberLazyListState()
     // Landscape has little vertical room, so shrink the input controls to keep the
@@ -210,17 +211,37 @@ fun MainScreen(
             ) { Text(stringResource(R.string.cutoff), style = MaterialTheme.typography.titleLarge) }
 
             // Disqualification is rare: keep it small and secondary to avoid mis-taps.
-            OutlinedButton(
-                onClick = {
-                    viewModel.recordDisqualification(number)
-                    clearAndRefocus()
-                },
-                modifier =
-                    Modifier
-                        .align(Alignment.End)
-                        .padding(top = 4.dp)
-                        .testTag("dsqButton"),
-            ) { Text(stringResource(R.string.disqualify), style = MaterialTheme.typography.labelLarge) }
+            // The reason field sits to the left of the button in the otherwise empty row;
+            // its placeholder disappears once the referee starts typing.
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedTextField(
+                    value = dsqReason,
+                    onValueChange = { dsqReason = it },
+                    placeholder = { Text(stringResource(R.string.dsq_reason_hint)) },
+                    singleLine = true,
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .testTag("dsqReasonField"),
+                )
+                OutlinedButton(
+                    onClick = {
+                        viewModel.recordDisqualification(number, dsqReason)
+                        dsqReason = ""
+                        clearAndRefocus()
+                    },
+                    modifier = Modifier.testTag("dsqButton"),
+                ) {
+                    Text(
+                        stringResource(R.string.disqualify),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+            }
 
             Diagnostics(
                 uploadStatus = uploadStatus,
@@ -322,7 +343,7 @@ private fun CutoffRow(cutoff: CutoffEntity) {
         Text(
             text = cutoff.event,
             color =
-                if (cutoff.event == CutoffEvent.DSQ) {
+                if (cutoff.event.startsWith(CutoffEvent.DSQ)) {
                     MaterialTheme.colorScheme.error
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
