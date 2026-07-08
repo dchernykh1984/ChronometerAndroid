@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.4.0...chronometer-android-v0.5.0) (2026-07-08)
+
+
+### Features
+
+* record a disqualification reason as DSQ: reason ([81bf14c](https://github.com/dchernykh1984/ChronometerAndroid/commit/81bf14c2cbae304617192480fb60aa705668a860))
+
 ## [0.4.0](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.3.0...chronometer-android-v0.4.0) (2026-07-07)
 
 
