@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.5.0...chronometer-android-v0.5.1) (2026-07-08)
+
+
+### Bug Fixes
+
+* keep the pending number and DSQ reason across the settings screen ([cac98d1](https://github.com/dchernykh1984/ChronometerAndroid/commit/cac98d1b61400ae1d8099521d3ecea0bdeadd6a2))
+
 ## [0.5.0](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.4.0...chronometer-android-v0.5.0) (2026-07-08)
 
 
