@@ -88,13 +88,25 @@ class MainFlowTest {
         }
     }
 
-    private fun numberFieldText(): String? =
+    private fun numberFieldText(): String? = editableTextOf("numberField")
+
+    private fun dsqReasonFieldText(): String? = editableTextOf("dsqReasonField")
+
+    private fun editableTextOf(tag: String): String? =
         composeRule
-            .onNodeWithTag("numberField")
+            .onNodeWithTag(tag)
             .fetchSemanticsNode()
             .config
             .getOrNull(SemanticsProperties.EditableText)
             ?.text
+
+    /** Type into the number field and wait until it actually holds it, without recording. */
+    private fun typePendingNumber(number: String) {
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            composeRule.onNodeWithTag("numberField").performTextReplacement(number)
+            numberFieldText() == number
+        }
+    }
 
     private fun recordAndAwait(
         tag: String,
@@ -266,6 +278,44 @@ class MainFlowTest {
 
         waitForTag("cutoffButton")
         assertTrue(composeRule.onAllNodesWithTag("unsavedChangesDialog").fetchSemanticsNodes().isEmpty())
+    }
+
+    @Test
+    fun pendingNumberAndReasonSurviveSettingsBack() {
+        typePendingNumber("70200")
+        composeRule.onNodeWithTag("dsqReasonField").performTextReplacement("cut the course")
+        openSettings()
+        composeRule.onNodeWithTag("backButton").performClick()
+        waitForTag("numberField")
+        assertEquals("70200", numberFieldText())
+        assertEquals("cut the course", dsqReasonFieldText())
+    }
+
+    @Test
+    fun pendingNumberAndReasonSurviveSettingsSave() {
+        typePendingNumber("70201")
+        composeRule.onNodeWithTag("dsqReasonField").performTextReplacement("false start")
+        openSettings()
+        saveSettings()
+        waitForTag("numberField")
+        assertEquals("70201", numberFieldText())
+        assertEquals("false start", dsqReasonFieldText())
+    }
+
+    @Test
+    fun textNumberKeptVerbatimWhenInputSwitchedToNumeric() {
+        // Text mode accepts letters, so enter an alphanumeric bib.
+        openSettings()
+        setToggle("numericInputSwitch", enabled = false)
+        saveSettings()
+        waitForTag("numberField")
+        typePendingNumber("A12")
+        // Switching the input type to numeric must not rewrite the pending value (A1).
+        openSettings()
+        setToggle("numericInputSwitch", enabled = true)
+        saveSettings()
+        waitForTag("numberField")
+        assertEquals("A12", numberFieldText())
     }
 
     @Test
