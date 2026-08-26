@@ -500,6 +500,20 @@ class MainFlowTest {
         composeRule.onNodeWithTag("editSaveButton").assertIsNotEnabled()
     }
 
+    @Test
+    fun newCutoffsCanBeRecordedWhileAnotherRowIsBeingEdited() {
+        recordAndAwait("cutoffButton", "70330")
+        enterEditMode()
+        composeRule.onNodeWithTag("editNumberField").performTextReplacement("70331")
+
+        // A new cutoff can still be recorded while the earlier row is mid-edit.
+        recordAndAwait("cutoffButton", "70340")
+
+        composeRule.onNodeWithText("70340").assertExists()
+        // The earlier row is still being edited (it just slid down under the new one).
+        composeRule.onNodeWithTag("editSaveButton").assertExists()
+    }
+
     private fun grantNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             InstrumentationRegistry
