@@ -339,6 +339,19 @@ private fun cutoffEventColor(event: String) =
     }
 
 @Composable
+private fun EventLabel(
+    event: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = event,
+        color = cutoffEventColor(event),
+        style = MaterialTheme.typography.labelLarge,
+        modifier = modifier,
+    )
+}
+
+@Composable
 private fun CutoffRow(
     cutoff: CutoffEntity,
     numericInput: Boolean,
@@ -373,11 +386,7 @@ private fun CutoffRow(
                 modifier = Modifier.width(72.dp),
             )
             Text(text = cutoff.timeStr, modifier = Modifier.weight(1f))
-            Text(
-                text = cutoff.event,
-                color = cutoffEventColor(cutoff.event),
-                style = MaterialTheme.typography.labelLarge,
-            )
+            EventLabel(cutoff.event)
             TextButton(onClick = ::startEdit, modifier = Modifier.testTag("editButton")) {
                 Text(stringResource(R.string.edit))
             }
@@ -385,7 +394,9 @@ private fun CutoffRow(
         return
     }
 
-    val numberValid = draftNumber.trim().isNotEmpty()
+    // Enabled only when something survives the same #/whitespace cleaning the
+    // repository applies, so Save is never offered for input the save would drop.
+    val numberValid = draftNumber.any { !it.isWhitespace() && it != '#' }
     val timeValid = TimeFormatter.isValidTimeString(draftTime.trim())
     Column(
         modifier =
@@ -404,6 +415,7 @@ private fun CutoffRow(
                     draftNumber = if (numericInput) input.filter(Char::isDigit) else input
                 },
                 singleLine = true,
+                isError = !numberValid,
                 keyboardOptions =
                     KeyboardOptions(
                         keyboardType = if (numericInput) KeyboardType.Number else KeyboardType.Text,
@@ -422,12 +434,7 @@ private fun CutoffRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = cutoff.event,
-                color = cutoffEventColor(cutoff.event),
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.weight(1f),
-            )
+            EventLabel(cutoff.event, Modifier.weight(1f))
             TextButton(
                 onClick = { editing = false },
                 modifier = Modifier.testTag("editDiscardButton"),
