@@ -10,6 +10,14 @@ interface CutoffDao {
     @Insert
     suspend fun insert(cutoff: CutoffEntity): Long
 
+    /** Correct a mis-recorded crossing: only the number and time are editable. */
+    @Query("UPDATE cutoffs SET number = :number, timeStr = :timeStr WHERE id = :id")
+    suspend fun updateNumberAndTime(
+        id: Long,
+        number: String,
+        timeStr: String,
+    )
+
     /** Full history in recording order, for file snapshots and uploads. */
     @Query("SELECT * FROM cutoffs ORDER BY id ASC")
     suspend fun getAll(): List<CutoffEntity>

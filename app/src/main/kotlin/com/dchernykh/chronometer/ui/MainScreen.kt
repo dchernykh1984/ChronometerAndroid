@@ -37,6 +37,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -58,6 +59,7 @@ import com.dchernykh.chronometer.R
 import com.dchernykh.chronometer.data.CutoffEntity
 import com.dchernykh.chronometer.data.CutoffEvent
 import com.dchernykh.chronometer.service.RaceService
+import com.dchernykh.chronometer.util.TimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -259,7 +261,9 @@ fun MainScreen(
                     state = logState,
                     modifier = Modifier.weight(1f).testTag("cutoffLog"),
                 ) {
-                    items(cutoffs, key = { it.id }) { cutoff -> CutoffRow(cutoff) }
+                    items(cutoffs, key = { it.id }) { cutoff ->
+                        CutoffRow(cutoff, settings.numericInput, viewModel::editCutoff)
+                    }
                 }
             }
         }
@@ -327,30 +331,116 @@ private fun InfoDialog(
 }
 
 @Composable
-private fun CutoffRow(cutoff: CutoffEntity) {
-    Row(
+private fun cutoffEventColor(event: String) =
+    if (event.startsWith(CutoffEvent.DSQ)) {
+        MaterialTheme.colorScheme.error
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+@Composable
+private fun CutoffRow(
+    cutoff: CutoffEntity,
+    numericInput: Boolean,
+    onSave: (id: Long, number: String, timeStr: String) -> Unit,
+) {
+    // Kept per row (keyed by id) so several rows can be edited at once and an
+    // in-progress edit survives scrolling and rotation. The drafts are refreshed
+    // from the current values every time editing starts, so only current values
+    // are ever edited.
+    var editing by rememberSaveable(cutoff.id) { mutableStateOf(false) }
+    var draftNumber by rememberSaveable(cutoff.id) { mutableStateOf(cutoff.number) }
+    var draftTime by rememberSaveable(cutoff.id) { mutableStateOf(cutoff.timeStr) }
+
+    fun startEdit() {
+        draftNumber = cutoff.number
+        draftTime = cutoff.timeStr
+        editing = true
+    }
+
+    if (!editing) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = cutoff.number,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.width(72.dp),
+            )
+            Text(text = cutoff.timeStr, modifier = Modifier.weight(1f))
+            Text(
+                text = cutoff.event,
+                color = cutoffEventColor(cutoff.event),
+                style = MaterialTheme.typography.labelLarge,
+            )
+            TextButton(onClick = ::startEdit, modifier = Modifier.testTag("editButton")) {
+                Text(stringResource(R.string.edit))
+            }
+        }
+        return
+    }
+
+    val numberValid = draftNumber.trim().isNotEmpty()
+    val timeValid = TimeFormatter.isValidTimeString(draftTime.trim())
+    Column(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .padding(vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(
-            text = cutoff.number,
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.width(72.dp),
-        )
-        Text(text = cutoff.timeStr, modifier = Modifier.weight(1f))
-        Text(
-            text = cutoff.event,
-            color =
-                if (cutoff.event.startsWith(CutoffEvent.DSQ)) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = draftNumber,
+                onValueChange = { input ->
+                    draftNumber = if (numericInput) input.filter(Char::isDigit) else input
                 },
-            style = MaterialTheme.typography.labelLarge,
-        )
+                singleLine = true,
+                keyboardOptions =
+                    KeyboardOptions(
+                        keyboardType = if (numericInput) KeyboardType.Number else KeyboardType.Text,
+                    ),
+                modifier = Modifier.width(96.dp).testTag("editNumberField"),
+            )
+            OutlinedTextField(
+                value = draftTime,
+                onValueChange = { draftTime = it },
+                singleLine = true,
+                isError = !timeValid,
+                modifier = Modifier.weight(1f).testTag("editTimeField"),
+            )
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = cutoff.event,
+                color = cutoffEventColor(cutoff.event),
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(
+                onClick = { editing = false },
+                modifier = Modifier.testTag("editDiscardButton"),
+            ) { Text(stringResource(R.string.discard)) }
+            TextButton(
+                enabled = numberValid && timeValid,
+                onClick = {
+                    onSave(cutoff.id, draftNumber.trim(), draftTime.trim())
+                    editing = false
+                },
+                modifier = Modifier.testTag("editSaveButton"),
+            ) { Text(stringResource(R.string.save)) }
+        }
     }
 }
 

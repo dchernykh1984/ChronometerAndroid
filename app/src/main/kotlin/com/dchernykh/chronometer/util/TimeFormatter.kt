@@ -17,6 +17,8 @@ object TimeFormatter {
     private const val MS_PER_MINUTE = 60_000L
     private const val MS_PER_SECOND = 1_000L
 
+    private val TIME_PATTERN = Regex("""^(\d+) (\d{1,2}):(\d{1,2}):(\d{1,2})\.(\d{3})$""")
+
     fun currentTimeString(nowMs: Long = System.currentTimeMillis()): String {
         val local = nowMs + TimeZone.getDefault().rawOffset
         val days = local / MS_PER_DAY
@@ -28,5 +30,19 @@ object TimeFormatter {
         val seconds = rem / MS_PER_SECOND
         val millis = (rem % MS_PER_SECOND).toString().padStart(3, '0')
         return "$days $hours:$minutes:$seconds.$millis"
+    }
+
+    /**
+     * True if [value] is a well-formed "D H:M:S.mmm" string this app could have
+     * produced: a non-negative day count, then a valid time of day (hours 0-23,
+     * minutes and seconds 0-59) with exactly three millisecond digits. Used to
+     * validate a manually edited cutoff time before it is saved.
+     */
+    fun isValidTimeString(value: String): Boolean {
+        val match = TIME_PATTERN.matchEntire(value) ?: return false
+        val hours = match.groupValues[2].toInt()
+        val minutes = match.groupValues[3].toInt()
+        val seconds = match.groupValues[4].toInt()
+        return hours in 0..23 && minutes in 0..59 && seconds in 0..59
     }
 }
