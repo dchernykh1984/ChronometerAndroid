@@ -9,6 +9,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -450,6 +451,53 @@ class MainFlowTest {
         } finally {
             RaceService.stop(appContext())
         }
+    }
+
+    private fun enterEditMode() {
+        // Tap the row's Edit button until the edit controls appear (a single tap can
+        // be dropped on the slow tablet, and the button is gone once editing starts).
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            val inEdit = composeRule.onAllNodesWithTag("editSaveButton").fetchSemanticsNodes().isNotEmpty()
+            if (!inEdit && composeRule.onAllNodesWithTag("editButton").fetchSemanticsNodes().isNotEmpty()) {
+                composeRule.onNodeWithTag("editButton").performClick()
+            }
+            inEdit
+        }
+    }
+
+    @Test
+    fun editingACutoffSavesNewNumberAndTime() {
+        recordAndAwait("cutoffButton", "70300")
+        enterEditMode()
+        composeRule.onNodeWithTag("editNumberField").performTextReplacement("70301")
+        composeRule.onNodeWithTag("editTimeField").performTextReplacement("1 2:3:4.005")
+        composeRule.onNodeWithTag("editSaveButton").performClick()
+
+        waitForText("70301")
+        composeRule.onNodeWithText("70301").assertExists()
+        composeRule.onNodeWithText("1 2:3:4.005").assertExists()
+        composeRule.onAllNodesWithText("70300").assertCountEquals(0)
+    }
+
+    @Test
+    fun discardingAnEditKeepsTheOriginalValues() {
+        recordAndAwait("cutoffButton", "70310")
+        enterEditMode()
+        composeRule.onNodeWithTag("editNumberField").performTextReplacement("70399")
+        composeRule.onNodeWithTag("editDiscardButton").performClick()
+
+        waitForText("70310")
+        composeRule.onNodeWithText("70310").assertExists()
+        composeRule.onAllNodesWithText("70399").assertCountEquals(0)
+    }
+
+    @Test
+    fun editWithInvalidTimeCannotBeSaved() {
+        recordAndAwait("cutoffButton", "70320")
+        enterEditMode()
+        composeRule.onNodeWithTag("editTimeField").performTextReplacement("bad time")
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("editSaveButton").assertIsNotEnabled()
     }
 
     private fun grantNotificationPermission() {

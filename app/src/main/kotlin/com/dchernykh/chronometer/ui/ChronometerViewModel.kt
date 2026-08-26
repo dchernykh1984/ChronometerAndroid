@@ -55,6 +55,15 @@ class ChronometerViewModel(
         viewModelScope.launch { repository.record(number, CutoffEvent.dsq(reason)) }
     }
 
+    /** Correct the number/time of an already-recorded cutoff, keeping its event. */
+    fun editCutoff(
+        id: Long,
+        number: String,
+        timeStr: String,
+    ) {
+        viewModelScope.launch { repository.editCutoff(id, number, timeStr) }
+    }
+
     fun loadSettings(): Settings = app.settingsStore.load()
 
     fun saveSettings(settings: Settings) {

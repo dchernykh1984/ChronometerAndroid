@@ -78,6 +78,51 @@ class CutoffRepository(
     }
 
     /**
+     * Correct a mis-recorded cutoff: overwrite its number and time, then run the
+     * same durable-file + upload sequence a fresh cutoff does. Only the number and
+     * time change; the event, id and original createdAt stay. Returns false (row
+     * left untouched) when the number is blank or the time is not a valid
+     * "D H:M:S.mmm" string. `#` and line breaks are stripped from the number so an
+     * edit can never break the `#`-delimited record.
+     *
+     * The snapshot is written under the row id, so it lands next to the original as
+     * `backup/<id>-N.txt` (BackupWriter never overwrites a snapshot) and nothing in
+     * the audit trail is lost.
+     */
+    suspend fun editCutoff(
+        id: Long,
+        number: String,
+        timeStr: String,
+    ): Boolean {
+        val cleanedNumber =
+            number
+                .replace('#', ' ')
+                .replace('\n', ' ')
+                .replace('\r', ' ')
+                .trim()
+        val cleanedTime = timeStr.trim()
+        if (cleanedNumber.isEmpty() || !TimeFormatter.isValidTimeString(cleanedTime)) {
+            return false
+        }
+
+        dao.updateNumberAndTime(id, cleanedNumber, cleanedTime)
+        settingsStore.nextClientRevision()
+
+        val settings = settingsStore.load()
+        val items = dao.getAll().map { it.toItem() }
+        val backupOk =
+            withContext(Dispatchers.IO) {
+                backupWriter.writeSnapshot(settings.folderPath, items, id)
+            }
+        backupFailedState.value = !backupOk
+
+        if (settings.isUploadReady) {
+            enqueueUpload()
+        }
+        return true
+    }
+
+    /**
      * Enqueue an upload for cutoffs already stored in Room. Called after the user
      * turns on or fixes the upload settings, so data recorded while sending was
      * off/misconfigured is pushed without waiting for the next new cutoff.

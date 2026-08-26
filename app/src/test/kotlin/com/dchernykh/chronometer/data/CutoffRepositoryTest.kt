@@ -99,6 +99,79 @@ class CutoffRepositoryTest {
         }
 
     @Test
+    fun editUpdatesNumberAndTimeKeepsEventAndAddsSnapshotWithoutLosingTheOriginal() =
+        runTest {
+            configure(sendEnabled = false)
+            repository.record("42", CutoffEvent.NEXT_LAP)
+            val row = db.cutoffDao().getAll().single()
+            val backupBefore = File(folder, "backup").listFiles()?.size ?: 0
+
+            assertTrue(repository.editCutoff(row.id, "43", "1 2:3:4.005"))
+
+            val updated = db.cutoffDao().getAll().single()
+            assertEquals("43", updated.number)
+            assertEquals("1 2:3:4.005", updated.timeStr)
+            assertEquals(CutoffEvent.NEXT_LAP, updated.event)
+            assertTrue(File(folder, "results.txt").readText().contains("43#1 2:3:4.005#nextLap#"))
+            // A fresh snapshot was added; the original snapshot file is preserved.
+            assertTrue((File(folder, "backup").listFiles()?.size ?: 0) > backupBefore)
+            assertTrue(File(folder, "backup/${row.id}.txt").exists())
+            assertFalse(repository.backupFailed.value)
+        }
+
+    @Test
+    fun editRejectsInvalidTimeAndLeavesRowUnchanged() =
+        runTest {
+            configure(sendEnabled = false)
+            repository.record("42", CutoffEvent.NEXT_LAP)
+            val row = db.cutoffDao().getAll().single()
+
+            assertFalse(repository.editCutoff(row.id, "43", "not a time"))
+
+            val after = db.cutoffDao().getAll().single()
+            assertEquals("42", after.number)
+            assertEquals(row.timeStr, after.timeStr)
+        }
+
+    @Test
+    fun editRejectsBlankNumberAndLeavesRowUnchanged() =
+        runTest {
+            configure(sendEnabled = false)
+            repository.record("42", CutoffEvent.NEXT_LAP)
+            val row = db.cutoffDao().getAll().single()
+
+            assertFalse(repository.editCutoff(row.id, "   ", "1 2:3:4.005"))
+
+            val after = db.cutoffDao().getAll().single()
+            assertEquals("42", after.number)
+        }
+
+    @Test
+    fun editStripsHashFromNumberSoItCannotBreakTheRecord() =
+        runTest {
+            configure(sendEnabled = false)
+            repository.record("42", CutoffEvent.NEXT_LAP)
+            val row = db.cutoffDao().getAll().single()
+
+            assertTrue(repository.editCutoff(row.id, "4#3", "1 2:3:4.005"))
+
+            val edited = db.cutoffDao().getAll().single()
+            assertEquals("4 3", edited.number)
+        }
+
+    @Test
+    fun editEnqueuesUploadWhenConfigured() =
+        runTest {
+            configure(sendEnabled = true)
+            repository.record("7", CutoffEvent.NEXT_LAP)
+            val row = db.cutoffDao().getAll().single()
+
+            assertTrue(repository.editCutoff(row.id, "8", "1 2:3:4.005"))
+
+            assertTrue(uploadWork().isNotEmpty())
+        }
+
+    @Test
     fun backupFailureIsSurfacedButRoomStillHasTheCutoff() =
         runTest {
             val blocker = File(RuntimeEnvironment.getApplication().cacheDir, "blocker-${System.nanoTime()}")
