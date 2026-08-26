@@ -27,7 +27,10 @@ class TimeFormatterTest {
         assertTrue(TimeFormatter.isValidTimeString("1 2:3:4.005"))
         assertTrue(TimeFormatter.isValidTimeString("0 0:0:0.007"))
         assertTrue(TimeFormatter.isValidTimeString("20300 23:59:59.999"))
+        // Single-digit hours/minutes/seconds ("9", not "09") are how the app writes them.
         assertTrue(TimeFormatter.isValidTimeString("20300 14:5:3.007"))
+        // A leading-zero millisecond like "010" is a normal, valid value.
+        assertTrue(TimeFormatter.isValidTimeString("20300 14:5:3.010"))
     }
 
     @Test
