@@ -465,13 +465,26 @@ class MainFlowTest {
         }
     }
 
+    private fun tapUntilEditClosed(buttonTag: String) {
+        // Tap an edit-row exit button (Save/Discard) until the row leaves edit mode;
+        // a single tap can be dropped on the slow tablet, and the button is gone once
+        // editing ends.
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            val editing = composeRule.onAllNodesWithTag("editSaveButton").fetchSemanticsNodes().isNotEmpty()
+            if (editing && composeRule.onAllNodesWithTag(buttonTag).fetchSemanticsNodes().isNotEmpty()) {
+                composeRule.onNodeWithTag(buttonTag).performClick()
+            }
+            !editing
+        }
+    }
+
     @Test
     fun editingACutoffSavesNewNumberAndTime() {
         recordAndAwait("cutoffButton", "70300")
         enterEditMode()
         composeRule.onNodeWithTag("editNumberField").performTextReplacement("70301")
         composeRule.onNodeWithTag("editTimeField").performTextReplacement("1 2:3:4.005")
-        composeRule.onNodeWithTag("editSaveButton").performClick()
+        tapUntilEditClosed("editSaveButton")
 
         waitForText("70301")
         composeRule.onNodeWithText("70301").assertExists()
@@ -484,7 +497,7 @@ class MainFlowTest {
         recordAndAwait("cutoffButton", "70310")
         enterEditMode()
         composeRule.onNodeWithTag("editNumberField").performTextReplacement("70399")
-        composeRule.onNodeWithTag("editDiscardButton").performClick()
+        tapUntilEditClosed("editDiscardButton")
 
         waitForText("70310")
         composeRule.onNodeWithText("70310").assertExists()
