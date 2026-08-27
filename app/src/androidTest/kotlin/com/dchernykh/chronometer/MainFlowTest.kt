@@ -11,6 +11,7 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -19,8 +20,10 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.work.WorkManager
@@ -453,13 +456,22 @@ class MainFlowTest {
         }
     }
 
+    private fun tapLogButton(tag: String) {
+        // The soft keyboard from an edited field can cover the buttons in the log
+        // when the tablet is in landscape, so dismiss it and scroll the button into
+        // view before tapping it.
+        Espresso.closeSoftKeyboard()
+        composeRule.onNodeWithTag("cutoffLog").performScrollToNode(hasTestTag(tag))
+        composeRule.onNodeWithTag(tag).performClick()
+    }
+
     private fun enterEditMode() {
         // Tap the row's Edit button until the edit controls appear (a single tap can
         // be dropped on the slow tablet, and the button is gone once editing starts).
         composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
             val inEdit = composeRule.onAllNodesWithTag("editSaveButton").fetchSemanticsNodes().isNotEmpty()
             if (!inEdit && composeRule.onAllNodesWithTag("editButton").fetchSemanticsNodes().isNotEmpty()) {
-                composeRule.onNodeWithTag("editButton").performClick()
+                tapLogButton("editButton")
             }
             inEdit
         }
@@ -472,7 +484,7 @@ class MainFlowTest {
         composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
             val editing = composeRule.onAllNodesWithTag("editSaveButton").fetchSemanticsNodes().isNotEmpty()
             if (editing && composeRule.onAllNodesWithTag(buttonTag).fetchSemanticsNodes().isNotEmpty()) {
-                composeRule.onNodeWithTag(buttonTag).performClick()
+                tapLogButton(buttonTag)
             }
             !editing
         }
