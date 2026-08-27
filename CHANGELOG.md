@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.5.1...chronometer-android-v0.6.0) (2026-08-27)
+
+
+### Features
+
+* edit a recorded cutoff's number and time from the log ([1972b28](https://github.com/dchernykh1984/ChronometerAndroid/commit/1972b281ebabf7ff0c85884f2c1016a08480c850))
+
 ## [0.5.1](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.5.0...chronometer-android-v0.5.1) (2026-07-08)
 
 
