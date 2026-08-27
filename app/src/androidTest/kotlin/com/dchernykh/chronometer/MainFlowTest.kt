@@ -23,7 +23,6 @@ import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.core.app.ApplicationProvider
-import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.work.WorkManager
@@ -471,10 +470,10 @@ class MainFlowTest {
     }
 
     private fun tapLogButton(tag: String) {
-        // The soft keyboard from an edited field can cover the buttons in the log
-        // when the tablet is in landscape, so dismiss it and scroll the button into
-        // view before tapping it.
-        Espresso.closeSoftKeyboard()
+        // In landscape the soft keyboard from an edited field can push a log button
+        // below the fold. Scrolling it into the log's viewport (which sits above the
+        // keyboard thanks to adjustResize) makes it tappable without Espresso, whose
+        // root-focus wait is itself flaky on a busy emulator.
         composeRule.onNodeWithTag("cutoffLog").performScrollToNode(hasTestTag(tag))
         composeRule.onNodeWithTag(tag).performClick()
     }
