@@ -185,6 +185,20 @@ class MainFlowTest {
         }
     }
 
+    private fun selectRadio(tag: String) {
+        // A single tap can be dropped on the slow tablet, leaving the option
+        // unselected; keep tapping until it actually reports itself selected.
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            val node = composeRule.onNodeWithTag(tag).performScrollTo()
+            if (node.fetchSemanticsNode().config.getOrNull(SemanticsProperties.Selected) == true) {
+                true
+            } else {
+                node.performClick()
+                false
+            }
+        }
+    }
+
     private fun waitForText(text: String) {
         composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
             composeRule.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
@@ -337,7 +351,7 @@ class MainFlowTest {
     @Test
     fun languageChoiceChangesSettingsText() {
         openSettings()
-        composeRule.onNodeWithTag("langKk").performScrollTo().performClick()
+        selectRadio("langKk")
 
         // Saving a language change recreates the activity and stays on Settings.
         saveSettings()
