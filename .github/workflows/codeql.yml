@@ -30,7 +30,7 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4.37.3
+        uses: github/codeql-action/init@v4.37.9
         with:
           languages: java-kotlin
           # Kotlin needs a real compile to extract source; trace it manually.
@@ -39,6 +39,6 @@ jobs:
         # --no-build-cache forces actual compilation so the tracer sees the code.
         run: ./gradlew --no-daemon --no-build-cache :app:compileDebugKotlin
       - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@v4.37.3
+        uses: github/codeql-action/analyze@v4.37.9
         with:
           category: "/language:java-kotlin"
