@@ -30,8 +30,10 @@ Session.vim
 
 # ===== AI agents =====
 
-# Claude Code (Anthropic)
-.claude/
+# Claude Code (Anthropic): the shared context (CLAUDE.md, .claude/skills,
+# .claude/settings.json) is version-controlled; only personal, machine-local
+# settings and permission grants stay out.
+.claude/settings.local.json
 
 # Cursor
 .cursor/
