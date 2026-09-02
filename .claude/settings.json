@@ -1,0 +1,28 @@
+{
+  "//": "Shared, version-controlled Claude Code settings. Personal grants and machine-local config live in .claude/settings.local.json (gitignored). Only read-only / safe commands are pre-allowed here; anything that mutates git, GitHub, or a device still prompts.",
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git fetch:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git stash list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(./gradlew :app:ktlintCheck:*)",
+      "Bash(./gradlew :app:detekt:*)",
+      "Bash(./gradlew :app:lintDebug:*)",
+      "Bash(./gradlew :app:testDebugUnitTest:*)",
+      "Bash(./gradlew :app:koverVerify:*)",
+      "Bash(./gradlew :app:assembleDebug:*)"
+    ]
+  }
+}
