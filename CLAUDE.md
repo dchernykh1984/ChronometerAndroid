@@ -35,6 +35,15 @@ instead. See the **dependabot-bumps** skill.
   CI to green. `main` is protected by a repository ruleset: 1 approving review, linear
   history, no force-push, no deletion. PRs land as **rebase merges**. Merging requires
   an approval - do not self-approve/merge unless the user explicitly asks.
+- **Tracked files stay ASCII.** A `no-non-ascii` pre-commit hook rejects any byte above
+  0x7F in Kotlin, YAML, Markdown, TOML, shell and JSON (the vendored `gradlew` is
+  excluded as upstream code). XML is deliberately not in that list, which is why the
+  Russian and Kazakh strings live in `res/values-ru/` and `res/values-kk/` and nowhere
+  else - a Cyrillic character in a Kotlin string or a comment fails the commit.
+- **Write files as UTF-8.** On Windows a PowerShell redirect, `Set-Content` or `Out-File`
+  defaults to UTF-16, and that hook then rejects a file whose text looks perfectly plain
+  in an editor: the bytes are the problem, not the characters. `file <path>` says which
+  encoding you actually wrote.
 
 ## Reviewing a change
 
@@ -57,6 +66,15 @@ assembleDebug/Release), `connected` instrumented tests on a **phone** (pixel_6,
 API 34) and a **tablet** (pixel_c, API 30), CodeQL `Analyze (java-kotlin)`,
 `osv-scan`, `pre-commit`, `actionlint`, `commitizen`. Releases are cut by
 release-please (`chore(main): release chronometer-android x.y.z`).
+
+Take the verdict from the rollup rather than `gh pr checks`, whose per-check status lags
+and can still say `pending` long after a job has finished - which reads like a hung
+check on a pipeline this wide:
+
+```bash
+gh pr view <n> --json statusCheckRollup \
+  --jq '[.statusCheckRollup[] | {name:(.name//.context), s:(.conclusion//.state)}]'
+```
 
 ## Deeper how-tos (skills in `.claude/skills/`)
 
