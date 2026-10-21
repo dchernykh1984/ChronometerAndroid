@@ -79,11 +79,13 @@ class MainFlowTest {
         resetStoredSettings()
     }
 
-    /** Hermetic start: wipe cutoffs and pending work left by earlier tests/runs. */
+    /** Remove work history too, so a prior failure cannot leak diagnostics into another test. */
     private fun clearAppData() {
         val app = appContext() as ChronometerApp
         runBlocking { app.database.cutoffDao().deleteAll() }
-        runCatching { WorkManager.getInstance(appContext()).cancelAllWork() }
+        val workManager = WorkManager.getInstance(appContext())
+        workManager.cancelAllWork().result.get()
+        workManager.pruneWork().result.get()
     }
 
     /** Recreate the activity and wait until the fresh main screen is interactive. */
@@ -608,6 +610,7 @@ class MainFlowTest {
 
         composeRule.onNodeWithText("70340").assertExists()
         // The earlier row is still being edited (it just slid down under the new one).
+        composeRule.onNodeWithTag("cutoffLog").performScrollToNode(hasTestTag("editSaveButton"))
         composeRule.onNodeWithTag("editSaveButton").assertExists()
     }
 
