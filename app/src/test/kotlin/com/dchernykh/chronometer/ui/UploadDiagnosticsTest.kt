@@ -39,6 +39,32 @@ class UploadDiagnosticsTest {
     }
 
     @Test
+    fun activeRequestUsesOnlyItsOwnErrorWhenFailedHistoryIsPresent() {
+        val currentId = UUID.randomUUID()
+        val infos =
+            listOf(
+                WorkInfo(id, WorkInfo.State.FAILED, emptySet()),
+                WorkInfo(currentId, WorkInfo.State.ENQUEUED, emptySet()),
+            )
+        assertEquals(UploadDiagnostics(UploadStatus.PENDING), uploadDiagnosticsOf(infos, error))
+        val currentError = UploadError(currentId.toString(), "HTTP 503: Maintenance")
+        assertEquals(
+            UploadDiagnostics(UploadStatus.PENDING, currentError.message),
+            uploadDiagnosticsOf(infos, currentError),
+        )
+    }
+
+    @Test
+    fun successfulSnapshotHidesTheFailedRequestsError() {
+        val infos =
+            listOf(
+                WorkInfo(id, WorkInfo.State.FAILED, emptySet()),
+                WorkInfo(UUID.randomUUID(), WorkInfo.State.SUCCEEDED, emptySet()),
+            )
+        assertEquals(UploadDiagnostics(UploadStatus.SENT), uploadDiagnosticsOf(infos, error))
+    }
+
+    @Test
     fun runningSucceededCancelledAndMissingWorkHideTheOldError() {
         for (state in listOf(WorkInfo.State.RUNNING, WorkInfo.State.SUCCEEDED, WorkInfo.State.CANCELLED)) {
             assertNull(uploadDiagnosticsOf(listOf(WorkInfo(id, state, emptySet())), error).error)
