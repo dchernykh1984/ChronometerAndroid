@@ -12,10 +12,15 @@ import com.dchernykh.chronometer.data.UploadErrorStore
 import com.dchernykh.chronometer.ui.UploadStatus
 import com.dchernykh.chronometer.ui.uploadDiagnosticsOf
 import com.dchernykh.chronometer.ui.uploadStatusOf
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -27,6 +32,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import java.io.File
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
@@ -134,6 +140,36 @@ class UploadIntegrationTest {
             val info = WorkInfo(UUID.fromString(error.workId), WorkInfo.State.FAILED, emptySet())
             assertTrue(uploadDiagnosticsOf(listOf(info), error).error!!.contains("HTTP 400"))
             assertTrue(error.message.contains("Unknown competition token"))
+        }
+
+    @Test
+    fun cancelledUploadCannotReplaceTheCurrentDiagnostic() =
+        runTest {
+            val releaseResponse = CountDownLatch(1)
+            server.dispatcher =
+                object : Dispatcher() {
+                    override fun dispatch(request: RecordedRequest): MockResponse {
+                        releaseResponse.await(5, TimeUnit.SECONDS)
+                        return MockResponse().setResponseCode(400).setBody("Old failure")
+                    }
+                }
+            configureUpload(pointNumber = 0)
+            repository.record("11", CutoffEvent.NEXT_LAP)
+            app.uploadErrorStore.record("current-work", "HTTP 403: Current failure")
+            val currentError = app.uploadErrorStore.error.value
+            val worker = TestListenableWorkerBuilder<UploadWorker>(app).build()
+            val attempt = launch(Dispatchers.IO) { worker.doWork() }
+            try {
+                assertNotNull(server.takeRequest(5, TimeUnit.SECONDS))
+                attempt.cancel()
+                releaseResponse.countDown()
+                attempt.join()
+                assertTrue(attempt.isCancelled)
+                assertEquals(currentError, app.uploadErrorStore.error.value)
+            } finally {
+                releaseResponse.countDown()
+                attempt.cancelAndJoin()
+            }
         }
 
     @Test
