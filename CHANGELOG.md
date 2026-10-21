@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.6.0...chronometer-android-v0.6.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* **upload:** show the reason for failed uploads ([9a9d1a2](https://github.com/dchernykh1984/ChronometerAndroid/commit/9a9d1a26f4d4264f86ad85e21c06e5fc9ef95263))
+
 ## [0.6.0](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.5.1...chronometer-android-v0.6.0) (2026-08-27)
 
 
