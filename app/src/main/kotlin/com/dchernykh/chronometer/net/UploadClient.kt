@@ -18,6 +18,11 @@ enum class UploadResult {
     GIVE_UP,
 }
 
+data class UploadOutcome(
+    val result: UploadResult,
+    val error: String? = null,
+)
+
 /**
  * Pushes the whole snapshot of items to the cycling-site API, mirroring
  * WindowsChronometerPython's http_io: point 0 -> /api/v1/finish-times/,
@@ -33,36 +38,81 @@ class UploadClient {
         pointNumber: Int,
         items: List<String>,
         clientRevision: Int,
-    ): UploadResult {
-        if (!hasAllowedUploadScheme(siteUrl)) {
-            // ftp://, file://, or scheme-less: never openable as HTTP - give up.
-            return UploadResult.GIVE_UP
-        }
-        return post(
-            endpointFor(siteUrl, pointNumber),
-            buildPayload(token, deviceId, pointNumber, items, clientRevision),
-        )
+    ): UploadOutcome {
+        val outcome =
+            if (!hasAllowedUploadScheme(siteUrl)) {
+                UploadOutcome(UploadResult.GIVE_UP, "MalformedURLException: $siteUrl")
+            } else {
+                post(
+                    endpointFor(siteUrl, pointNumber),
+                    buildPayload(token, deviceId, pointNumber, items, clientRevision),
+                )
+            }
+        return outcome.copy(error = outcome.error?.let { diagnostic(it, token) })
     }
 
     private fun post(
         endpoint: String,
         body: String,
-    ): UploadResult =
+    ): UploadOutcome =
         try {
             val connection = open(endpoint)
             try {
                 connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
-                resultForStatus(connection.responseCode)
+                responseOutcome(connection)
             } finally {
                 connection.disconnect()
             }
-        } catch (_: MalformedURLException) {
+        } catch (error: MalformedURLException) {
             // Misconfigured site URL - do not retry forever.
-            UploadResult.GIVE_UP
-        } catch (_: IOException) {
+            UploadOutcome(UploadResult.GIVE_UP, "${error.javaClass.simpleName}: ${error.message.orEmpty()}")
+        } catch (error: IllegalArgumentException) {
+            // URL accepts some invalid ports that the connection later rejects.
+            UploadOutcome(UploadResult.GIVE_UP, "${error.javaClass.simpleName}: ${error.message.orEmpty()}")
+        } catch (error: IOException) {
             // Connectivity problem - retry when the network returns.
-            UploadResult.RETRY
+            UploadOutcome(UploadResult.RETRY, "${error.javaClass.simpleName}: ${error.message.orEmpty()}")
         }
+
+    private fun responseOutcome(connection: HttpURLConnection): UploadOutcome {
+        val code = connection.responseCode
+        val result = resultForStatus(code)
+        if (result == UploadResult.SUCCESS) {
+            return UploadOutcome(result)
+        }
+        val status = "HTTP $code ${connection.responseMessage.orEmpty()}".trim()
+        val detail = readErrorBody(connection)
+        return UploadOutcome(result, if (detail.isBlank()) status else "$status: $detail")
+    }
+
+    private fun readErrorBody(connection: HttpURLConnection): String =
+        try {
+            (connection.errorStream ?: connection.inputStream).bufferedReader(Charsets.UTF_8).use { reader ->
+                buildString {
+                    repeat(MAX_ERROR_INPUT_CHARS) {
+                        val char = reader.read()
+                        if (char == -1) return@buildString
+                        append(char.toChar())
+                    }
+                }
+            }
+        } catch (_: IOException) {
+            // Keep the HTTP status even if the server's error body cannot be read.
+            ""
+        }
+
+    private fun diagnostic(
+        message: String,
+        token: String,
+    ): String {
+        val redacted =
+            if (token.isEmpty()) {
+                message
+            } else {
+                message.replace(jsonString(token).removeSurrounding("\""), "[redacted]").replace(token, "[redacted]")
+            }
+        return redacted.replace(WHITESPACE, " ").trim().take(MAX_ERROR_CHARS)
+    }
 
     private fun open(endpoint: String): HttpURLConnection =
         (URL(endpoint).openConnection() as HttpURLConnection).apply {
@@ -75,6 +125,9 @@ class UploadClient {
 
     companion object {
         private const val TIMEOUT_MS = 10_000
+        private const val MAX_ERROR_INPUT_CHARS = 2_048
+        private const val MAX_ERROR_CHARS = 300
+        private val WHITESPACE = Regex("[\\s\\p{Cc}]+")
         private const val HTTP_OK_MIN = 200
         private const val HTTP_OK_MAX = 299
         private const val HTTP_SERVER_ERR_MIN = 500

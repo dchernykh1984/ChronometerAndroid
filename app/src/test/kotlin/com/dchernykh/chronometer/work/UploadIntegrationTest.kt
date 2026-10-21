@@ -8,7 +8,9 @@ import androidx.work.testing.WorkManagerTestInitHelper
 import com.dchernykh.chronometer.ChronometerApp
 import com.dchernykh.chronometer.data.CutoffEvent
 import com.dchernykh.chronometer.data.CutoffRepository
+import com.dchernykh.chronometer.data.UploadErrorStore
 import com.dchernykh.chronometer.ui.UploadStatus
+import com.dchernykh.chronometer.ui.uploadDiagnosticsOf
 import com.dchernykh.chronometer.ui.uploadStatusOf
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
@@ -24,6 +26,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import java.io.File
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 /**
@@ -120,13 +123,17 @@ class UploadIntegrationTest {
     @Test
     fun permanentHttpErrorSurfacesAsFailedStatus() =
         runTest {
-            server.enqueue(MockResponse().setResponseCode(400))
+            server.enqueue(MockResponse().setResponseCode(400).setBody("Unknown competition token"))
             configureUpload(pointNumber = 0)
             repository.record("11", CutoffEvent.NEXT_LAP)
 
             assertEquals(ListenableWorker.Result.failure(), runWorker())
             // A failed worker maps to the on-screen "Upload: error" status.
             assertEquals(UploadStatus.FAILED, uploadStatusOf(listOf(WorkInfo.State.FAILED)))
+            val error = app.uploadErrorStore.error.value!!
+            val info = WorkInfo(UUID.fromString(error.workId), WorkInfo.State.FAILED, emptySet())
+            assertTrue(uploadDiagnosticsOf(listOf(info), error).error!!.contains("HTTP 400"))
+            assertTrue(error.message.contains("Unknown competition token"))
         }
 
     @Test
@@ -139,5 +146,9 @@ class UploadIntegrationTest {
             assertEquals(ListenableWorker.Result.retry(), runWorker())
             // A retry goes back to the queue, shown as "Upload: queued".
             assertEquals(UploadStatus.PENDING, uploadStatusOf(listOf(WorkInfo.State.ENQUEUED)))
+            // WorkManager clears progress when retrying, so the reason is durable.
+            val error = UploadErrorStore(app).error.value!!
+            val info = WorkInfo(UUID.fromString(error.workId), WorkInfo.State.ENQUEUED, emptySet())
+            assertTrue(uploadDiagnosticsOf(listOf(info), error).error!!.contains("HTTP 500"))
         }
 }

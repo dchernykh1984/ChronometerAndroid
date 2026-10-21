@@ -11,6 +11,7 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -41,6 +42,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.net.InetAddress
+import java.net.ServerSocket
+import kotlin.concurrent.thread
 
 /**
  * End-to-end UI smoke tests. They are layout-agnostic on purpose so the same
@@ -501,6 +505,61 @@ class MainFlowTest {
             }
             !editing
         }
+    }
+
+    @Test
+    fun uploadFailureShowsServerReasonAfterActivityRecreation() {
+        ServerSocket(0, 1, InetAddress.getByName("127.0.0.1")).use { server ->
+            server.soTimeout = AWAIT_MS.toInt()
+            thread(name = "upload-error-response", isDaemon = true) {
+                server.accept().use { socket ->
+                    socket.soTimeout = AWAIT_MS.toInt()
+                    val reader = socket.getInputStream().bufferedReader()
+                    var contentLength = 0
+                    var line = reader.readLine()
+                    while (!line.isNullOrEmpty()) {
+                        if (line.startsWith("Content-Length:", ignoreCase = true)) {
+                            contentLength = line.substringAfter(':').trim().toInt()
+                        }
+                        line = reader.readLine()
+                    }
+                    repeat(contentLength) { reader.read() }
+                    val body = "Unknown competition token"
+                    socket.getOutputStream().write(
+                        (
+                            "HTTP/1.1 400 Bad Request\r\nContent-Length: ${body.length}\r\n" +
+                                "Connection: close\r\n\r\n$body"
+                        ).toByteArray(),
+                    )
+                }
+            }
+            configureTestUpload("http://127.0.0.1:${server.localPort}")
+            recordAndAwait("cutoffButton", "70400")
+            waitForTag("uploadError")
+            composeRule.onNodeWithTag("uploadError").assertTextContains("HTTP 400", substring = true)
+            composeRule.onNodeWithTag("uploadError").assertTextContains("Unknown competition token", substring = true)
+            recreateAndSettle()
+            waitForTag("uploadError")
+            composeRule.onNodeWithTag("uploadError").assertIsDisplayed()
+            composeRule.onNodeWithTag("uploadStatus").assertTextContains("Upload: error")
+        }
+    }
+
+    @Test
+    fun networkErrorShowsTheReasonWhileWaitingForRetry() {
+        configureTestUpload("http://127.0.0.1:1")
+        recordAndAwait("cutoffButton", "70500")
+        waitForTag("uploadError")
+        composeRule.onNodeWithTag("uploadError").assertTextContains("ConnectException", substring = true)
+        composeRule.onNodeWithTag("uploadStatus").assertTextContains("Upload: queued")
+    }
+
+    private fun configureTestUpload(siteUrl: String) {
+        val app = appContext() as ChronometerApp
+        app.settingsStore.save(
+            app.settingsStore.load().copy(siteUrl = siteUrl, token = "ui-secret", sendEnabled = true),
+        )
+        recreateAndSettle()
     }
 
     @Test

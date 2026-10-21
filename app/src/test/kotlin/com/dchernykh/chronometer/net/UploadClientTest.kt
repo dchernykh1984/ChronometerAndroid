@@ -4,6 +4,7 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -53,7 +54,8 @@ class UploadClientTest {
     fun uploadPostsToFinishTimesAndSucceedsOn2xx() {
         withServer(responseCode = 204) { server, baseUrl ->
             val result = UploadClient().upload(baseUrl, "tok", "dev", 0, listOf("1#t#nextLap#"), 7)
-            assertEquals(UploadResult.SUCCESS, result)
+            assertEquals(UploadResult.SUCCESS, result.result)
+            assertNull(result.error)
             val request = server.takeRequest()
             assertEquals("/api/v1/finish-times/", request.path)
             val body = request.body.readUtf8()
@@ -65,40 +67,86 @@ class UploadClientTest {
     @Test
     fun uploadRetriesOn5xx() {
         withServer(responseCode = 500) { _, baseUrl ->
-            assertEquals(UploadResult.RETRY, UploadClient().upload(baseUrl, "t", "d", 0, listOf("x"), 1))
+            val outcome = UploadClient().upload(baseUrl, "race-secret", "d", 0, listOf("x"), 1)
+            assertEquals(UploadResult.RETRY, outcome.result)
+            assertEquals("HTTP 500 Server Error", outcome.error)
         }
     }
 
     @Test
     fun uploadGivesUpOn4xx() {
         withServer(responseCode = 400) { _, baseUrl ->
-            assertEquals(UploadResult.GIVE_UP, UploadClient().upload(baseUrl, "t", "d", 0, listOf("x"), 1))
+            val outcome = UploadClient().upload(baseUrl, "race-secret", "d", 0, listOf("x"), 1)
+            assertEquals(UploadResult.GIVE_UP, outcome.result)
+            assertEquals("HTTP 400 Client Error", outcome.error)
         }
     }
 
     @Test
     fun uploadRetriesOnConnectionError() {
         // Nothing is listening on port 1, so the connection is refused -> retry.
-        assertEquals(UploadResult.RETRY, UploadClient().upload("http://127.0.0.1:1", "t", "d", 0, listOf("x"), 1))
+        val outcome = UploadClient().upload("http://127.0.0.1:1", "race-secret", "d", 0, listOf("x"), 1)
+        assertEquals(UploadResult.RETRY, outcome.result)
+        assertTrue(outcome.error!!.contains("ConnectException"))
+        assertTrue(outcome.error.substringAfter(':').isNotBlank())
     }
 
     @Test
     fun uploadGivesUpOnMalformedUrl() {
-        assertEquals(UploadResult.GIVE_UP, UploadClient().upload("not-a-url", "t", "d", 0, listOf("x"), 1))
+        val outcome = UploadClient().upload("not-a-url", "race-secret", "d", 0, listOf("x"), 1)
+        assertEquals(UploadResult.GIVE_UP, outcome.result)
+        assertTrue(outcome.error!!.contains("MalformedURLException"))
     }
 
     @Test
     fun uploadGivesUpOnDisallowedScheme() {
-        assertEquals(UploadResult.GIVE_UP, UploadClient().upload("ftp://host", "t", "d", 0, listOf("x"), 1))
-        assertEquals(UploadResult.GIVE_UP, UploadClient().upload("file:///tmp/x", "t", "d", 0, listOf("x"), 1))
+        for (url in listOf("ftp://host", "file:///tmp/x", "http://host:bad")) {
+            val outcome = UploadClient().upload(url, "race-secret", "d", 0, listOf("x"), 1)
+            assertEquals(UploadResult.GIVE_UP, outcome.result)
+            assertTrue(outcome.error!!.contains("MalformedURLException"))
+        }
+    }
+
+    @Test
+    fun uploadExplainsAnOutOfRangePort() {
+        val outcome = UploadClient().upload("http://127.0.0.1:65536", "race-secret", "d", 0, emptyList(), 1)
+        assertEquals(UploadResult.GIVE_UP, outcome.result)
+        assertTrue(outcome.error!!.contains("IllegalArgumentException"))
+        assertTrue(outcome.error.contains("65536"))
+    }
+
+    @Test
+    fun serverReasonIsBoundedAndDoesNotExposeTheToken() {
+        val token = "secret-\"quoted\""
+        val body = "{\"detail\":\"Invalid token secret-\\\"quoted\\\"\"}\nraw=$token\n" + "x".repeat(10_000)
+        withServer(responseCode = 403, responseBody = body) { _, baseUrl ->
+            val outcome = UploadClient().upload(baseUrl, token, "d", 0, listOf("x"), 1)
+            assertEquals(UploadResult.GIVE_UP, outcome.result)
+            val error = outcome.error!!
+            assertTrue(error.startsWith("HTTP 403"))
+            assertTrue(error.contains("Invalid token [redacted]"))
+            assertTrue(error.contains("raw=[redacted]"))
+            assertFalse(error.contains("secret-"))
+            assertFalse(error.contains('\n'))
+            assertEquals(300, error.length)
+        }
+    }
+
+    @Test
+    fun serverReasonWithAnEmptyTokenIsStillReadable() {
+        withServer(responseCode = 400, responseBody = "Unknown competition") { _, baseUrl ->
+            val outcome = UploadClient().upload(baseUrl, "", "d", 0, emptyList(), 1)
+            assertTrue(outcome.error!!.contains("Unknown competition"))
+        }
     }
 
     private fun withServer(
         responseCode: Int,
+        responseBody: String = "",
         block: (server: MockWebServer, baseUrl: String) -> Unit,
     ) {
         val server = MockWebServer()
-        server.enqueue(MockResponse().setResponseCode(responseCode))
+        server.enqueue(MockResponse().setResponseCode(responseCode).setBody(responseBody))
         server.start()
         try {
             block(server, server.url("/").toString().trimEnd('/'))

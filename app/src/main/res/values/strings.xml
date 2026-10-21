@@ -40,6 +40,7 @@
     <string name="diag_upload_running">Uploading…</string>
     <string name="diag_upload_sent">Upload: sent</string>
     <string name="diag_upload_failed">Upload: error</string>
+    <string name="diag_upload_reason">Reason: %1$s</string>
     <string name="diag_backup_failed">Warning: cutoff file not saved</string>
     <string name="language">Language</string>
     <string name="language_system">System</string>

@@ -40,6 +40,16 @@ class LocalizationTest {
     }
 
     @Test
+    fun uploadReasonIsLocalizedAndPreservesTheSystemDiagnostic() {
+        val labels =
+            listOf(AppLanguage.EN, AppLanguage.RU, AppLanguage.KK).map {
+                LocaleContext.wrap(context(), it).getString(R.string.diag_upload_reason, "HTTP 403")
+            }
+        assertEquals(3, labels.distinct().size)
+        assertTrue(labels.all { it.endsWith("HTTP 403") })
+    }
+
+    @Test
     fun protocolTokensStayEnglishInEveryLocale() {
         val label = LocaleContext.wrap(context(), AppLanguage.RU).getString(R.string.finish_mode)
         assertTrue(label.contains("finish"))
