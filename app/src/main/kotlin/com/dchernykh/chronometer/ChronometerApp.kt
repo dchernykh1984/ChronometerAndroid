@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.dchernykh.chronometer.data.AppDatabase
 import com.dchernykh.chronometer.data.MIGRATION_1_2
 import com.dchernykh.chronometer.data.SettingsStore
+import com.dchernykh.chronometer.data.UploadErrorStore
 import com.dchernykh.chronometer.io.BackupWriter
 import com.dchernykh.chronometer.net.UploadClient
 
@@ -13,6 +14,8 @@ class ChronometerApp : Application() {
     lateinit var database: AppDatabase
         private set
     lateinit var settingsStore: SettingsStore
+        private set
+    lateinit var uploadErrorStore: UploadErrorStore
         private set
 
     val uploadClient = UploadClient()
@@ -27,5 +30,6 @@ class ChronometerApp : Application() {
                 .addMigrations(MIGRATION_1_2)
                 .build()
         settingsStore = SettingsStore(this)
+        uploadErrorStore = UploadErrorStore(this)
     }
 }

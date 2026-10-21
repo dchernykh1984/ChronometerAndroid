@@ -6,6 +6,8 @@ import androidx.work.WorkerParameters
 import com.dchernykh.chronometer.ChronometerApp
 import com.dchernykh.chronometer.data.isUploadReady
 import com.dchernykh.chronometer.net.UploadResult
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * Uploads the current snapshot of cutoffs. Enqueued with a CONNECTED constraint
@@ -41,7 +43,10 @@ class UploadWorker(
                 items = items,
                 clientRevision = app.settingsStore.clientRevision(),
             )
-        return when (outcome) {
+        // A replaced/cancelled request must not overwrite the current diagnostic.
+        currentCoroutineContext().ensureActive()
+        outcome.error?.let { app.uploadErrorStore.record(id.toString(), it) }
+        return when (outcome.result) {
             UploadResult.SUCCESS -> Result.success()
             UploadResult.RETRY -> Result.retry()
             UploadResult.GIVE_UP -> Result.failure()

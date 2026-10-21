@@ -40,6 +40,7 @@
     <string name="diag_upload_running">Жіберілуде…</string>
     <string name="diag_upload_sent">Жіберу: жіберілді</string>
     <string name="diag_upload_failed">Жіберу: қате</string>
+    <string name="diag_upload_reason">Себебі: %1$s</string>
     <string name="diag_backup_failed">Назар аударыңыз: белгілер файлы сақталмады</string>
     <string name="language">Тіл</string>
     <string name="language_system">Жүйелік</string>

@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -38,10 +38,9 @@ class ChronometerViewModel(
     /** Diagnostics (do not affect recording): last backup outcome + upload state. */
     val backupFailed: StateFlow<Boolean> = repository.backupFailed
 
-    val uploadStatus: StateFlow<UploadStatus> =
-        repository.uploadWorkInfo
-            .map { infos -> uploadStatusOf(infos.map { it.state }) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), UploadStatus.IDLE)
+    val uploadDiagnostics: StateFlow<UploadDiagnostics> =
+        combine(repository.uploadWorkInfo, app.uploadErrorStore.error, ::uploadDiagnosticsOf)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), UploadDiagnostics())
 
     fun recordCutoff(number: String) {
         val event = CutoffEvent.lapEvent(settingsState.value.finishMode)

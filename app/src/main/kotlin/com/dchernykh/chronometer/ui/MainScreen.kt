@@ -72,7 +72,7 @@ fun MainScreen(
     onDsqReasonChange: (String) -> Unit,
 ) {
     val cutoffs by viewModel.cutoffs.collectAsStateWithLifecycle()
-    val uploadStatus by viewModel.uploadStatus.collectAsStateWithLifecycle()
+    val uploadDiagnostics by viewModel.uploadDiagnostics.collectAsStateWithLifecycle()
     val backupFailed by viewModel.backupFailed.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val focusRequester = remember { FocusRequester() }
@@ -247,7 +247,7 @@ fun MainScreen(
             }
 
             Diagnostics(
-                uploadStatus = uploadStatus,
+                uploadDiagnostics = uploadDiagnostics,
                 backupFailed = backupFailed,
                 modifier = Modifier.padding(top = 8.dp),
             )
@@ -453,17 +453,27 @@ private fun CutoffRow(
 
 @Composable
 private fun Diagnostics(
-    uploadStatus: UploadStatus,
+    uploadDiagnostics: UploadDiagnostics,
     backupFailed: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = uploadStatusLabel(uploadStatus),
+            text = uploadStatusLabel(uploadDiagnostics.status),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.testTag("uploadStatus"),
         )
+        uploadDiagnostics.error?.let { error ->
+            Text(
+                text = stringResource(R.string.diag_upload_reason, error),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.error,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.testTag("uploadError"),
+            )
+        }
         if (backupFailed) {
             Text(
                 text = stringResource(R.string.diag_backup_failed),
