@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.6.2...chronometer-android-v0.7.0) (2026-10-22)
+
+
+### Features
+
+* **cutoffs:** delete entries with recovery snapshots ([0250ef7](https://github.com/dchernykh1984/ChronometerAndroid/commit/0250ef766457afe86997250506fb3dbc0376f4e1))
+
 ## [0.6.2](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.6.1...chronometer-android-v0.6.2) (2026-10-22)
 
 
