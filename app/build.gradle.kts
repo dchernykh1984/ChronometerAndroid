@@ -161,11 +161,10 @@ listOf(
 
 dependencies {
     constraints {
-        // Robolectric 4.16.1 pulls bcprov-jdk18on 1.81 (test-only, never shipped),
-        // which carries GHSA-574f-3g2m-x479 (9.3) and GHSA-c3fc-8qff-9hwx. Force the
-        // patched release so the OSV scan of the lockfile stays clean.
-        testImplementation("org.bouncycastle:bcprov-jdk18on:1.84") {
-            because("CVE fix for GHSA-574f-3g2m-x479 / GHSA-c3fc-8qff-9hwx")
+        // Robolectric's provider is test-only, never shipped. Keep it patched for
+        // GHSA-9pwp-9qqc-pr26 / GHSA-qp49-qgx5-5m26 and earlier advisories.
+        testImplementation("org.bouncycastle:bcprov-jdk18on:1.85") {
+            because("Fix known vulnerabilities in Robolectric's test-only provider")
         }
     }
 
