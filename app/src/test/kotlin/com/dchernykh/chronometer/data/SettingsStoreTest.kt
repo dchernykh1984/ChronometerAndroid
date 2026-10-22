@@ -78,7 +78,7 @@ class SettingsStoreTest {
     }
 
     @Test
-    fun newCompetitionClearsTokenPointRevisionAndKeepsRest() {
+    fun newCompetitionClearsTokenAndPointAndKeepsRest() {
         store.save(
             store.load().copy(
                 siteUrl = "http://s",
@@ -87,14 +87,12 @@ class SettingsStoreTest {
                 numericInput = false,
             ),
         )
-        store.nextClientRevision()
 
         store.resetForNewCompetition()
 
         val loaded = store.load()
         assertEquals("", loaded.token)
         assertEquals(0, loaded.pointNumber)
-        assertEquals(0, store.clientRevision())
         // Unrelated preferences are preserved.
         assertEquals("http://s", loaded.siteUrl)
         assertFalse(loaded.numericInput)
@@ -120,16 +118,16 @@ class SettingsStoreTest {
     }
 
     @Test
-    fun newCompetitionRestartsTheRevisionStreamFromOne() {
-        // Contract: a new competition (new token) starts a fresh revision stream.
-        // The server keys idempotency on (competition_token, device_id, point) so
-        // these low revisions are never stale. See docs/server-protocol.md.
+    fun newCompetitionKeepsCountingRevisions() {
+        // The same competition's token may be entered again after a reset: a counter
+        // restarted from 1 would sit below the revision the server already holds for
+        // this device and every upload would be refused with HTTP 409.
         store.nextClientRevision()
-        store.nextClientRevision()
+        val beforeReset = store.nextClientRevision()
 
         store.resetForNewCompetition()
 
-        assertEquals(0, store.clientRevision())
-        assertEquals(1, store.nextClientRevision())
+        assertEquals(beforeReset, store.clientRevision())
+        assertEquals(beforeReset + 1, store.nextClientRevision())
     }
 }

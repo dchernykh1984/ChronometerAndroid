@@ -52,11 +52,8 @@ cutoff. The server must accept only the newest revision for a
 snapshots, so retries or duplicated network deliveries cannot create duplicated
 cutoffs.
 
-The `competition_token` is part of the idempotency key on purpose. "New
-competition" (settings screen) resets `client_revision` to 0 and is used
-together with a new competition token, so the next competition's revisions
-(1, 2, ...) form a fresh stream and are never treated as stale relative to a
-previous competition on the same device and point. A server that keyed only on
-`(device_id, point_number)` would reject the new competition's early revisions
-with HTTP 409 (`UploadResult.GIVE_UP`); keying on the token as well is
-therefore required.
+`client_revision` never goes back, not even on "New competition" (settings
+screen). A referee may start over and enter the same competition's token again
+to overwrite what the device sent: a counter restarted from 1 would sit below
+the revision the server already holds for that stream, and every upload would
+be refused with HTTP 409 (`UploadResult.GIVE_UP`) until it climbed past it.
