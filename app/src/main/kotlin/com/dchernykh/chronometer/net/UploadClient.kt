@@ -37,7 +37,7 @@ class UploadClient {
         deviceId: String,
         pointNumber: Int,
         items: List<String>,
-        clientRevision: Int,
+        clientRevision: Long,
     ): UploadOutcome {
         val outcome =
             if (!hasAllowedUploadScheme(siteUrl)) {
@@ -157,7 +157,7 @@ class UploadClient {
             deviceId: String,
             pointNumber: Int,
             items: List<String>,
-            clientRevision: Int,
+            clientRevision: Long,
         ): String {
             val itemsJson = items.joinToString(separator = ",", prefix = "[", postfix = "]", transform = ::jsonString)
             return buildString {

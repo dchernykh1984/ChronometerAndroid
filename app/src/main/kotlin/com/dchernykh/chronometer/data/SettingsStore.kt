@@ -80,13 +80,22 @@ class SettingsStore(
         }
     }
 
-    /** Current highest revision (the server rejects a stale one with HTTP 409). */
-    fun clientRevision(): Int = prefs.getInt(KEY_REV, 0)
+    /**
+     * Current highest revision (the server rejects a stale one with HTTP 409). A Long,
+     * since it counts every cutoff the device ever records; versions up to 0.6.1 stored
+     * it as an Int, which getLong would refuse with a ClassCastException, so both are read.
+     */
+    fun clientRevision(): Long =
+        when (val stored = prefs.all[KEY_REV]) {
+            is Long -> stored
+            is Int -> stored.toLong()
+            else -> 0L
+        }
 
     /** Bump the revision on each cutoff so the newest snapshot is always accepted. */
-    fun nextClientRevision(): Int {
+    fun nextClientRevision(): Long {
         val next = clientRevision() + 1
-        prefs.edit { putInt(KEY_REV, next) }
+        prefs.edit { putLong(KEY_REV, next) }
         return next
     }
 

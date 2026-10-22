@@ -1,5 +1,6 @@
 package com.dchernykh.chronometer.data
 
+import android.content.Context
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -115,6 +116,32 @@ class SettingsStoreTest {
         assertEquals(start + 1, store.nextClientRevision())
         assertEquals(start + 2, store.nextClientRevision())
         assertEquals(start + 2, store.clientRevision())
+    }
+
+    @Test
+    fun revisionStoredAsIntByAnOlderVersionCarriesOn() {
+        RuntimeEnvironment
+            .getApplication()
+            .getSharedPreferences("chronometer_settings", Context.MODE_PRIVATE)
+            .edit()
+            .putInt("client_revision", 41)
+            .commit()
+
+        assertEquals(41L, store.clientRevision())
+        assertEquals(42L, store.nextClientRevision())
+        assertEquals(42L, SettingsStore(RuntimeEnvironment.getApplication()).clientRevision())
+    }
+
+    @Test
+    fun revisionCountsPastTheIntRange() {
+        RuntimeEnvironment
+            .getApplication()
+            .getSharedPreferences("chronometer_settings", Context.MODE_PRIVATE)
+            .edit()
+            .putInt("client_revision", Int.MAX_VALUE)
+            .commit()
+
+        assertEquals(Int.MAX_VALUE.toLong() + 1, store.nextClientRevision())
     }
 
     @Test
