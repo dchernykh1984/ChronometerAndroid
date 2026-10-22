@@ -56,4 +56,5 @@ cutoffs.
 screen). A referee may start over and enter the same competition's token again
 to overwrite what the device sent: a counter restarted from 1 would sit below
 the revision the server already holds for that stream, and every upload would
-be refused with HTTP 409 (`UploadResult.GIVE_UP`) until it climbed past it.
+be refused with HTTP 409 (`UploadResult.GIVE_UP`) until it climbed past it. The
+counter is a 64-bit integer, so one device never runs out of revisions.

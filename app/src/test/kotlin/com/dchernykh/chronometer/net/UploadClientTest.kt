@@ -39,6 +39,12 @@ class UploadClientTest {
     }
 
     @Test
+    fun payloadCarriesARevisionBeyondTheIntRange() {
+        val json = UploadClient.buildPayload("tok", "dev", 0, emptyList(), 3_000_000_000L)
+        assertTrue(json.contains("\"client_revision\":3000000000"))
+    }
+
+    @Test
     fun payloadForFinishOmitsPointNumber() {
         val json = UploadClient.buildPayload("tok", "dev", 0, emptyList(), 1)
         assertFalse(json.contains("point_number"))
