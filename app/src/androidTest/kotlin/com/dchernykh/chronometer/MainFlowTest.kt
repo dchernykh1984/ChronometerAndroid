@@ -139,6 +139,7 @@ class MainFlowTest {
 
     private fun resetStoredSettings() {
         val store = SettingsStore(appContext())
+        store.resetForNewCompetition()
         store.save(
             store.load().copy(
                 token = "",
@@ -562,6 +563,115 @@ class MainFlowTest {
             app.settingsStore.load().copy(siteUrl = siteUrl, token = "ui-secret", sendEnabled = true),
         )
         recreateAndSettle()
+    }
+
+    private fun openDeleteDialog() {
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            val open = composeRule.onAllNodesWithTag("deleteCutoffDialog").fetchSemanticsNodes().isNotEmpty()
+            if (!open) tapLogButton("editDeleteButton")
+            open
+        }
+    }
+
+    @Test
+    fun deleteIsHiddenUntilEditingAndCancellationKeepsTheSavedCutoffAndDraft() {
+        recordAndAwait("cutoffButton", "70600")
+        composeRule.onAllNodesWithTag("editDeleteButton").assertCountEquals(0)
+        val app = appContext() as ChronometerApp
+        val original =
+            runBlocking {
+                app.database
+                    .cutoffDao()
+                    .getAll()
+                    .single()
+            }
+        enterEditMode()
+        composeRule.onNodeWithTag("editNumberField").performTextReplacement("70699")
+        openDeleteDialog()
+        composeRule
+            .onNodeWithText(
+                LocaleContext.wrap(app, AppLanguage.EN).getString(
+                    R.string.delete_cutoff_confirm,
+                    original.number,
+                    original.timeStr,
+                ),
+            ).assertIsDisplayed()
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            val open = composeRule.onAllNodesWithTag("cancelDeleteCutoff").fetchSemanticsNodes().isNotEmpty()
+            if (open) composeRule.onNodeWithTag("cancelDeleteCutoff").performClick()
+            !open
+        }
+        assertEquals(listOf(original), runBlocking { app.database.cutoffDao().getAll() })
+        composeRule.onNodeWithTag("editNumberField").assertTextContains("70699")
+        tapUntilEditClosed("editDiscardButton")
+        waitForText("70600")
+    }
+
+    @Test
+    fun confirmedDeletionOfTheLastCutoffWritesBeforeAndAfterBackups() {
+        val app = appContext() as ChronometerApp
+        val folder = File(app.cacheDir, "ui-delete-${System.nanoTime()}")
+        app.settingsStore.save(app.settingsStore.load().copy(folderPath = folder.path))
+        recreateAndSettle()
+        recordAndAwait("cutoffButton", "70610")
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            File(folder, "backup").listFiles()?.size == 1
+        }
+        val row =
+            runBlocking {
+                app.database
+                    .cutoffDao()
+                    .getAll()
+                    .single()
+            }
+        enterEditMode()
+        openDeleteDialog()
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            val open = composeRule.onAllNodesWithTag("confirmDeleteCutoff").fetchSemanticsNodes().isNotEmpty()
+            if (open) composeRule.onNodeWithTag("confirmDeleteCutoff").performClick()
+            !open
+        }
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            File(folder, "backup").listFiles()?.size == 3
+        }
+        assertTrue(
+            runBlocking {
+                app.database
+                    .cutoffDao()
+                    .getAll()
+                    .isEmpty()
+            },
+        )
+        assertEquals("", File(folder, "results.txt").readText())
+        assertTrue(File(folder, "backup/${row.id}-1.txt").readText().contains("70610#"))
+        assertEquals("", File(folder, "backup/${row.id}-2.txt").readText())
+        waitForText(localizedString(AppLanguage.EN, R.string.log_empty))
+    }
+
+    @Test
+    fun failedPreDeleteBackupShowsAnErrorAndKeepsTheCutoff() {
+        val app = appContext() as ChronometerApp
+        val folder = File(app.cacheDir, "ui-delete-blocked-${System.nanoTime()}")
+        folder.writeText("blocked")
+        app.settingsStore.save(app.settingsStore.load().copy(folderPath = folder.path))
+        recreateAndSettle()
+        recordAndAwait("cutoffButton", "70620")
+        val original =
+            runBlocking {
+                app.database
+                    .cutoffDao()
+                    .getAll()
+                    .single()
+            }
+        enterEditMode()
+        openDeleteDialog()
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            val failed = composeRule.onAllNodesWithTag("deleteCutoffError").fetchSemanticsNodes().isNotEmpty()
+            if (!failed) composeRule.onNodeWithTag("confirmDeleteCutoff").performClick()
+            failed
+        }
+        composeRule.onNodeWithTag("deleteCutoffError").assertIsDisplayed()
+        assertEquals(listOf(original), runBlocking { app.database.cutoffDao().getAll() })
     }
 
     @Test

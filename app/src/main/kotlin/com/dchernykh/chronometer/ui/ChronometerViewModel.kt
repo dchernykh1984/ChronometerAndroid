@@ -65,6 +65,13 @@ class ChronometerViewModel(
 
     fun loadSettings(): Settings = app.settingsStore.load()
 
+    fun deleteCutoff(
+        id: Long,
+        onDone: (Boolean) -> Unit,
+    ) {
+        viewModelScope.launch { onDone(repository.deleteCutoff(id)) }
+    }
+
     fun saveSettings(settings: Settings) {
         app.settingsStore.save(settings)
         // Re-read so normalized values (generated uuid, default folder) propagate.

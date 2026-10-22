@@ -12,10 +12,15 @@ import com.dchernykh.chronometer.data.UploadErrorStore
 import com.dchernykh.chronometer.ui.UploadStatus
 import com.dchernykh.chronometer.ui.uploadDiagnosticsOf
 import com.dchernykh.chronometer.ui.uploadStatusOf
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
@@ -23,6 +28,7 @@ import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -124,6 +130,66 @@ class UploadIntegrationTest {
             assertTrue(body.contains("\"client_revision\":"))
             assertTrue(body.contains("11#"))
             assertTrue(body.contains("22#"))
+        }
+
+    @Test
+    fun workerUploadsAnEmptySnapshotWithANewerRevisionAfterDeletingTheLastCutoff() =
+        runTest {
+            // Both endpoints replace this device's full stream, including an empty list.
+            for (point in listOf(0, 3)) {
+                configureUpload(pointNumber = point)
+                repository.record("11", CutoffEvent.NEXT_LAP)
+                val revision = app.settingsStore.clientRevision()
+                val row =
+                    app.database
+                        .cutoffDao()
+                        .getAll()
+                        .single()
+                assertTrue(repository.deleteCutoff(row.id))
+                server.enqueue(MockResponse().setResponseCode(204))
+
+                assertEquals(ListenableWorker.Result.success(), runWorker())
+
+                val request = server.takeRequest(5, TimeUnit.SECONDS)!!
+                val endpoint = if (point == 0) "finish-times" else "remote-points"
+                assertEquals("/api/v1/$endpoint/", request.path)
+                val body = request.body.readUtf8()
+                assertTrue(body.contains("\"items\":[]"))
+                assertTrue(body.contains("\"client_revision\":${revision + 1}"))
+            }
+        }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun workerWaitsForTheMutationAndReadsTheMatchingListAndRevision() =
+        runTest {
+            configureUpload(pointNumber = 0)
+            repository.record("11", CutoffEvent.NEXT_LAP)
+            server.enqueue(MockResponse().setResponseCode(204))
+            val worker = TestListenableWorkerBuilder<UploadWorker>(app).build()
+            val upload: Deferred<ListenableWorker.Result>
+            val revision: Long
+            CutoffRepository.mutationMutex.withLock {
+                upload = async { worker.doWork() }
+                runCurrent()
+                assertFalse(upload.isCompleted)
+                assertEquals(0, server.requestCount)
+                app.database.cutoffDao().deleteAll()
+                app.settingsStore.allowEmptySnapshot()
+                revision = app.settingsStore.nextClientRevision()
+            }
+            assertEquals(ListenableWorker.Result.success(), upload.await())
+            val body = server.takeRequest(5, TimeUnit.SECONDS)!!.body.readUtf8()
+            assertTrue(body.contains("\"items\":[]"))
+            assertTrue(body.contains("\"client_revision\":$revision"))
+        }
+
+    @Test
+    fun workerDoesNotClearTheServerForAFreshEmptyList() =
+        runTest {
+            configureUpload(pointNumber = 0)
+            assertEquals(ListenableWorker.Result.success(), runWorker())
+            assertEquals(0, server.requestCount)
         }
 
     @Test

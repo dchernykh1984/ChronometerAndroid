@@ -6,6 +6,10 @@
     <string name="disqualify">Дисквалификация</string>
     <string name="dsq_reason_hint">Дисквалификация себебі</string>
     <string name="edit">Өзгерту</string>
+    <string name="delete_cutoff">Жою</string>
+    <string name="delete_cutoff_title">Белгіні жою керек пе?</string>
+    <string name="delete_cutoff_confirm">%2$s уақытындағы %1$s белгісін жою керек пе? Бұрынғы сақтық көшірмелер сақталады.</string>
+    <string name="delete_cutoff_failed">Белгі сақталды: сақтық көшірме жасау мүмкін болмады. Файлдарға рұқсатты тексеріп, қайталаңыз.</string>
     <string name="log_empty">Әзірге белгілер жоқ</string>
     <string name="back">Артқа</string>
     <string name="save">Сақтау</string>

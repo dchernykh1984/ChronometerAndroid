@@ -18,6 +18,9 @@ interface CutoffDao {
         timeStr: String,
     )
 
+    @Query("DELETE FROM cutoffs WHERE id = :id")
+    suspend fun deleteById(id: Long): Int
+
     /** Full history in recording order, for file snapshots and uploads. */
     @Query("SELECT * FROM cutoffs ORDER BY id ASC")
     suspend fun getAll(): List<CutoffEntity>

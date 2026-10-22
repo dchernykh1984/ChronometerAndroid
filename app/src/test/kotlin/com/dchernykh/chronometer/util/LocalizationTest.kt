@@ -50,6 +50,21 @@ class LocalizationTest {
     }
 
     @Test
+    fun deletionCopyIsLocalizedAndConfirmationIncludesTheSavedCutoff() {
+        val locales = listOf(AppLanguage.EN, AppLanguage.RU, AppLanguage.KK)
+        for (resource in listOf(R.string.delete_cutoff, R.string.delete_cutoff_title, R.string.delete_cutoff_failed)) {
+            val labels = locales.map { LocaleContext.wrap(context(), it).getString(resource) }
+            assertEquals(3, labels.distinct().size)
+        }
+        val confirmations =
+            locales.map {
+                LocaleContext.wrap(context(), it).getString(R.string.delete_cutoff_confirm, "42", "1 2:3:4.005")
+            }
+        assertEquals(3, confirmations.distinct().size)
+        assertTrue(confirmations.all { it.contains("42") && it.contains("1 2:3:4.005") })
+    }
+
+    @Test
     fun protocolTokensStayEnglishInEveryLocale() {
         val label = LocaleContext.wrap(context(), AppLanguage.RU).getString(R.string.finish_mode)
         assertTrue(label.contains("finish"))

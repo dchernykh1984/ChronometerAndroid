@@ -6,6 +6,10 @@
     <string name="disqualify">Дисквалификация</string>
     <string name="dsq_reason_hint">Причина дисквалификации</string>
     <string name="edit">Изменить</string>
+    <string name="delete_cutoff">Удалить</string>
+    <string name="delete_cutoff_title">Удалить отсечку?</string>
+    <string name="delete_cutoff_confirm">Удалить отсечку %1$s со временем %2$s? Существующие бэкапы сохранятся.</string>
+    <string name="delete_cutoff_failed">Отсечка сохранена: не удалось создать бэкап. Проверьте доступ к файлам и повторите.</string>
     <string name="log_empty">Отсечек пока нет</string>
     <string name="back">Назад</string>
     <string name="save">Сохранить</string>

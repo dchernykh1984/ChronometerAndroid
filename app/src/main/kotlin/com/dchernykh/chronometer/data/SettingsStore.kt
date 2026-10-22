@@ -77,6 +77,7 @@ class SettingsStore(
         prefs.edit {
             putString(KEY_TOKEN, "")
             putInt(KEY_POINT, 0)
+            putBoolean(KEY_EMPTY_SNAPSHOT, false)
         }
     }
 
@@ -99,6 +100,13 @@ class SettingsStore(
         return next
     }
 
+    /** An empty list may clear the server only after an explicit cutoff deletion. */
+    fun allowsEmptySnapshot(): Boolean = prefs.getBoolean(KEY_EMPTY_SNAPSHOT, false)
+
+    fun allowEmptySnapshot() {
+        prefs.edit { putBoolean(KEY_EMPTY_SNAPSHOT, true) }
+    }
+
     private fun ensureDeviceUuid() {
         if (prefs.getString(KEY_UUID, "").isNullOrBlank()) {
             prefs.edit { putString(KEY_UUID, UUID.randomUUID().toString()) }
@@ -117,5 +125,6 @@ class SettingsStore(
         const val KEY_THEME = "theme_mode"
         const val KEY_LANG = "language"
         const val KEY_REV = "client_revision"
+        const val KEY_EMPTY_SNAPSHOT = "allow_empty_snapshot"
     }
 }
