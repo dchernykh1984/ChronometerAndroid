@@ -134,8 +134,9 @@ class CutoffRepository(
     }
 
     /**
-     * Start a new competition: empty `results.txt`, clear cutoffs, drop the token,
-     * reset the point number and revision. Backups on disk are preserved.
+     * Start a new competition: empty `results.txt`, clear cutoffs, drop the token and
+     * reset the point number; the revision counter keeps counting. Backups on disk
+     * are preserved.
      *
      * The file reset happens first. If it fails, the existing Room/settings state is
      * kept intact so the referee does not lose the current competition.

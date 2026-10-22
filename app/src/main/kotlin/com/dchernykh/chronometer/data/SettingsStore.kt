@@ -65,15 +65,18 @@ class SettingsStore(
             .getOrDefault(ThemeMode.SYSTEM)
 
     /**
-     * Start a new competition: clear the upload token, reset the control point to
-     * 0 and the revision counter. Folder, device id and preferences are kept; the
-     * on-disk backups are not touched here (the caller only resets `results.txt`).
+     * Start a new competition: clear the upload token and reset the control point to
+     * 0. Folder, device id and preferences are kept; the on-disk backups are not
+     * touched here (the caller only resets `results.txt`).
+     *
+     * The revision counter is kept too: the referee may enter the same competition's
+     * token again to overwrite what this device sent, and the server rejects any
+     * revision not above the one it holds for this device.
      */
     fun resetForNewCompetition() {
         prefs.edit {
             putString(KEY_TOKEN, "")
             putInt(KEY_POINT, 0)
-            putInt(KEY_REV, 0)
         }
     }
 
