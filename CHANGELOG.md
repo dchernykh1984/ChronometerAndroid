@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.2](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.6.1...chronometer-android-v0.6.2) (2026-10-22)
+
+
+### Bug Fixes
+
+* **upload:** count revisions in a Long, carrying on from the stored Int ([2162a18](https://github.com/dchernykh1984/ChronometerAndroid/commit/2162a18a6cce0278d34ebc84573a8052c68837b2))
+* **upload:** keep counting revisions across a new competition ([baf3f4e](https://github.com/dchernykh1984/ChronometerAndroid/commit/baf3f4e02b2eb92d5c123048a45dd64de00809ba))
+
 ## [0.6.1](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.6.0...chronometer-android-v0.6.1) (2026-10-21)
 
 
