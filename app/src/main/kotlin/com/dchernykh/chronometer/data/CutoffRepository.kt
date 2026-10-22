@@ -11,10 +11,13 @@ import com.dchernykh.chronometer.io.BackupWriter
 import com.dchernykh.chronometer.util.TimeFormatter
 import com.dchernykh.chronometer.work.UploadWorker
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /** Orchestrates the durable-first recording sequence for each cutoff. */
@@ -51,29 +54,31 @@ class CutoffRepository(
         val now = System.currentTimeMillis()
         val timeStr = TimeFormatter.currentTimeString(now)
 
-        val id =
-            dao.insert(
-                CutoffEntity(
-                    number = trimmed,
-                    timeStr = timeStr,
-                    event = event,
-                    createdAt = now,
-                ),
-            )
-        settingsStore.nextClientRevision()
+        mutationMutex.withLock {
+            val id =
+                dao.insert(
+                    CutoffEntity(
+                        number = trimmed,
+                        timeStr = timeStr,
+                        event = event,
+                        createdAt = now,
+                    ),
+                )
+            settingsStore.nextClientRevision()
 
-        val settings = settingsStore.load()
-        val items = dao.getAll().map { it.toItem() }
-        // Name the snapshot by the unique row id, not the millisecond clock, so two
-        // presses in the same millisecond never collide.
-        val backupOk =
-            withContext(Dispatchers.IO) {
-                backupWriter.writeSnapshot(settings.folderPath, items, id)
+            val settings = settingsStore.load()
+            val items = dao.getAll().map { it.toItem() }
+            // Name the snapshot by the unique row id, not the millisecond clock, so two
+            // presses in the same millisecond never collide.
+            val backupOk =
+                withContext(Dispatchers.IO) {
+                    backupWriter.writeSnapshot(settings.folderPath, items, id)
+                }
+            backupFailedState.value = !backupOk
+
+            if (settings.isUploadReady) {
+                enqueueUpload()
             }
-        backupFailedState.value = !backupOk
-
-        if (settings.isUploadReady) {
-            enqueueUpload()
         }
     }
 
@@ -105,33 +110,74 @@ class CutoffRepository(
             return false
         }
 
-        dao.updateNumberAndTime(id, cleanedNumber, cleanedTime)
-        settingsStore.nextClientRevision()
+        return mutationMutex.withLock {
+            dao.updateNumberAndTime(id, cleanedNumber, cleanedTime)
+            settingsStore.nextClientRevision()
 
-        val settings = settingsStore.load()
-        val items = dao.getAll().map { it.toItem() }
-        val backupOk =
-            withContext(Dispatchers.IO) {
-                backupWriter.writeSnapshot(settings.folderPath, items, id)
+            val settings = settingsStore.load()
+            val items = dao.getAll().map { it.toItem() }
+            val backupOk =
+                withContext(Dispatchers.IO) {
+                    backupWriter.writeSnapshot(settings.folderPath, items, id)
+                }
+            backupFailedState.value = !backupOk
+
+            if (settings.isUploadReady) {
+                enqueueUpload()
             }
-        backupFailedState.value = !backupOk
-
-        if (settings.isUploadReady) {
-            enqueueUpload()
+            true
         }
-        return true
     }
+
+    /** Refuse deletion until the complete original list has an immutable backup. */
+    suspend fun deleteCutoff(id: Long): Boolean =
+        mutationMutex.withLock {
+            val before = dao.getAll()
+            if (before.none { it.id == id }) {
+                return@withLock false
+            }
+            val settings = settingsStore.load()
+            val backedUp =
+                withContext(Dispatchers.IO) {
+                    backupWriter.writeSnapshot(settings.folderPath, before.map { it.toItem() }, id)
+                }
+            if (!backedUp) {
+                backupFailedState.value = true
+                return@withLock false
+            }
+
+            // Once deleted, always finish the new snapshot and queue the upload.
+            withContext(NonCancellable) {
+                // Persist intent before the delete so a restart can still send an empty list.
+                settingsStore.allowEmptySnapshot()
+                dao.deleteById(id)
+                settingsStore.nextClientRevision()
+                val after = dao.getAll().map { it.toItem() }
+                val backupOk =
+                    withContext(Dispatchers.IO) {
+                        backupWriter.writeSnapshot(settings.folderPath, after, id)
+                    }
+                backupFailedState.value = !backupOk
+                if (settings.isUploadReady) {
+                    enqueueUpload()
+                }
+                true
+            }
+        }
 
     /**
      * Enqueue an upload for cutoffs already stored in Room. Called after the user
      * turns on or fixes the upload settings, so data recorded while sending was
      * off/misconfigured is pushed without waiting for the next new cutoff.
      */
-    suspend fun uploadPendingCutoffs() {
-        if (settingsStore.load().isUploadReady && dao.getAll().isNotEmpty()) {
-            enqueueUpload()
+    suspend fun uploadPendingCutoffs() =
+        mutationMutex.withLock {
+            if (settingsStore.load().isUploadReady &&
+                (dao.getAll().isNotEmpty() || settingsStore.allowsEmptySnapshot())
+            ) {
+                enqueueUpload()
+            }
         }
-    }
 
     /**
      * Start a new competition: empty `results.txt`, clear cutoffs, drop the token and
@@ -141,18 +187,19 @@ class CutoffRepository(
      * The file reset happens first. If it fails, the existing Room/settings state is
      * kept intact so the referee does not lose the current competition.
      */
-    suspend fun startNewCompetition(): Boolean {
-        val folder = settingsStore.load().folderPath
-        val resetOk = withContext(Dispatchers.IO) { backupWriter.resetResults(folder) }
-        if (!resetOk) {
-            backupFailedState.value = true
-            return false
+    suspend fun startNewCompetition(): Boolean =
+        mutationMutex.withLock {
+            val folder = settingsStore.load().folderPath
+            val resetOk = withContext(Dispatchers.IO) { backupWriter.resetResults(folder) }
+            if (!resetOk) {
+                backupFailedState.value = true
+                return@withLock false
+            }
+            dao.deleteAll()
+            settingsStore.resetForNewCompetition()
+            backupFailedState.value = false
+            true
         }
-        dao.deleteAll()
-        settingsStore.resetForNewCompetition()
-        backupFailedState.value = false
-        return true
-    }
 
     /** Size of the data folder (results + backups) for the settings info line. */
     suspend fun dataFolderSizeBytes(): Long =
@@ -171,7 +218,10 @@ class CutoffRepository(
             .enqueueUniqueWork(UPLOAD_WORK, ExistingWorkPolicy.REPLACE, request)
     }
 
-    private companion object {
-        const val UPLOAD_WORK = "chronometer_upload"
+    companion object {
+        // Writers and the worker must agree on the list, revision and snapshot filenames.
+        internal val mutationMutex = Mutex()
+
+        private const val UPLOAD_WORK = "chronometer_upload"
     }
 }

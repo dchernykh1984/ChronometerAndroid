@@ -6,6 +6,10 @@
     <string name="disqualify">Disqualify</string>
     <string name="dsq_reason_hint">Disqualification reason</string>
     <string name="edit">Edit</string>
+    <string name="delete_cutoff">Delete</string>
+    <string name="delete_cutoff_title">Delete cutoff?</string>
+    <string name="delete_cutoff_confirm">Delete cutoff %1$s at %2$s? Existing backup files will be kept.</string>
+    <string name="delete_cutoff_failed">Cutoff kept: could not save a backup. Check file access and try again.</string>
     <string name="log_empty">No cutoffs yet</string>
     <string name="back">Back</string>
     <string name="save">Save</string>

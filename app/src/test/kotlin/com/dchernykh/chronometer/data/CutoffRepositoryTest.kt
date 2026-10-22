@@ -4,6 +4,11 @@ import androidx.room.Room
 import androidx.work.WorkManager
 import androidx.work.testing.WorkManagerTestInitHelper
 import com.dchernykh.chronometer.io.BackupWriter
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -169,6 +174,202 @@ class CutoffRepositoryTest {
             assertTrue(repository.editCutoff(row.id, "8", "1 2:3:4.005"))
 
             assertTrue(uploadWork().isNotEmpty())
+        }
+
+    @Test
+    fun deletePreservesOriginalBackupsAndAddsCompleteBeforeAndAfterSnapshots() =
+        runTest {
+            configure(sendEnabled = false)
+            repository.record("11", CutoffEvent.NEXT_LAP)
+            repository.record("22", CutoffEvent.FINISH)
+            val rows = db.cutoffDao().getAll()
+            val originals = File(folder, "backup").listFiles()!!.associate { it.name to it.readText() }
+            val revision = store.clientRevision()
+            val before = rows.joinToString("\n", postfix = "\n") { it.toItem() }
+            val after = rows.last().toItem() + "\n"
+
+            assertTrue(repository.deleteCutoff(rows.first().id))
+
+            assertEquals(listOf(rows.last()), db.cutoffDao().getAll())
+            assertEquals(after, File(folder, "results.txt").readText())
+            assertEquals(before, File(folder, "backup/${rows.first().id}-1.txt").readText())
+            assertEquals(after, File(folder, "backup/${rows.first().id}-2.txt").readText())
+            val snapshots = File(folder, "backup").listFiles()!!.associate { it.name to it.readText() }
+            assertEquals(originals.size + 2, snapshots.size)
+            originals.forEach { (name, body) -> assertEquals(body, snapshots[name]) }
+            assertEquals(revision + 1, store.clientRevision())
+            assertFalse(repository.backupFailed.value)
+            assertTrue(uploadWork().isEmpty())
+        }
+
+    @Test
+    fun deleteIsBlockedIfTheBackupCannotBeSavedEvenWhenResultsAreWritable() =
+        runTest {
+            configure(sendEnabled = false)
+            repository.record("11", CutoffEvent.NEXT_LAP)
+            val row = db.cutoffDao().getAll().single()
+            val revision = store.clientRevision()
+            val backup = File(folder, "backup")
+            assertTrue(backup.renameTo(File(folder, "preserved-backups")))
+            backup.writeText("block directory creation")
+            configure(sendEnabled = true)
+
+            assertFalse(repository.deleteCutoff(row.id))
+
+            assertEquals(listOf(row), db.cutoffDao().getAll())
+            assertEquals(revision, store.clientRevision())
+            assertFalse(store.allowsEmptySnapshot())
+            assertTrue(repository.backupFailed.value)
+            assertTrue(uploadWork().isEmpty())
+        }
+
+    @Test
+    fun deletingAMissingRowDoesNotChangeFilesRevisionOrUploadIntent() =
+        runTest {
+            configure(sendEnabled = true)
+            val revision = store.clientRevision()
+            assertFalse(repository.deleteCutoff(123))
+            assertFalse(folder.exists())
+            assertEquals(revision, store.clientRevision())
+            assertFalse(store.allowsEmptySnapshot())
+            assertTrue(uploadWork().isEmpty())
+        }
+
+    @Test
+    fun postDeleteBackupFailureKeepsTheRecoverySnapshotAndQueuesTheDurableDeletion() =
+        runTest {
+            configure(sendEnabled = false)
+            repository.record("11", CutoffEvent.NEXT_LAP)
+            val row = db.cutoffDao().getAll().single()
+            val dao = db.cutoffDao()
+            val failingAfterDelete =
+                object : CutoffDao by dao {
+                    override suspend fun deleteById(id: Long): Int {
+                        val deleted = dao.deleteById(id)
+                        // Simulate storage becoming unavailable after the durable deletion.
+                        assertTrue(File(folder, "backup").renameTo(File(folder, "recovery")))
+                        File(folder, "backup").writeText("blocked")
+                        return deleted
+                    }
+                }
+            configure(sendEnabled = true)
+            val deleting =
+                CutoffRepository(RuntimeEnvironment.getApplication(), failingAfterDelete, store, BackupWriter())
+
+            assertTrue(deleting.deleteCutoff(row.id))
+
+            assertTrue(db.cutoffDao().getAll().isEmpty())
+            assertTrue(File(folder, "recovery/${row.id}-1.txt").readText().contains("11#"))
+            assertEquals("", File(folder, "results.txt").readText())
+            assertTrue(deleting.backupFailed.value)
+            assertTrue(uploadWork().isNotEmpty())
+        }
+
+    @Test
+    fun deletingTheLastCutoffWhileSendingIsOffCanBeUploadedAfterRestart() =
+        runTest {
+            configure(sendEnabled = false)
+            repository.record("11", CutoffEvent.NEXT_LAP)
+            val row = db.cutoffDao().getAll().single()
+            assertTrue(repository.deleteCutoff(row.id))
+            assertEquals("", File(folder, "results.txt").readText())
+            assertEquals("", File(folder, "backup/${row.id}-2.txt").readText())
+            assertTrue(uploadWork().isEmpty())
+
+            val context = RuntimeEnvironment.getApplication()
+            val reopenedStore = SettingsStore(context)
+            assertTrue(reopenedStore.allowsEmptySnapshot())
+            configure(sendEnabled = true)
+            CutoffRepository(context, db.cutoffDao(), reopenedStore, BackupWriter()).uploadPendingCutoffs()
+            assertTrue(uploadWork().isNotEmpty())
+        }
+
+    @Test
+    fun newCompetitionDoesNotUploadThePreviousEmptySnapshot() =
+        runTest {
+            configure(sendEnabled = false)
+            repository.record("11", CutoffEvent.NEXT_LAP)
+            assertTrue(
+                repository.deleteCutoff(
+                    db
+                        .cutoffDao()
+                        .getAll()
+                        .single()
+                        .id,
+                ),
+            )
+            assertTrue(repository.startNewCompetition())
+            configure(sendEnabled = true)
+            repository.uploadPendingCutoffs()
+            assertFalse(store.allowsEmptySnapshot())
+            assertTrue(uploadWork().isEmpty())
+        }
+
+    @Test
+    fun cancellationAfterTheDatabaseDeleteStillFinishesThePostDeleteBackupAndUpload() =
+        runTest {
+            configure(sendEnabled = false)
+            repository.record("11", CutoffEvent.NEXT_LAP)
+            val row = db.cutoffDao().getAll().single()
+            val revision = store.clientRevision()
+            val deleted = CompletableDeferred<Unit>()
+            val finishDelete = CompletableDeferred<Unit>()
+            val dao = db.cutoffDao()
+            val pausedDao =
+                object : CutoffDao by dao {
+                    override suspend fun deleteById(id: Long): Int {
+                        val count = dao.deleteById(id)
+                        deleted.complete(Unit)
+                        finishDelete.await()
+                        return count
+                    }
+                }
+            configure(sendEnabled = true)
+            val deleting = CutoffRepository(RuntimeEnvironment.getApplication(), pausedDao, store, BackupWriter())
+            val task = launch { deleting.deleteCutoff(row.id) }
+            deleted.await()
+            task.cancel()
+            finishDelete.complete(Unit)
+            task.join()
+
+            assertEquals(revision + 1, store.clientRevision())
+            assertEquals("", File(folder, "results.txt").readText())
+            assertEquals("", File(folder, "backup/${row.id}-2.txt").readText())
+            assertTrue(uploadWork().isNotEmpty())
+        }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun recordingDuringDeletionCannotOverwriteTheNewerResultsOrReuseABackupName() =
+        runTest {
+            configure(sendEnabled = false)
+            repository.record("11", CutoffEvent.NEXT_LAP)
+            val row = db.cutoffDao().getAll().single()
+            val deletingRow = CompletableDeferred<Unit>()
+            val resumeDeletion = CompletableDeferred<Unit>()
+            val dao = db.cutoffDao()
+            val pausedDao =
+                object : CutoffDao by dao {
+                    override suspend fun deleteById(id: Long): Int {
+                        deletingRow.complete(Unit)
+                        resumeDeletion.await()
+                        return dao.deleteById(id)
+                    }
+                }
+            val deleting = CutoffRepository(RuntimeEnvironment.getApplication(), pausedDao, store, BackupWriter())
+            val delete = async { deleting.deleteCutoff(row.id) }
+            deletingRow.await()
+            val record = async { repository.record("22", CutoffEvent.FINISH) }
+            runCurrent()
+            assertFalse(record.isCompleted)
+            resumeDeletion.complete(Unit)
+            assertTrue(delete.await())
+            record.await()
+
+            val rows = db.cutoffDao().getAll()
+            assertEquals("22", rows.single().number)
+            assertEquals(rows.single().toItem() + "\n", File(folder, "results.txt").readText())
+            assertEquals(4, File(folder, "backup").listFiles()!!.size)
         }
 
     @Test

@@ -12,6 +12,9 @@ connectivity returns.
   crash, and the log auto-scrolls to the newest entry.
 - **Finish mode** records `finish` instead of `nextLap`, and the participant
   number field accepts digits (default) or free text.
+- **Edit** corrects a cutoff's number/time or offers **Delete** with confirmation.
+  Deletion requires a backup of the original list and writes another snapshot
+  after updating it; existing backups are kept.
 - Mirrors each press to plain files in a user-chosen folder: `results.txt` (the
   format the desktop referee tools consume) plus an immutable `backup/<id>.txt`
   snapshot per press, written atomically.
@@ -164,7 +167,14 @@ Not Disturb; **Finish timing mode** stops it. Type a number and tap **Cutoff**
 In the configured folder (default `/sdcard/android_chronometer`):
 
 - `results.txt` - the current list of cutoffs, one `number#time#event#` per line;
-- `backup/<id>.txt` - one immutable snapshot per press.
+- `backup/<id>.txt` - one immutable snapshot per press; edits and deletions add
+  `backup/<id>-N.txt` snapshots without overwriting earlier ones.
+
+To remove a cutoff, choose **Edit**, then **Delete**, and confirm its saved number
+and time. If the backup before deletion fails, the cutoff stays. If the updated
+snapshot fails, the original backup remains available and the app shows a warning.
+Deleting the final cutoff also sends an empty snapshot to clear this device's
+stream on the site, including when uploads are enabled later.
 
 "New competition" clears the cutoff list, the upload token and the point number
 but **keeps the backups**; settings show the data folder's size so you can clean

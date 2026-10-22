@@ -10,6 +10,7 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,6 +23,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -262,7 +264,7 @@ fun MainScreen(
                     modifier = Modifier.weight(1f).testTag("cutoffLog"),
                 ) {
                     items(cutoffs, key = { it.id }) { cutoff ->
-                        CutoffRow(cutoff, settings.numericInput, viewModel::editCutoff)
+                        CutoffRow(cutoff, settings.numericInput, viewModel::editCutoff, viewModel::deleteCutoff)
                     }
                 }
             }
@@ -356,6 +358,7 @@ private fun CutoffRow(
     cutoff: CutoffEntity,
     numericInput: Boolean,
     onSave: (id: Long, number: String, timeStr: String) -> Unit,
+    onDelete: (id: Long, onDone: (Boolean) -> Unit) -> Unit,
 ) {
     // Kept per row (keyed by id) so several rows can be edited at once and an
     // in-progress edit survives scrolling and rotation. The drafts are refreshed
@@ -364,6 +367,7 @@ private fun CutoffRow(
     var editing by rememberSaveable(cutoff.id) { mutableStateOf(false) }
     var draftNumber by rememberSaveable(cutoff.id) { mutableStateOf(cutoff.number) }
     var draftTime by rememberSaveable(cutoff.id) { mutableStateOf(cutoff.timeStr) }
+    var showDeleteDialog by rememberSaveable(cutoff.id) { mutableStateOf(false) }
 
     fun startEdit() {
         draftNumber = cutoff.number
@@ -430,11 +434,17 @@ private fun CutoffRow(
                 modifier = Modifier.weight(1f).testTag("editTimeField"),
             )
         }
+        EventLabel(cutoff.event)
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            EventLabel(cutoff.event, Modifier.weight(1f))
+            TextButton(
+                onClick = { showDeleteDialog = true },
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                modifier = Modifier.testTag("editDeleteButton"),
+            ) { Text(stringResource(R.string.delete_cutoff)) }
+            Spacer(Modifier.weight(1f))
             TextButton(
                 onClick = { editing = false },
                 modifier = Modifier.testTag("editDiscardButton"),
@@ -449,6 +459,58 @@ private fun CutoffRow(
             ) { Text(stringResource(R.string.save)) }
         }
     }
+    if (showDeleteDialog) {
+        DeleteCutoffDialog(cutoff, onDelete, onDismiss = { showDeleteDialog = false })
+    }
+}
+
+@Composable
+private fun DeleteCutoffDialog(
+    cutoff: CutoffEntity,
+    onDelete: (id: Long, onDone: (Boolean) -> Unit) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var deleting by remember { mutableStateOf(false) }
+    var failed by rememberSaveable(cutoff.id) { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = { if (!deleting) onDismiss() },
+        title = { Text(stringResource(R.string.delete_cutoff_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.delete_cutoff_confirm, cutoff.number, cutoff.timeStr))
+                if (failed) {
+                    Text(
+                        stringResource(R.string.delete_cutoff_failed),
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.testTag("deleteCutoffError"),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = !deleting,
+                onClick = {
+                    deleting = true
+                    onDelete(cutoff.id) { success ->
+                        deleting = false
+                        failed = !success
+                        if (success) onDismiss()
+                    }
+                },
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                modifier = Modifier.testTag("confirmDeleteCutoff"),
+            ) { Text(stringResource(R.string.delete_cutoff)) }
+        },
+        dismissButton = {
+            TextButton(
+                enabled = !deleting,
+                onClick = onDismiss,
+                modifier = Modifier.testTag("cancelDeleteCutoff"),
+            ) { Text(stringResource(R.string.cancel)) }
+        },
+        modifier = Modifier.testTag("deleteCutoffDialog"),
+    )
 }
 
 @Composable
