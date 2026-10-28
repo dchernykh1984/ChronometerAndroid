@@ -117,7 +117,9 @@ screens, which the instrumented tests cover.
   interleave with a hand cutoff, an edit or a deletion.
 - **`CutoffRepository`**: `record()` keeps its behaviour; the part after the Room insert (revision,
   snapshot, upload) becomes `afterChange(stamp)`, used by hand cutoffs, chip cutoffs and assigned
-  breaks.
+  breaks. A batch of source events calls it once, so a mass finish writes one `results.txt` and one
+  snapshot per batch, not one per cutoff: snapshots hold the whole list, and one per chip cutoff
+  would grow the backup folder with the square of the field size.
 - **Main screen**: in beam mode the pending breaks show above the log, oldest first, each with
   Discard; the Cutoff button reads "Cutoff 10:00:00.123" while one is pending. In chips mode a line
   shows source state, bibs and chips loaded, conflicts and unknown chips, and opens the chips

@@ -59,6 +59,7 @@ The raw formats are ChronometerPython's (`specs/001-event-sources/contracts/raw-
 
 ## In memory
 
-- **Chip map**: chip -> bib from `start.txt` (fields 0 and 11), conflicts, counts.
+- **Chip map**: chip -> bib from `start.txt` (fields 0 and 11; a relay's k-th rider, after k
+  semicolons, binds to bib + k when the line has N > 1 stages and a numeric bib), conflicts, counts.
 - **Unknown chips**: from `chip_reads` of chips not in the map: first, last, count.
 - **Source state**: `Stopped`, `Running`, `Restarting(inSeconds)`, `NotAvailable`, last error.

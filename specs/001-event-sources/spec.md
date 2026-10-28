@@ -205,19 +205,24 @@ the dead time and download a start protocol: the cutoff does not come back.
 
 - Two bibs read at the same moment: each bib gets its own cutoff.
 - A read that arrives late with an earlier time (a reader flushing its buffer after a reconnect):
-  it joins the pass its time falls into; a pass without a cutoff gets one, and a cutoff already
-  made is not moved. The cutoff is appended to `results.txt` after newer ones; the protocol
+  it joins the pass its time falls into; a pass that never had a cutoff gets one, and a cutoff
+  already made is not moved. The cutoff is appended to `results.txt` after newer ones; the protocol
   generator orders crossings by time, not by line.
 - The dead time changed during a race: it applies to reads from then on; passes already formed
   keep their reads and their cutoffs.
-- Chip ids in the start protocol in lower case or with stray punctuation: matched the way
-  StartProtocolMaker normalises chip ids; a reader's chip id is normalised the same way.
+- Chip ids in the start protocol in lower case, with stray punctuation or with spaces inside (an
+  EPC typed in groups of four): matched the way StartProtocolMaker normalises chip ids; a reader's
+  chip id is normalised the same way.
 - A start protocol line without a bib, with `NOT_PAID` or with fewer than 12 `#` separators: its
   chips are not bound.
-- A relay line: its chips, of every member, bind to the line's bib.
+- A relay of three stages with bib 21 and chips `A1;B1;C1`: A1 binds to 21, B1 to 22, C1 to 23.
 - Pending beam breaks when the source changes: they stay pending and visible until assigned or
   discarded.
 - DSQ: always the time of the tap, never a pending break.
+- A cutoff at the time of the tap while breaks are pending (the beam missed a rider and caught a
+  bird): the referee discards the false breaks first; Cutoff takes a pending break whenever there
+  is one, so a number never lands on the wrong time silently -- the button shows which time it
+  will use.
 - "New competition": clears the cutoff list as today, and also the pending breaks, the chip reads
   and the passes; moves `start.txt`, `chip_reads.txt` and `beam_breaks.txt` into `backup/`. The
   token is cleared as today, so the next competition starts without a map until its own start
@@ -246,22 +251,28 @@ the dead time and download a start protocol: the cutoff does not come back.
   later may speak the same event lines over its USB or Bluetooth link.
 - **FR-004**: Devices available in this round: test beam (a break every few seconds at random) and
   test chips (passes of the chips of the loaded map in turn, two to four reads each within a
-  second, and now and then a chip that is not in the map). The others are stubs: listed, marked
-  "not available yet", never started.
+  second, and now and then a chip that is not in the map; with no map loaded, only chips no map
+  holds). The others are stubs: listed, marked "not available yet", never started.
 - **FR-005**: A source that fails is started again after 1 s, the pause doubling to at most 30 s
   while it keeps failing and returning to 1 s after 30 s of running without a failure.
 - **FR-006**: A read's or a break's time is the time on the phone's clock the source reports or,
   without one, the time the app received it, as `D H:M:S.mmm` in local standard time, like a hand
-  cutoff.
+  cutoff. A reported time before 2000 (a device clock never set) or from 2100 on makes the event
+  invalid, as the desktop protocol decides: it is not used, and it becomes the source's last error
+  on screen.
 - **FR-007**: Every chip read is stored in Room before anything else, then appended to
   `chip_reads.txt` in the data folder as `chip#time#device time#antenna#signal#reader#`, with a
   field left empty when the device did not give it -- the format of the desktop chronometer's raw
   reads file. A raw-file write that fails shows the file warning the app shows today; the read
   still counts.
 - **FR-008**: The chip map is built from field 0 (bib) and field 11 (chip ids) of `start.txt`.
-  Chip ids are normalised as StartProtocolMaker normalises them: split on commas, semicolons and
-  whitespace, keep ASCII letters and digits, upper case. A chip on the lines of two bibs is
+  Field 11 is split on commas and semicolons; each id there, and each id a source reports, is
+  compared upper case with everything but ASCII letters and digits dropped, as StartProtocolMaker
+  normalises it, so an EPC typed in groups of four is one id. A chip on the lines of two bibs is
   reported and not mapped. A line without a bib, with `NOT_PAID` or without field 11 binds nothing.
+  Semicolons separate the riders of a team: on a line with N > 1 stages (field 4) and a numeric
+  bib, the k-th rider (from 0) binds to bib + k, as FinishProtocolGenerator and the site number
+  stage riders, and riders past the N-th bind nothing; any other line binds every chip to its bib.
   The file is read as UTF-8, falling back to cp1251 as the desktop chronometer does.
 - **FR-009**: "Download start protocol" in the settings fetches
   `GET <site URL>/api/v1/start-list/?competition_token=<token>` only when pressed, and takes the
@@ -269,13 +280,16 @@ the dead time and download a start protocol: the cutoff does not come back.
   `start.txt` to `backup/` without overwriting an earlier copy, replaces `start.txt` in one step,
   rebuilds the map and shows how many bibs and chips were loaded and which chips conflict. On a
   network error, an HTTP error, an invalid response or a list with no lines, nothing changes and
-  the referee sees why. "Reload start protocol" reads `start.txt` again.
+  the referee sees why. The answer is invalid when `devices` is not a list or a line is anything
+  but text on one line (no line break `String.lines()` would split at); blank lines are no riders,
+  so an answer of blank lines is a list with no lines. "Reload start protocol" reads `start.txt`
+  again.
 - **FR-010**: A bib's chip reads are grouped into passes by their read times, whatever order they
   arrive in: reads less than the dead time apart are one pass. A pass that has never had a cutoff
   gets one as soon as it forms, timed at its first read; a cutoff already made is never moved,
   even when a late read turns out earlier, and a pass that once had a cutoff never gets another,
   even after the referee edits or deletes it. Dead time: 5 s by default, settable from 1 s to
-  120 s.
+  120 s; a change applies to reads from then on.
 - **FR-011**: Reads of unknown chips are listed with first read, last read and count. When the map
   changes, the reads of chips that became known join their bib's reads; every pass of the bib (by
   FR-010) that has never had a cutoff gets one, at its first read. A chip that moves from one bib
