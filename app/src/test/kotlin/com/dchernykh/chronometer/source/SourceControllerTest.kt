@@ -1,9 +1,14 @@
 package com.dchernykh.chronometer.source
 
+import android.os.Looper
 import com.dchernykh.chronometer.data.SettingsStore
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.TestScope
@@ -11,11 +16,13 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import java.util.Collections
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -193,6 +200,42 @@ class SourceControllerTest {
             runCurrent()
             assertEquals(listOf(base + 1_000, base), taken.flatten().map { (it as SourceEvent.ChipRead).timeMs })
         }
+
+    @Test
+    fun aBurstOf10000ReadsIsHandedOnInOrderOffTheMainThread() {
+        choose(SourceKind.CHIPS)
+        val reads = List(10_000) { SourceEvent.ChipRead("C${it % 50}", 1_767_261_600_000 + it) }
+        val stored = Collections.synchronizedList(mutableListOf<SourceEvent>())
+        val threads = Collections.synchronizedSet(mutableSetOf<Thread>())
+        val controller =
+            SourceController(store, System::currentTimeMillis) { batch ->
+                threads += Thread.currentThread()
+                stored += batch
+            }.apply {
+                sourceFor = {
+                    CutoffSource {
+                        flow {
+                            reads.forEach { emit(it) }
+                            awaitCancellation()
+                        }
+                    }
+                }
+            }
+        // As the timing-mode service runs it.
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        try {
+            controller.start(scope)
+            val deadline = System.currentTimeMillis() + 20_000
+            while (stored.size < reads.size && System.currentTimeMillis() < deadline) {
+                Thread.sleep(10)
+            }
+            assertEquals(reads, stored.toList())
+            assertFalse(Looper.getMainLooper().thread in threads)
+        } finally {
+            controller.stop()
+            scope.cancel()
+        }
+    }
 
     @Test
     fun aRestartRunsTheSourceTheSettingsNowChoose() =

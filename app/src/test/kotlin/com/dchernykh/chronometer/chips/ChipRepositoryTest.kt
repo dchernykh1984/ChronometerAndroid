@@ -426,6 +426,14 @@ class ChipRepositoryTest {
             try {
                 chips(after).apply(listOf(read("A1", 3_000)))
                 assertEquals(listOf("15" to time(0)), made(after))
+                // The reads outlive the process too (SC-003), each with the bib it went to.
+                val kept = mutableListOf<String>()
+                after.openHelper.readableDatabase.query("SELECT chip, timeStr, bib FROM chip_reads ORDER BY id").use {
+                    while (it.moveToNext()) {
+                        kept += "${it.getString(0)}#${it.getString(1)}#${it.getString(2)}"
+                    }
+                }
+                assertEquals(listOf("A1#${time(0)}#15", "A1#${time(3_000)}#15"), kept)
             } finally {
                 after.close()
             }
