@@ -110,9 +110,10 @@ class ChipRepository(
                         StartProtocol.Unreadable(e.message ?: e.javaClass.simpleName)
                     }
                 }
-            protocolState.value = protocol
             val settings = settingsStore.load()
             val lastCutoff = db.withTransaction { timeWaitingReads(protocol.map, settings) }
+            // Only once the reads it binds are timed: a reload cut short leaves the map before it.
+            protocolState.value = protocol
             lastCutoff?.let { cutoffs.afterChange(it) }
         }
     }
