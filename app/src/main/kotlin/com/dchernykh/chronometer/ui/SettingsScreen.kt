@@ -2,6 +2,7 @@ package com.dchernykh.chronometer.ui
 
 import android.Manifest
 import android.app.Activity
+import android.content.Context
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -47,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dchernykh.chronometer.R
 import com.dchernykh.chronometer.data.AppLanguage
+import com.dchernykh.chronometer.data.Settings
 import com.dchernykh.chronometer.data.ThemeMode
 import com.dchernykh.chronometer.data.isUploadConfigured
 import java.util.UUID
@@ -90,11 +92,7 @@ fun SettingsScreen(
     val hasUnsavedChanges = settings != initialSettings
 
     fun saveAndExit() {
-        viewModel.saveSettings(settings)
-        if (settings.language != initialSettings.language) {
-            // Re-run attachBaseContext with the new locale.
-            (context as? Activity)?.recreate()
-        } else {
+        if (!saveApplyingLanguage(viewModel, context, settings, initialSettings)) {
             onBack()
         }
     }
@@ -252,7 +250,8 @@ fun SettingsScreen(
                 onDownload = {
                     // The download uses the saved site URL, token and folder: save what the
                     // referee sees, and stay here to see the result.
-                    viewModel.saveSettings(settings)
+                    // A new language recreates the screen; the download goes on in the view model.
+                    saveApplyingLanguage(viewModel, context, settings, initialSettings)
                     settings = viewModel.loadSettings()
                     initialSettings = settings
                     viewModel.downloadStartProtocol()
@@ -414,4 +413,22 @@ internal fun ChoiceChip(
         label = { Text(stringResource(labelRes), maxLines = 1) },
         modifier = Modifier.testTag(tag),
     )
+}
+
+/**
+ * Save [edited]; a new language recreates the activity, whose locale is set as it starts
+ * (attachBaseContext). True when it did.
+ */
+private fun saveApplyingLanguage(
+    viewModel: ChronometerViewModel,
+    context: Context,
+    edited: Settings,
+    saved: Settings,
+): Boolean {
+    viewModel.saveSettings(edited)
+    val recreate = edited.language != saved.language
+    if (recreate) {
+        (context as? Activity)?.recreate()
+    }
+    return recreate
 }
