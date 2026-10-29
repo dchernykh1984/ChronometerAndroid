@@ -200,8 +200,9 @@ class ChipRepository(
             return
         }
         ensureMap()
-        val settings = settingsStore.load()
         CutoffRepository.mutationMutex.withLock {
+            // Read now, not before waiting: a save meanwhile counts for this batch.
+            val settings = settingsStore.load()
             val map = protocolState.value?.map ?: ChipMap()
             val rows = reads.map { read -> rowOf(read, map) }
             db.withTransaction { storeAndTime(rows, settings) }?.let { cutoffs.afterChange(it) }
