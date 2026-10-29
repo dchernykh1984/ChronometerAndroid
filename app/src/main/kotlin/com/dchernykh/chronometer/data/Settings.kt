@@ -79,3 +79,12 @@ val Settings.isUploadConfigured: Boolean
 /** True when uploads should actually be attempted (configured and turned on). */
 val Settings.isUploadReady: Boolean
     get() = sendEnabled && isUploadConfigured
+
+/** The device the settings choose; null by hand. */
+val Settings.chosenDevice: DeviceId?
+    get() =
+        when (cutoffSource) {
+            SourceKind.HAND -> null
+            SourceKind.BEAM -> beamDevice
+            SourceKind.CHIPS -> chipsDevice
+        }

@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import com.dchernykh.chronometer.R
 import com.dchernykh.chronometer.data.DEAD_TIME_RANGE_S
 import com.dchernykh.chronometer.data.Settings
+import com.dchernykh.chronometer.data.chosenDevice
 import com.dchernykh.chronometer.source.DeviceId
 import com.dchernykh.chronometer.source.SourceKind
 import com.dchernykh.chronometer.startprotocol.Download
@@ -56,7 +57,7 @@ internal fun CutoffSourceSection(
         return
     }
     Text(stringResource(R.string.source_device))
-    val chosen = if (kind == SourceKind.BEAM) settings.beamDevice else settings.chipsDevice
+    val chosen = settings.chosenDevice
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),

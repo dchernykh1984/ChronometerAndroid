@@ -11,9 +11,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import com.dchernykh.chronometer.R
 import com.dchernykh.chronometer.data.Settings
+import com.dchernykh.chronometer.data.chosenDevice
 import com.dchernykh.chronometer.source.EventProblem
 import com.dchernykh.chronometer.source.SourceError
-import com.dchernykh.chronometer.source.SourceKind
 import com.dchernykh.chronometer.source.SourceState
 import com.dchernykh.chronometer.source.SourceStatus
 
@@ -23,12 +23,7 @@ internal fun SourceLine(
     settings: Settings,
     status: SourceStatus,
 ) {
-    val device =
-        when (settings.cutoffSource) {
-            SourceKind.HAND -> return
-            SourceKind.BEAM -> settings.beamDevice
-            SourceKind.CHIPS -> settings.chipsDevice
-        }
+    val device = settings.chosenDevice ?: return
     val name = deviceLabel(device)
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(

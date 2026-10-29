@@ -1,5 +1,8 @@
 package com.dchernykh.chronometer.data
 
+import com.dchernykh.chronometer.source.DeviceId
+import com.dchernykh.chronometer.source.SourceKind
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -78,4 +81,22 @@ class SettingsValidationTest {
         folderPath = "/folder",
         sendEnabled = sendEnabled,
     )
+
+    @Test
+    fun theChosenDeviceIsTheOneOfTheChosenSource() {
+        val settings =
+            Settings(
+                siteUrl = "",
+                token = "",
+                pointNumber = 0,
+                deviceUuid = "",
+                folderPath = "",
+                sendEnabled = false,
+                beamDevice = DeviceId.USB_BEAM,
+                chipsDevice = DeviceId.LLRP,
+            )
+        assertEquals(null, settings.copy(cutoffSource = SourceKind.HAND).chosenDevice)
+        assertEquals(DeviceId.USB_BEAM, settings.copy(cutoffSource = SourceKind.BEAM).chosenDevice)
+        assertEquals(DeviceId.LLRP, settings.copy(cutoffSource = SourceKind.CHIPS).chosenDevice)
+    }
 }
