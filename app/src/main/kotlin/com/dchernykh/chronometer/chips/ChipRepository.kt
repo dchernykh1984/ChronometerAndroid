@@ -149,8 +149,9 @@ class ChipRepository(
         val lastCutoff = db.withTransaction { timeWaitingReads(protocol.map, settings) }
         // Only once the reads it binds are timed: a reload cut short leaves the map before it.
         protocolState.value = protocol
-        waiting.value = db.chipDao().waitingSummary().associateBy { it.chip }
+        // The cutoffs it made go to the files and the site first, whatever the summary does.
         lastCutoff?.let { cutoffs.afterChange(it) }
+        waiting.value = db.chipDao().waitingSummary().associateBy { it.chip }
     }
 
     /**
