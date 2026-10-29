@@ -73,7 +73,7 @@
     <string name="device_raceresult">Декодер RaceResult</string>
     <string name="device_r2000">Считыватель R2000</string>
     <string name="device_not_available">%1$s (пока недоступно)</string>
-    <string name="dead_time">Мёртвое время, с: чтения одного номера ближе него - один проход</string>
+    <string name="dead_time">Мёртвое время, с (%1$d-%2$d): чтения одного номера ближе него - один проход</string>
     <string name="source_line_stopped">%1$s: остановлено</string>
     <string name="source_line_running">%1$s: работает</string>
     <string name="source_line_restarting">%1$s: перезапуск через %2$d с</string>
