@@ -396,6 +396,19 @@ class MainFlowTest {
     }
 
     @Test
+    fun aLanguageSavedByTheDownloadButtonIsApplied() {
+        openSettings()
+        selectRadio("langKk")
+        selectRadio("sourceChips")
+        // No site set: the download changes nothing and says so, in the language just saved.
+        composeRule.onNodeWithTag("downloadStartProtocol").performScrollTo().performClick()
+        waitForText(localizedString(AppLanguage.KK, R.string.settings))
+        val noSite = localizedString(AppLanguage.KK, R.string.download_no_site)
+        waitForText(localizedString(AppLanguage.KK, R.string.download_failed, noSite))
+        assertEquals(AppLanguage.KK, SettingsStore(appContext()).load().language)
+    }
+
+    @Test
     fun themeChoiceIsAppliedAndReflectedInSettings() {
         openSettings()
         composeRule.onNodeWithTag("themeDark").performScrollTo().performClick()
