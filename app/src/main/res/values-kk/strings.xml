@@ -84,4 +84,8 @@
     <string name="source_error_time">Құрылғы сағаты бапталмаған оқиға есепке алынбады</string>
     <string name="source_invalid_events">Есепке алынбаған оқиғалар: %1$d</string>
     <string name="source_test_warning">СЫНАҚ ҚҰРЫЛҒЫСЫ: оның белгілеулері - сынақ деректері</string>
+    <string name="cutoff_at">Белгілеу %1$s</string>
+    <string name="pending_breaks_title">Сәуле іске қосылулары нөмір күтуде</string>
+    <string name="discard_break_title">Сәуленің бұл іске қосылуын тастау керек пе?</string>
+    <string name="discard_break_message">%1$s кезіндегі іске қосылу кезектен шығады; beam_breaks.txt оны сақтайды.</string>
 </resources>

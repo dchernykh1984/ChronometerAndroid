@@ -120,8 +120,8 @@ screens, which the instrumented tests cover.
   breaks. A batch of source events calls it once, so a mass finish writes one `results.txt` and one
   snapshot per batch, not one per cutoff: snapshots hold the whole list, and one per chip cutoff
   would grow the backup folder with the square of the field size.
-- **Main screen**: in beam mode the pending breaks show above the log, oldest first, each with
-  Discard; the Cutoff button reads "Cutoff 10:00:00.123" while one is pending. In chips mode a line
+- **Main screen**: pending beam breaks show above the log, oldest first, each with Discard, and
+  stay after the source changes; the Cutoff button reads "Cutoff 10:00:00.123" while one is pending. In chips mode a line
   shows source state, bibs and chips loaded, conflicts and unknown chips, and opens the chips
   screen. A test device adds a warning line.
 - **Settings**: a "Cutoff source" section with the three choices, the device list (stubs disabled,

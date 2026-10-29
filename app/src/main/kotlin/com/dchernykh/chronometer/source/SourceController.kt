@@ -16,6 +16,7 @@ private const val BATCH = 200
 /** The source behind each device; null while a device is not available. */
 fun builtInSource(device: DeviceId): CutoffSource? =
     when (device) {
+        DeviceId.TEST_BEAM -> TestBeamSource()
         else -> null
     }
 

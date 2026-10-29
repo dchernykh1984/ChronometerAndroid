@@ -78,6 +78,7 @@ fun MainScreen(
     val backupFailed by viewModel.backupFailed.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val sourceStatus by viewModel.sourceStatus.collectAsStateWithLifecycle()
+    val pendingBreaks by viewModel.pendingBreaks.collectAsStateWithLifecycle()
     val focusRequester = remember { FocusRequester() }
     val logState = rememberLazyListState()
     // Landscape has little vertical room, so shrink the input controls to keep the
@@ -214,7 +215,9 @@ fun MainScreen(
                         .height(if (landscape) 52.dp else 72.dp)
                         .padding(top = 8.dp)
                         .testTag("cutoffButton"),
-            ) { Text(stringResource(R.string.cutoff), style = MaterialTheme.typography.titleLarge) }
+            ) {
+                Text(cutoffLabel(pendingBreaks.firstOrNull()), style = MaterialTheme.typography.titleLarge)
+            }
 
             // Disqualification is rare: keep it small and secondary to avoid mis-taps.
             // The reason field sits to the left of the button in the otherwise empty row;
@@ -255,6 +258,7 @@ fun MainScreen(
                 modifier = Modifier.padding(top = 8.dp),
             )
             SourceLine(settings, sourceStatus)
+            PendingBreaks(pendingBreaks, viewModel::discardBreak)
 
             HorizontalDivider(modifier = Modifier.padding(vertical = if (landscape) 6.dp else 12.dp))
 

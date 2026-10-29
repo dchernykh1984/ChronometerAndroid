@@ -61,6 +61,23 @@ class BackupWriter {
             true
         }.getOrDefault(false)
 
+    /**
+     * Append lines to a raw device file in the data folder ([RawFiles]). False, and
+     * nothing thrown, when it cannot be written: what it holds is in Room already.
+     */
+    fun appendRaw(
+        folderPath: String,
+        name: String,
+        lines: List<String>,
+    ): Boolean =
+        runCatching {
+            if (lines.isNotEmpty()) {
+                val folder = File(folderPath).apply { mkdirs() }
+                File(folder, name).appendText(lines.joinToString(separator = "\n", postfix = "\n"), Charsets.UTF_8)
+            }
+            true
+        }.getOrDefault(false)
+
     /** Total size in bytes of the data folder (results + all backups), 0 if missing. */
     fun folderSizeBytes(folderPath: String): Long {
         val folder = File(folderPath)

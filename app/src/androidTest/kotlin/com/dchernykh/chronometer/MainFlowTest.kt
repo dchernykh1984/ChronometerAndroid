@@ -34,10 +34,14 @@ import com.dchernykh.chronometer.data.ThemeMode
 import com.dchernykh.chronometer.service.RaceService
 import com.dchernykh.chronometer.source.CutoffSource
 import com.dchernykh.chronometer.source.DeviceId
+import com.dchernykh.chronometer.source.SourceEvent
 import com.dchernykh.chronometer.source.SourceKind
 import com.dchernykh.chronometer.source.SourceState
 import com.dchernykh.chronometer.source.builtInSource
+import com.dchernykh.chronometer.ui.timeOfDay
 import com.dchernykh.chronometer.util.LocaleContext
+import com.dchernykh.chronometer.util.TimeFormatter
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -88,7 +92,11 @@ class MainFlowTest {
     /** Remove work history too, so a prior failure cannot leak diagnostics into another test. */
     private fun clearAppData() {
         val app = appContext() as ChronometerApp
-        runBlocking { app.database.cutoffDao().deleteAll() }
+        runBlocking {
+            app.database.cutoffDao().deleteAll()
+            // A waiting beam break would take the next test's Cutoff.
+            app.database.beamDao().clearBreaks()
+        }
         val workManager = WorkManager.getInstance(appContext())
         workManager.cancelAllWork().result.get()
         workManager.pruneWork().result.get()
@@ -221,6 +229,12 @@ class MainFlowTest {
         }
     }
 
+    private fun waitUntilGone(tag: String) {
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            composeRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isEmpty()
+        }
+    }
+
     private fun waitForTag(tag: String) {
         composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
             composeRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
@@ -241,7 +255,8 @@ class MainFlowTest {
     private fun localizedString(
         language: AppLanguage,
         @StringRes stringRes: Int,
-    ): String = LocaleContext.wrap(appContext(), language).getString(stringRes)
+        vararg args: Any,
+    ): String = LocaleContext.wrap(appContext(), language).getString(stringRes, *args)
 
     @Test
     fun recordingCutoffShowsItInLog() {
@@ -511,6 +526,69 @@ class MainFlowTest {
             RaceService.stop(appContext())
             controller.sourceFor = ::builtInSource
         }
+    }
+
+    @Test
+    fun aBeamBreakWaitsForTheNumberAndTheCutoffTakesItsTime() {
+        val controller = (appContext() as ChronometerApp).sourceController
+        val breakMs = System.currentTimeMillis() - BREAK_AGO_MS
+        val breakTime = TimeFormatter.currentTimeString(breakMs)
+        controller.sourceFor = {
+            CutoffSource {
+                flow {
+                    emit(SourceEvent.BeamBreak(1, breakMs))
+                    awaitCancellation()
+                }
+            }
+        }
+        openSettings()
+        selectRadio("sourceBeam")
+        saveSettings()
+        grantNotificationPermission()
+        composeRule.onNodeWithTag("timingModeToggle").performClick()
+        try {
+            waitForText(localizedString(AppLanguage.EN, R.string.timing_dnd_title))
+            composeRule.onNodeWithTag("timingOnDialogOk").performClick()
+            waitForText(localizedString(AppLanguage.EN, R.string.cutoff_at, timeOfDay(breakTime)))
+            typePendingNumber("15")
+            // The log shows the break's full time once the tap has taken; a repeat tap
+            // finds the field empty and records nothing.
+            composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+                composeRule.onNodeWithTag("cutoffButton").performClick()
+                composeRule.onAllNodesWithText(breakTime).fetchSemanticsNodes().isNotEmpty()
+            }
+            composeRule.onNodeWithText("15").assertExists()
+            waitUntilGone("pendingBreaks")
+            composeRule.onNodeWithText(localizedString(AppLanguage.EN, R.string.cutoff)).assertExists()
+        } finally {
+            RaceService.stop(appContext())
+            controller.sourceFor = ::builtInSource
+        }
+    }
+
+    @Test
+    fun aDsqKeepsTheTapTimeAndADiscardedBreakLeavesTheQueue() {
+        val breakMs = System.currentTimeMillis() - BREAK_AGO_MS
+        val breakTime = TimeFormatter.currentTimeString(breakMs)
+        runBlocking { (appContext() as ChronometerApp).beamRepository.add(listOf(SourceEvent.BeamBreak(1, breakMs))) }
+        val label = localizedString(AppLanguage.EN, R.string.cutoff_at, timeOfDay(breakTime))
+        waitForText(label)
+        recordAndAwait("dsqButton", "81")
+        waitForText("DSQ")
+        composeRule.onAllNodesWithText(breakTime).assertCountEquals(0)
+        composeRule.onNodeWithText(label).assertExists()
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            val asked = composeRule.onAllNodesWithTag("confirmDiscardBreak").fetchSemanticsNodes().isNotEmpty()
+            if (!asked) composeRule.onNodeWithTag("discardBreak").performClick()
+            asked
+        }
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            if (composeRule.onAllNodesWithTag("confirmDiscardBreak").fetchSemanticsNodes().isNotEmpty()) {
+                composeRule.onNodeWithTag("confirmDiscardBreak").performClick()
+            }
+            composeRule.onAllNodesWithTag("pendingBreaks").fetchSemanticsNodes().isEmpty()
+        }
+        composeRule.onNodeWithText(localizedString(AppLanguage.EN, R.string.cutoff)).assertExists()
     }
 
     @Test
@@ -786,6 +864,9 @@ class MainFlowTest {
         // The tablet AVD is markedly slower; give the async record -> Room -> Flow
         // pipeline and recompositions generous headroom.
         const val AWAIT_MS = 20_000L
+
+        /** A break this long ago has a time no tap during the test can have. */
+        const val BREAK_AGO_MS = 60_000L
 
         // Enough rows to make the log scrollable on either profile.
         const val LOG_FILL = 12

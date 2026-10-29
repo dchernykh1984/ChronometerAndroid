@@ -84,4 +84,8 @@
     <string name="source_error_time">An event with the device clock never set was not used</string>
     <string name="source_invalid_events">Events not used: %1$d</string>
     <string name="source_test_warning">TEST DEVICE: its cutoffs are test data</string>
+    <string name="cutoff_at">Cutoff %1$s</string>
+    <string name="pending_breaks_title">Beam breaks waiting for a number</string>
+    <string name="discard_break_title">Discard this beam break?</string>
+    <string name="discard_break_message">The break at %1$s leaves the queue; beam_breaks.txt keeps it.</string>
 </resources>

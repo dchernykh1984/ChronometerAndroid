@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.dchernykh.chronometer.ChronometerApp
 import com.dchernykh.chronometer.data.CutoffEntity
 import com.dchernykh.chronometer.data.CutoffEvent
-import com.dchernykh.chronometer.data.CutoffRepository
+import com.dchernykh.chronometer.data.PendingBreakEntity
 import com.dchernykh.chronometer.data.Settings
 import com.dchernykh.chronometer.source.SourceStatus
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,8 +21,8 @@ class ChronometerViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
     private val app = application as ChronometerApp
-    private val repository =
-        CutoffRepository(app, app.database.cutoffDao(), app.settingsStore, app.backupWriter)
+    private val repository = app.cutoffRepository
+    private val beam = app.beamRepository
 
     private val settingsState = MutableStateFlow(app.settingsStore.load())
 
@@ -36,8 +36,14 @@ class ChronometerViewModel(
             emptyList(),
         )
 
-    /** Diagnostics (do not affect recording): last backup outcome + upload state. */
-    val backupFailed: StateFlow<Boolean> = repository.backupFailed
+    /** Diagnostics (do not affect recording): last file outcome + upload state. */
+    val backupFailed: StateFlow<Boolean> =
+        combine(repository.backupFailed, beam.rawFailed) { snapshot, raw -> snapshot || raw }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
+
+    /** Beam breaks waiting for a number, oldest first. */
+    val pendingBreaks: StateFlow<List<PendingBreakEntity>> =
+        beam.pending.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     /** The cutoff source's state, for its line on the main screen. */
     val sourceStatus: StateFlow<SourceStatus> = app.sourceController.status
@@ -46,9 +52,22 @@ class ChronometerViewModel(
         combine(repository.uploadWorkInfo, app.uploadErrorStore.error, ::uploadDiagnosticsOf)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), UploadDiagnostics())
 
+    /**
+     * The oldest waiting beam break takes the number at its time, whatever the source is
+     * now (the button shows that time); with none waiting, the cutoff is at the tap.
+     */
     fun recordCutoff(number: String) {
         val event = CutoffEvent.lapEvent(settingsState.value.finishMode)
-        viewModelScope.launch { repository.record(number, event) }
+        viewModelScope.launch {
+            if (!beam.assignOldest(number, event)) {
+                repository.record(number, event)
+            }
+        }
+    }
+
+    /** A false beam break leaves the queue; beam_breaks.txt keeps it. */
+    fun discardBreak(id: Long) {
+        viewModelScope.launch { beam.discard(id) }
     }
 
     fun recordDisqualification(
