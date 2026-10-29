@@ -42,4 +42,33 @@ class MigrationTest {
             }
         }
     }
+
+    @Test
+    fun migrate2To3KeepsEveryCutoffAndAddsTheSourceTables() {
+        val name = "migration-test-3"
+        helper.createDatabase(name, 2).use { db ->
+            db.execSQL(
+                "INSERT INTO cutoffs (id, number, timeStr, event, createdAt) " +
+                    "VALUES (1, '42', '1 2:3:4.005', 'nextLap', 100)",
+            )
+            db.execSQL(
+                "INSERT INTO cutoffs (id, number, timeStr, event, createdAt) " +
+                    "VALUES (2, '7', '1 2:3:5.000', 'DSQ: cut the course', 200)",
+            )
+        }
+        helper.runMigrationsAndValidate(name, 3, true, MIGRATION_2_3).use { db ->
+            db.query("SELECT number, timeStr, event FROM cutoffs ORDER BY id").use { cursor ->
+                assertEquals(2, cursor.count)
+                cursor.moveToFirst()
+                assertEquals("42", cursor.getString(0))
+                assertEquals("1 2:3:4.005", cursor.getString(1))
+                cursor.moveToNext()
+                assertEquals("DSQ: cut the course", cursor.getString(2))
+            }
+            db.query("SELECT COUNT(*) FROM chip_reads").use { cursor ->
+                cursor.moveToFirst()
+                assertEquals(0, cursor.getInt(0))
+            }
+        }
+    }
 }

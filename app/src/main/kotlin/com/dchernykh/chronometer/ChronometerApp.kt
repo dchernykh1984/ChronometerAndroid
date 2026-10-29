@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.room.Room
 import com.dchernykh.chronometer.data.AppDatabase
 import com.dchernykh.chronometer.data.MIGRATION_1_2
+import com.dchernykh.chronometer.data.MIGRATION_2_3
 import com.dchernykh.chronometer.data.SettingsStore
 import com.dchernykh.chronometer.data.UploadErrorStore
 import com.dchernykh.chronometer.io.BackupWriter
@@ -27,7 +28,7 @@ class ChronometerApp : Application() {
             Room
                 .databaseBuilder(this, AppDatabase::class.java, "chronometer.db")
                 // Migrate rather than drop data: recorded cutoffs must never be lost.
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
         settingsStore = SettingsStore(this)
         uploadErrorStore = UploadErrorStore(this)

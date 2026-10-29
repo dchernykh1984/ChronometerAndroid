@@ -9,7 +9,7 @@ each commit: `./gradlew ktlintCheck detekt lintDebug testDebugUnitTest koverVeri
 - [ ] T001 `CutoffRepository.recordAt(number, timeStr, event)` and `afterChange(stamp)` shared with
   `record()`; unit tests that a cutoff at a given time is stored, snapshotted and queued.
   -- `refactor(cutoffs): record a cutoff at a given time through the same durable path`
-- [ ] T002 Room v3: `chip_reads`, `passes`, `attributed_chips`, `pending_breaks`, `SourceDao`,
+- [ ] T002 Room v3: `chip_reads`, `passes`, `attributed_chips`, `pending_breaks`, `ChipDao`, `PassDao`, `BeamDao`,
   `MIGRATION_2_3`, exported schema 3; `MigrationTest` 2 -> 3 keeps every cutoff.
   -- `feat(db): store chip reads, passes and pending beam breaks`
 

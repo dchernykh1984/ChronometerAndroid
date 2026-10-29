@@ -26,3 +26,40 @@ val MIGRATION_1_2 =
             db.execSQL("ALTER TABLE `cutoffs_new` RENAME TO `cutoffs`")
         }
     }
+
+/**
+ * v3 adds what the cutoff sources keep: chip reads, passes, the chips whose reads are in
+ * passes, and beam breaks waiting for a number. `cutoffs` is untouched. The statements
+ * match Room's generated v3 schema exactly.
+ */
+val MIGRATION_2_3 =
+    object : Migration(2, 3) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `chip_reads` (" +
+                    "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `chip` TEXT NOT NULL, " +
+                    "`timeStr` TEXT NOT NULL, `timeMs` INTEGER NOT NULL, " +
+                    "`deviceTime` TEXT NOT NULL, `antenna` TEXT NOT NULL, " +
+                    "`reader` TEXT NOT NULL, `rssi` REAL)",
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_chip_reads_chip` ON `chip_reads` (`chip`)",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `passes` (" +
+                    "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `bib` TEXT NOT NULL, " +
+                    "`firstMs` INTEGER NOT NULL, `lastMs` INTEGER NOT NULL, " +
+                    "`issued` INTEGER NOT NULL)",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_passes_bib` ON `passes` (`bib`)")
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `attributed_chips` (" +
+                    "`chip` TEXT NOT NULL, PRIMARY KEY(`chip`))",
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `pending_breaks` (" +
+                    "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `seq` INTEGER NOT NULL, " +
+                    "`timeStr` TEXT NOT NULL, `deviceTime` TEXT NOT NULL)",
+            )
+        }
+    }
