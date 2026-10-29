@@ -119,4 +119,15 @@ class BackupWriterTest {
         assertTrue(BackupWriter().appendRaw(folder.path, "chip_reads.txt", listOf("DEF456#0 10:00:05.000#")))
         assertEquals(listOf("ABC123#0 10:00:0", "DEF456#0 10:00:05.000#"), File(folder, "chip_reads.txt").readLines())
     }
+
+    @Test
+    fun aFileThatCannotGoBackIsSaidSo() {
+        val folder = Files.createTempDirectory("aside").toFile()
+        File(folder, "start.txt").writeText("15#")
+        val moved = checkNotNull(BackupWriter().moveAside(folder.path, listOf("start.txt"), 1L))
+        // Something took its place meanwhile.
+        File(folder, "start.txt").apply { mkdirs() }.resolve("in-the-way").writeText("x")
+        assertFalse(BackupWriter().putBack(moved))
+        assertEquals("15#", File(folder, "backup/start-1.txt").readText())
+    }
 }
