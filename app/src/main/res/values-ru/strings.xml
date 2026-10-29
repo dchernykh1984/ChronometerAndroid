@@ -112,4 +112,5 @@
     <string name="download_invalid">ответ сайта - не стартовый протокол (%1$s)</string>
     <string name="download_empty">на сайте ещё нет стартового протокола этого соревнования</string>
     <string name="download_file">start.txt не удалось записать в папку данных</string>
+    <string name="source_error_not_stored">События не сохранены, повтор: %1$s</string>
 </resources>
