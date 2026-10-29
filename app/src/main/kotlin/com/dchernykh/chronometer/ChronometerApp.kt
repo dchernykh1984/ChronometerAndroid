@@ -47,7 +47,7 @@ class ChronometerApp : Application() {
         ) { batch ->
             beamRepository.add(batch.filterIsInstance<SourceEvent.BeamBreak>())
             chipRepository.apply(batch.filterIsInstance<SourceEvent.ChipRead>())
-        }
+        }.also { cutoffRepository.whenANewCompetitionStarts(it::discardTaken) }
     }
 
     override fun onCreate() {

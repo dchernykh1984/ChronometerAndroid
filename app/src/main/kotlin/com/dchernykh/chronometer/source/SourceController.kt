@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicLong
 
 /** At most this many waiting events go on together, so a burst costs one snapshot. */
 private const val BATCH = 200
@@ -60,6 +61,8 @@ class SourceController(
     private var scope: CoroutineScope? = null
     private var job: Job? = null
 
+    private val competition = AtomicLong()
+
     // App-wide, not a run's: a consumer of a run before a restart that still cannot store
     // shows on the run after it.
     private val storeError = MutableStateFlow<SourceError?>(null)
@@ -85,7 +88,7 @@ class SourceController(
         }
         val runner = SourceRunner(source, now)
         // Unlimited: the source never waits for Room, whatever a burst of reads holds.
-        val channel = Channel<SourceEvent>(Channel.UNLIMITED)
+        val channel = Channel<Taken>(Channel.UNLIMITED)
         val previous = consumer
         // After the run before it has stored everything it took, so events keep their order.
         consumer =
@@ -112,7 +115,7 @@ class SourceController(
                         }
                     }
                 }
-                runner.run { channel.send(it.timedOnArrival(wallClock())) }
+                runner.run { channel.send(Taken(competition.get(), it.timedOnArrival(wallClock()))) }
             }
         // Closed once the run has ended, so an event it was handing on as it stopped is kept.
         job?.invokeOnCompletion { channel.close() }
@@ -124,11 +127,15 @@ class SourceController(
      * 30 s, newer events waiting behind it: nothing is dropped, and the app keeps running.
      */
     @Suppress("TooGenericExceptionCaught") // whatever storing throws, the batch is kept
-    private suspend fun store(batch: List<SourceEvent>) {
+    private suspend fun store(batch: List<Taken>) {
         var pause: Long? = null
         while (true) {
+            // Taken in a competition since replaced: its tables are gone, and so is the batch.
+            val current = batch.filter { it.competition == competition.get() }.map { it.event }
             try {
-                sink(batch)
+                if (current.isNotEmpty()) {
+                    sink(current)
+                }
                 storeError.value = null
                 return
             } catch (cancel: CancellationException) {
@@ -139,6 +146,15 @@ class SourceController(
                 delay(pause)
             }
         }
+    }
+
+    /**
+     * A new competition has cleared the tables: events taken before it, still waiting or
+     * being tried again, are dropped instead of landing in it. One already in the sink, waiting
+     * for the lock, still goes in.
+     */
+    fun discardTaken() {
+        competition.incrementAndGet()
     }
 
     /**
@@ -179,3 +195,9 @@ private fun SourceEvent.timedOnArrival(nowMs: Long): SourceEvent =
         is SourceEvent.BeamBreak -> if (timeMs == null) copy(timeMs = nowMs) else this
         else -> this
     }
+
+/** An event and the competition it was taken in. */
+private class Taken(
+    val competition: Long,
+    val event: SourceEvent,
+)

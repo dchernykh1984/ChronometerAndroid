@@ -1,6 +1,7 @@
 package com.dchernykh.chronometer.service
 
 import android.content.Intent
+import androidx.work.testing.WorkManagerTestInitHelper
 import com.dchernykh.chronometer.ChronometerApp
 import com.dchernykh.chronometer.source.CutoffSource
 import com.dchernykh.chronometer.source.DeviceId
@@ -11,6 +12,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -22,6 +24,12 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [33])
 class RaceServiceTest {
+    @Before
+    fun setUp() {
+        // The source the service starts stores through the cutoffs, which queue uploads.
+        WorkManagerTestInitHelper.initializeTestWorkManager(RuntimeEnvironment.getApplication())
+    }
+
     @Test
     fun startCommandPromotesToForegroundWithNotification() {
         val service = Robolectric.buildService(RaceService::class.java).create().get()
