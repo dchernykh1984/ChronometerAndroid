@@ -367,6 +367,22 @@ class ChipRepositoryTest {
         }
 
     @Test
+    fun aReloadThatCannotTimeTheWaitingReadsLeavesTheMapBeforeIt() =
+        runTest {
+            startTxt("A1")
+            val chips = chips()
+            chips.reloadMap()
+            startTxt("B1")
+            db.close()
+            assertTrue(runCatching { chips.reloadMap() }.isFailure)
+            assertEquals(
+                mapOf("A1" to "15"),
+                chips.protocol.value!!
+                    .map.bibOf,
+            )
+        }
+
+    @Test
     fun aForgottenMapBindsNoReadUntilStartTxtIsReadAgain() =
         runTest {
             startTxt("A1")
