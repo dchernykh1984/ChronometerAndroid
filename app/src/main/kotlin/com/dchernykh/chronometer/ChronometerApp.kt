@@ -51,6 +51,7 @@ class ChronometerApp : Application() {
         }.apply {
             // The test chips pass the riders of the map in use.
             sourceFor = { builtInSource(it) { chipRepository.protocol.value?.map ?: ChipMap() } }
+            cutoffRepository.whenANewCompetitionStarts(::startOver)
         }
     }
 
