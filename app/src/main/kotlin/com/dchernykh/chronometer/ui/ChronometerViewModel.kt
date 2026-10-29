@@ -141,7 +141,7 @@ class ChronometerViewModel(
         if (settingsState.value.folderPath != folderBefore) {
             reloadStartProtocol()
         }
-        // A source chosen anew while timing mode is on runs at once.
+        // A device chosen anew while timing mode is on runs at once.
         app.sourceController.restart()
         // Flush cutoffs recorded while sending was off/misconfigured.
         viewModelScope.launch { repository.uploadPendingCutoffs() }

@@ -63,13 +63,7 @@ class SourceController(
     fun start(scope: CoroutineScope) {
         stop()
         this.scope = scope
-        val settings = settingsStore.load()
-        val device =
-            when (settings.cutoffSource) {
-                SourceKind.HAND -> null
-                SourceKind.BEAM -> settings.beamDevice
-                SourceKind.CHIPS -> settings.chipsDevice
-            }
+        val device = chosenDevice()
         deviceState.value = device
         val source = device?.takeIf { it.available }?.let(sourceFor)
         if (device == null || source == null) {
@@ -132,9 +126,25 @@ class SourceController(
         }
     }
 
-    /** Start again with the settings as they are now, if it is running. */
+    /**
+     * Start again if it is running and the settings now choose another device; a save that
+     * changed anything else leaves a running device alone, mid-race.
+     */
     fun restart() {
-        scope?.let(::start)
+        val scope = scope ?: return
+        if (chosenDevice() != deviceState.value) {
+            start(scope)
+        }
+    }
+
+    /** The device the settings choose; null by hand. */
+    private fun chosenDevice(): DeviceId? {
+        val settings = settingsStore.load()
+        return when (settings.cutoffSource) {
+            SourceKind.HAND -> null
+            SourceKind.BEAM -> settings.beamDevice
+            SourceKind.CHIPS -> settings.chipsDevice
+        }
     }
 
     fun stop() {
