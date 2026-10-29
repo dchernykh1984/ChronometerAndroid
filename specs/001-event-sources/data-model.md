@@ -23,6 +23,9 @@ All survive "New competition".
 | `timeMs` | INTEGER | `timeStr` parsed, for the pass rule |
 | `deviceTime`, `antenna`, `reader` | TEXT | empty when not reported |
 | `rssi` | REAL, nullable | |
+| `bib` | TEXT, nullable | the bib whose passes hold the read; null while no map binds the chip |
+
+Index on (`bib`, `chip`): the waiting reads are found by `bib IS NULL`.
 
 `passes`
 
@@ -31,9 +34,8 @@ All survive "New competition".
 | `id` | INTEGER PK autoincrement | |
 | `bib` | TEXT, indexed | |
 | `firstMs`, `lastMs` | INTEGER | |
-| `issued` | INTEGER (boolean) | a cutoff was made for it once |
 
-`attributed_chips`: `chip` TEXT PK -- chips whose reads have been put into passes.
+Every pass is inserted with its cutoff, in one transaction: a pass that exists has had its cutoff.
 
 `pending_breaks`
 
