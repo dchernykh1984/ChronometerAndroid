@@ -7,6 +7,7 @@ import com.dchernykh.chronometer.data.ChipSeen
 import com.dchernykh.chronometer.data.CutoffEntity
 import com.dchernykh.chronometer.data.CutoffEvent
 import com.dchernykh.chronometer.data.CutoffRepository
+import com.dchernykh.chronometer.data.PassDao
 import com.dchernykh.chronometer.data.PassEntity
 import com.dchernykh.chronometer.data.Settings
 import com.dchernykh.chronometer.data.SettingsStore
@@ -172,16 +173,18 @@ class ChipRepository(
         val bound = dao.waitingChips().filter { it in map.bibOf }
         val reads = bound.chunked(CHIPS_A_QUERY).flatMap { dao.waitingReadsOf(it) }
         val deadMs = settings.deadTimeS * MS_PER_SECOND
+        val book = PassBook(db.passDao(), deadMs)
         val made = mutableListOf<ChipReadEntity>()
         for ((bib, ofBib) in reads.groupBy { map.bibOf.getValue(it.chip) }) {
             // Grouped first, as ChronometerPython's set_map: a group near a pass makes nothing,
             // however much earlier its first read is.
             for (group in groups(ofBib.sortedWith(compareBy({ it.timeMs }, { it.id })), deadMs)) {
-                if (intoPasses(bib, group.first().timeMs, group.last().timeMs, deadMs)) {
+                if (book.join(bib, group.first().timeMs, group.last().timeMs)) {
                     made += group.first().copy(bib = bib)
                 }
             }
         }
+        book.save()
         bound.forEach { dao.attribute(it, map.bibOf.getValue(it)) }
         return made
             .sortedBy { it.timeMs }
@@ -225,14 +228,15 @@ class ChipRepository(
         settings: Settings,
     ): Long? {
         db.chipDao().insertReads(rows)
-        val deadMs = settings.deadTimeS * MS_PER_SECOND
+        val book = PassBook(db.passDao(), settings.deadTimeS * MS_PER_SECOND)
         var last: Long? = null
         for (row in rows) {
             val bib = row.bib ?: continue
-            if (intoPasses(bib, row.timeMs, row.timeMs, deadMs)) {
+            if (book.join(bib, row.timeMs, row.timeMs)) {
                 last = db.cutoffDao().insert(cutoffOf(bib, row.timeStr, settings.finishMode))
             }
         }
+        book.save()
         return last
     }
 
@@ -259,38 +263,6 @@ class ChipRepository(
         timeStr: String,
         finishMode: Boolean,
     ) = CutoffEntity(number = bib, timeStr = timeStr, event = CutoffEvent.lapEvent(finishMode), createdAt = now())
-
-    /**
-     * The pass rule (spec FR-010, ChronometerPython's `_into_passes`): reads from [first] to
-     * [last] less than the dead time from passes of their bib join them, merging them into
-     * one, and make nothing; otherwise they are a new pass. True for a new pass. A cutoff is
-     * never moved, and a pass whose cutoff the referee deleted or edited still holds its reads.
-     */
-    private suspend fun intoPasses(
-        bib: String,
-        first: Long,
-        last: Long,
-        deadMs: Long,
-    ): Boolean {
-        val dao = db.passDao()
-        val near = dao.passesOf(bib).filter { it.firstMs - deadMs < last && first < it.lastMs + deadMs }
-        if (near.isEmpty()) {
-            dao.insertPass(PassEntity(bib = bib, firstMs = first, lastMs = last))
-            return true
-        }
-        val merged =
-            near.first().copy(
-                firstMs = minOf(first, near.minOf { it.firstMs }),
-                lastMs = maxOf(last, near.maxOf { it.lastMs }),
-            )
-        if (merged != near.first()) {
-            dao.updatePass(merged)
-        }
-        if (near.size > 1) {
-            dao.deletePasses(near.drop(1).map { it.id })
-        }
-        return false
-    }
 }
 
 /** Reads sorted by time, joined wherever less than the dead time apart. */
@@ -308,4 +280,53 @@ private fun groups(
         }
     }
     return groups
+}
+
+/**
+ * The passes of the bibs a batch touches, read once and kept in memory; [save] writes back
+ * what changed, inside the batch's transaction. The pass rule (spec FR-010,
+ * ChronometerPython's `_into_passes`): reads from first to last less than the dead time from
+ * passes of their bib join them, merging them into one, and make nothing; otherwise they are a
+ * new pass. A cutoff is never moved, and a pass whose cutoff the referee deleted or edited
+ * still holds its reads.
+ */
+private class PassBook(
+    private val dao: PassDao,
+    private val deadMs: Long,
+) {
+    private val read = mutableMapOf<String, List<PassEntity>>()
+    private val now = mutableMapOf<String, MutableList<PassEntity>>()
+
+    /** Put reads from [first] to [last] into [bib]'s passes; true for a new pass. */
+    suspend fun join(
+        bib: String,
+        first: Long,
+        last: Long,
+    ): Boolean {
+        val passes = now.getOrPut(bib) { dao.passesOf(bib).also { read[bib] = it }.toMutableList() }
+        val near = passes.filter { it.firstMs - deadMs < last && first < it.lastMs + deadMs }
+        passes.removeAll { pass -> near.any { it === pass } }
+        // Kept under a stored id where there is one, so fewer rows change.
+        val kept =
+            near.firstOrNull { it.id != 0L } ?: near.firstOrNull()
+                ?: PassEntity(bib = bib, firstMs = first, lastMs = last)
+        passes +=
+            kept.copy(
+                firstMs = minOf(first, near.minOfOrNull { it.firstMs } ?: first),
+                lastMs = maxOf(last, near.maxOfOrNull { it.lastMs } ?: last),
+            )
+        return near.isEmpty()
+    }
+
+    suspend fun save() {
+        for ((bib, passes) in now) {
+            val before = read.getValue(bib).associateBy { it.id }
+            passes.filter { it.id == 0L }.forEach { dao.insertPass(it) }
+            passes.filter { it.id != 0L && it != before[it.id] }.forEach { dao.updatePass(it) }
+            val gone = before.keys - passes.map { it.id }.toSet()
+            if (gone.isNotEmpty()) {
+                dao.deletePasses(gone.toList())
+            }
+        }
+    }
 }
