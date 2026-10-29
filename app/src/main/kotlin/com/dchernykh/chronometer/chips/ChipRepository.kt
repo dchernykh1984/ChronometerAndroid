@@ -15,6 +15,7 @@ import com.dchernykh.chronometer.data.SettingsStore
 import com.dchernykh.chronometer.data.hasAllowedUploadScheme
 import com.dchernykh.chronometer.io.BackupWriter
 import com.dchernykh.chronometer.io.RawFiles
+import com.dchernykh.chronometer.io.RawLog
 import com.dchernykh.chronometer.source.SourceEvent
 import com.dchernykh.chronometer.startprotocol.Download
 import com.dchernykh.chronometer.startprotocol.DownloadProblem
@@ -74,7 +75,7 @@ class ChipRepository(
     private val now: () -> Long = System::currentTimeMillis,
 ) {
     private val protocolState = MutableStateFlow<StartProtocol?>(null)
-    private val rawFailedState = MutableStateFlow(false)
+    private val raw = RawLog(RawFiles.CHIP_READS, backupWriter)
 
     init {
         cutoffs.whenANewCompetitionStarts(::startOver)
@@ -84,7 +85,7 @@ class ChipRepository(
     val protocol: StateFlow<StartProtocol?> = protocolState.asStateFlow()
 
     /** True once the raw reads file missed lines, until a new competition; the reads are in Room. */
-    val rawFailed: StateFlow<Boolean> = rawFailedState.asStateFlow()
+    val rawFailed: StateFlow<Boolean> = raw.failed
 
     /** Chips read that the map neither binds nor names as a conflict (FR-011), by id. */
     val unknown: Flow<List<ChipSeen>> =
@@ -99,7 +100,7 @@ class ChipRepository(
      */
     private fun startOver() {
         protocolState.value = StartProtocol.Missing()
-        rawFailedState.value = false
+        raw.startOver()
     }
 
     /** Read `start.txt` if it has not been read yet: at start-up, never from the site. */
@@ -244,12 +245,7 @@ class ChipRepository(
                     "${it.chip}#${it.timeStr}#${it.deviceTime}#${it.antenna}#${RawFiles.signal(it.rssi)}#${it.reader}#"
                 }
             // Under the lock too: a new competition moves the file aside before or after it.
-            val written =
-                withContext(Dispatchers.IO) {
-                    backupWriter.appendRaw(settings.folderPath, RawFiles.CHIP_READS, lines)
-                }
-            // The file only grows: lines it missed stay missing, and so does the warning.
-            rawFailedState.value = rawFailedState.value || !written
+            raw.append(settings.folderPath, lines)
         }
     }
 

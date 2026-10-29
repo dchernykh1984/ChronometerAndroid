@@ -8,15 +8,12 @@ import com.dchernykh.chronometer.data.PendingBreakEntity
 import com.dchernykh.chronometer.data.SettingsStore
 import com.dchernykh.chronometer.io.BackupWriter
 import com.dchernykh.chronometer.io.RawFiles
+import com.dchernykh.chronometer.io.RawLog
 import com.dchernykh.chronometer.source.SourceEvent
 import com.dchernykh.chronometer.util.TimeFormatter
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 
 /**
  * Beam breaks waiting for the referee to give each a number (spec US4, FR-013): kept in
@@ -30,7 +27,7 @@ class BeamRepository(
     private val now: () -> Long = System::currentTimeMillis,
 ) {
     private val dao = db.beamDao()
-    private val rawFailedState = MutableStateFlow(false)
+    private val raw = RawLog(RawFiles.BEAM_BREAKS, backupWriter)
 
     init {
         cutoffs.whenANewCompetitionStarts(::startOver)
@@ -40,7 +37,7 @@ class BeamRepository(
     val pending: Flow<List<PendingBreakEntity>> = dao.observeBreaks()
 
     /** True once the raw beam file missed lines, until a new competition; the breaks are in Room. */
-    val rawFailed: StateFlow<Boolean> = rawFailedState.asStateFlow()
+    val rawFailed: StateFlow<Boolean> = raw.failed
 
     /** Breaks taken in the competition [takenIn]: dropped once a new one has started. */
     suspend fun add(
@@ -65,12 +62,7 @@ class BeamRepository(
             db.withTransaction { rows.forEach { dao.insertBreak(it) } }
             val lines = rows.map { "${it.seq}#${it.timeStr}#${it.deviceTime}#" }
             // Under the lock too: a new competition moves the file aside before or after it.
-            val written =
-                withContext(Dispatchers.IO) {
-                    backupWriter.appendRaw(settingsStore.load().folderPath, RawFiles.BEAM_BREAKS, lines)
-                }
-            // The file only grows: lines it missed stay missing, and so does the warning.
-            rawFailedState.value = rawFailedState.value || !written
+            raw.append(settingsStore.load().folderPath, lines)
         }
     }
 
@@ -108,7 +100,7 @@ class BeamRepository(
 
     /** A new competition: the raw beam file starts afresh, so its last failure is no more. */
     private fun startOver() {
-        rawFailedState.value = false
+        raw.startOver()
     }
 
     /** A false break leaves the queue; the raw file keeps it. */
