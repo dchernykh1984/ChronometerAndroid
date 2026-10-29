@@ -16,6 +16,7 @@ import com.dchernykh.chronometer.io.BackupWriter
 import com.dchernykh.chronometer.net.UploadClient
 import com.dchernykh.chronometer.source.SourceController
 import com.dchernykh.chronometer.source.SourceEvent
+import com.dchernykh.chronometer.source.builtInSource
 
 /** Holds the app-wide singletons (manual dependency injection). */
 class ChronometerApp : Application() {
@@ -43,11 +44,14 @@ class ChronometerApp : Application() {
         SourceController(
             settingsStore,
             SystemClock::elapsedRealtime,
-            chipMap = { chipRepository.protocol.value?.map ?: ChipMap() },
-        ) { batch ->
-            beamRepository.add(batch.filterIsInstance<SourceEvent.BeamBreak>())
-            chipRepository.apply(batch.filterIsInstance<SourceEvent.ChipRead>())
-        }.also { cutoffRepository.whenANewCompetitionStarts(it::discardTaken) }
+            competition = { cutoffRepository.competition },
+        ) { batch, takenIn ->
+            beamRepository.add(batch.filterIsInstance<SourceEvent.BeamBreak>(), takenIn)
+            chipRepository.apply(batch.filterIsInstance<SourceEvent.ChipRead>(), takenIn)
+        }.apply {
+            // The test chips pass the riders of the map in use.
+            sourceFor = { builtInSource(it) { chipRepository.protocol.value?.map ?: ChipMap() } }
+        }
     }
 
     override fun onCreate() {

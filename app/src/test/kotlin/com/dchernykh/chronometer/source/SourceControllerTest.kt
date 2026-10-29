@@ -32,8 +32,10 @@ class SourceControllerTest {
     private val breaks = (1L..3L).map { SourceEvent.BeamBreak(it, 1_761_725_400_000 + it) }
 
     private fun TestScope.controller(source: CutoffSource?) =
-        SourceController(store, { testScheduler.currentTime }, storeScope = backgroundScope) { taken += it }
-            .apply { sourceFor = { source } }
+        SourceController(store, { testScheduler.currentTime }, storeScope = backgroundScope) { batch, _ ->
+            taken +=
+                batch
+        }.apply { sourceFor = { source } }
 
     private fun choose(
         kind: SourceKind,
@@ -94,7 +96,7 @@ class SourceControllerTest {
             choose(SourceKind.BEAM)
             var failures = 2
             val controller =
-                SourceController(store, { testScheduler.currentTime }, storeScope = backgroundScope) { batch ->
+                SourceController(store, { testScheduler.currentTime }, storeScope = backgroundScope) { batch, _ ->
                     check(failures-- <= 0) { "database or disk is full" }
                     taken += batch
                 }.apply { sourceFor = { endless } }
@@ -129,7 +131,16 @@ class SourceControllerTest {
     private fun TestScope.slowController(
         source: CutoffSource,
         release: CompletableDeferred<Unit>,
-    ) = SourceController(store, { testScheduler.currentTime }, storeScope = backgroundScope) { batch ->
+        competition: () -> Long = { 0L },
+    ) = SourceController(
+        store,
+        { testScheduler.currentTime },
+        competition = competition,
+        storeScope = backgroundScope,
+    ) {
+        batch,
+        _,
+        ->
         release.await()
         taken += batch
     }.apply { sourceFor = { source } }
@@ -168,13 +179,14 @@ class SourceControllerTest {
                         awaitCancellation()
                     }
                 }
-            val controller = slowController(source, release)
+            var competition = 0L
+            val controller = slowController(source, release) { competition }
             controller.start(backgroundScope)
             runCurrent()
             advanceTimeBy(2)
             runCurrent()
-            // Break 1 is in the sink already; 2 and 3 wait.
-            controller.discardTaken()
+            // Break 1 is in the sink already (which checks again under its lock); 2 and 3 wait.
+            competition++
             release.complete(Unit)
             advanceTimeBy(20)
             runCurrent()
@@ -211,7 +223,7 @@ class SourceControllerTest {
                     { testScheduler.currentTime },
                     wallClock = { base + testScheduler.currentTime },
                     storeScope = backgroundScope,
-                ) { batch ->
+                ) { batch, _ ->
                     delay(5_000) // a slow store: the time must not be taken now
                     taken += batch
                 }.apply {
@@ -239,7 +251,7 @@ class SourceControllerTest {
         val stored = Collections.synchronizedList(mutableListOf<SourceEvent>())
         val threads = Collections.synchronizedSet(mutableSetOf<Thread>())
         val controller =
-            SourceController(store, System::currentTimeMillis) { batch ->
+            SourceController(store, System::currentTimeMillis) { batch, _ ->
                 threads += Thread.currentThread()
                 stored += batch
             }.apply {
@@ -273,7 +285,7 @@ class SourceControllerTest {
         runTest {
             choose(SourceKind.BEAM)
             val controller =
-                SourceController(store, { testScheduler.currentTime }, storeScope = backgroundScope) {
+                SourceController(store, { testScheduler.currentTime }, storeScope = backgroundScope) { _, _ ->
                     error("database or disk is full")
                 }.apply { sourceFor = { endless } }
             controller.start(backgroundScope)

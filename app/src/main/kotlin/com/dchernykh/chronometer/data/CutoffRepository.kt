@@ -40,6 +40,14 @@ class CutoffRepository(
     private val backupFailedState = MutableStateFlow(false)
     private val newCompetitionListeners = CopyOnWriteArrayList<() -> Unit>()
 
+    /**
+     * Which competition this is, counted since the app started; a new one counts on. A source
+     * event carries the one it arrived in, and is dropped, under [mutationMutex], once it is past.
+     */
+    @Volatile
+    var competition = 0L
+        private set
+
     /** True after the most recent cutoff failed to write its local files. */
     val backupFailed: StateFlow<Boolean> = backupFailedState.asStateFlow()
 
@@ -211,6 +219,7 @@ class CutoffRepository(
                 val started = moved != null && clearTables(folder, moved)
                 if (started) {
                     settingsStore.resetForNewCompetition()
+                    competition++
                     newCompetitionListeners.forEach { it() }
                 }
                 backupFailedState.value = !started

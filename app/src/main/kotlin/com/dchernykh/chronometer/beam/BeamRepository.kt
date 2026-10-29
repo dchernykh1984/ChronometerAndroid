@@ -42,7 +42,11 @@ class BeamRepository(
     /** True after the raw beam file could not be written; the breaks are in Room. */
     val rawFailed: StateFlow<Boolean> = rawFailedState.asStateFlow()
 
-    suspend fun add(breaks: List<SourceEvent.BeamBreak>) {
+    /** Breaks taken in the competition [takenIn]: dropped once a new one has started. */
+    suspend fun add(
+        breaks: List<SourceEvent.BeamBreak>,
+        takenIn: Long = cutoffs.competition,
+    ) {
         if (breaks.isEmpty()) {
             return
         }
@@ -55,6 +59,9 @@ class BeamRepository(
                 )
             }
         CutoffRepository.mutationMutex.withLock {
+            if (takenIn != cutoffs.competition) {
+                return@withLock // the last competition's: its tables are gone
+            }
             db.withTransaction { rows.forEach { dao.insertBreak(it) } }
             val lines = rows.map { "${it.seq}#${it.timeStr}#${it.deviceTime}#" }
             // Under the lock too: a new competition moves the file aside before or after it.

@@ -198,12 +198,19 @@ class ChipRepository(
      * and cutoffs commit together, then the cutoffs take the durable path once for the batch
      * and the raw reads file gets the lines.
      */
-    suspend fun apply(reads: List<SourceEvent.ChipRead>) {
+    suspend fun apply(
+        reads: List<SourceEvent.ChipRead>,
+        /** The competition they were taken in: dropped once a new one has started. */
+        takenIn: Long = cutoffs.competition,
+    ) {
         if (reads.isEmpty()) {
             return
         }
         ensureMap()
         CutoffRepository.mutationMutex.withLock {
+            if (takenIn != cutoffs.competition) {
+                return@withLock // the last competition's: its tables are gone
+            }
             // Read now, not before waiting: a save meanwhile counts for this batch.
             val settings = settingsStore.load()
             val map = protocolState.value?.map ?: ChipMap()
