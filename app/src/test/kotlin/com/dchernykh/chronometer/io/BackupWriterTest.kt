@@ -7,6 +7,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
+import java.nio.file.Files
 
 class BackupWriterTest {
     @get:Rule
@@ -109,5 +110,13 @@ class BackupWriterTest {
         assertEquals(listOf("42-1.txt", "42.txt"), backups)
         assertEquals("1#t#nextLap#\n", File(folder, "backup/42.txt").readText())
         assertEquals("2#t#nextLap#\n", File(folder, "backup/42-1.txt").readText())
+    }
+
+    @Test
+    fun aRawLineCutShortStaysOnItsOwnLine() {
+        val folder = Files.createTempDirectory("raw").toFile()
+        File(folder, "chip_reads.txt").writeText("ABC123#0 10:00:0")
+        assertTrue(BackupWriter().appendRaw(folder.path, "chip_reads.txt", listOf("DEF456#0 10:00:05.000#")))
+        assertEquals(listOf("ABC123#0 10:00:0", "DEF456#0 10:00:05.000#"), File(folder, "chip_reads.txt").readLines())
     }
 }
