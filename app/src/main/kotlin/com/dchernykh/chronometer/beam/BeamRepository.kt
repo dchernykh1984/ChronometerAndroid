@@ -50,13 +50,16 @@ class BeamRepository(
                     deviceTime = RawFiles.field(it.deviceTime),
                 )
             }
-        CutoffRepository.mutationMutex.withLock { db.withTransaction { rows.forEach { dao.insertBreak(it) } } }
-        val lines = rows.map { "${it.seq}#${it.timeStr}#${it.deviceTime}#" }
-        val written =
-            withContext(Dispatchers.IO) {
-                backupWriter.appendRaw(settingsStore.load().folderPath, RawFiles.BEAM_BREAKS, lines)
-            }
-        rawFailedState.value = !written
+        CutoffRepository.mutationMutex.withLock {
+            db.withTransaction { rows.forEach { dao.insertBreak(it) } }
+            val lines = rows.map { "${it.seq}#${it.timeStr}#${it.deviceTime}#" }
+            // Under the lock too: a new competition moves the file aside before or after it.
+            val written =
+                withContext(Dispatchers.IO) {
+                    backupWriter.appendRaw(settingsStore.load().folderPath, RawFiles.BEAM_BREAKS, lines)
+                }
+            rawFailedState.value = !written
+        }
     }
 
     /**

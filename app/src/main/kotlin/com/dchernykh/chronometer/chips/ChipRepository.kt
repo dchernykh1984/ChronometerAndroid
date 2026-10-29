@@ -187,22 +187,21 @@ class ChipRepository(
         }
         ensureMap()
         val settings = settingsStore.load()
-        val rows =
-            CutoffRepository.mutationMutex.withLock {
-                val map = protocolState.value?.map ?: ChipMap()
-                val rows = reads.map { read -> rowOf(read, map) }
-                db.withTransaction { storeAndTime(rows, settings) }?.let { cutoffs.afterChange(it) }
-                rows
-            }
-        val lines =
-            rows.map {
-                "${it.chip}#${it.timeStr}#${it.deviceTime}#${it.antenna}#${RawFiles.signal(it.rssi)}#${it.reader}#"
-            }
-        val written =
-            withContext(Dispatchers.IO) {
-                backupWriter.appendRaw(settings.folderPath, RawFiles.CHIP_READS, lines)
-            }
-        rawFailedState.value = !written
+        CutoffRepository.mutationMutex.withLock {
+            val map = protocolState.value?.map ?: ChipMap()
+            val rows = reads.map { read -> rowOf(read, map) }
+            db.withTransaction { storeAndTime(rows, settings) }?.let { cutoffs.afterChange(it) }
+            val lines =
+                rows.map {
+                    "${it.chip}#${it.timeStr}#${it.deviceTime}#${it.antenna}#${RawFiles.signal(it.rssi)}#${it.reader}#"
+                }
+            // Under the lock too: a new competition moves the file aside before or after it.
+            val written =
+                withContext(Dispatchers.IO) {
+                    backupWriter.appendRaw(settings.folderPath, RawFiles.CHIP_READS, lines)
+                }
+            rawFailedState.value = !written
+        }
     }
 
     /** [rows] stored, and each read of a bound chip into its bib's passes; the last cutoff's id. */
