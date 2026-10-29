@@ -32,9 +32,13 @@ import com.dchernykh.chronometer.data.CutoffEvent
 import com.dchernykh.chronometer.data.SettingsStore
 import com.dchernykh.chronometer.data.ThemeMode
 import com.dchernykh.chronometer.service.RaceService
+import com.dchernykh.chronometer.source.CutoffSource
 import com.dchernykh.chronometer.source.DeviceId
 import com.dchernykh.chronometer.source.SourceKind
+import com.dchernykh.chronometer.source.SourceState
+import com.dchernykh.chronometer.source.builtInSource
 import com.dchernykh.chronometer.util.LocaleContext
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -482,6 +486,30 @@ class MainFlowTest {
             waitForText(stopLabel)
         } finally {
             RaceService.stop(appContext())
+        }
+    }
+
+    @Test
+    fun aHandCutoffRecordsWhileAFailingSourceRestarts() {
+        val controller = (appContext() as ChronometerApp).sourceController
+        controller.sourceFor = { CutoffSource { flow { error("no beam") } } }
+        openSettings()
+        selectRadio("sourceBeam")
+        saveSettings()
+        grantNotificationPermission()
+        composeRule.onNodeWithTag("timingModeToggle").performClick()
+        try {
+            waitForText(localizedString(AppLanguage.EN, R.string.timing_dnd_title))
+            composeRule.onNodeWithTag("timingOnDialogOk").performClick()
+            composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+                controller.status.value.state is SourceState.Restarting
+            }
+            recordAndAwait("cutoffButton", "77")
+            composeRule.onNodeWithText("77").assertExists()
+            composeRule.onNodeWithTag("sourceLine").assertExists()
+        } finally {
+            RaceService.stop(appContext())
+            controller.sourceFor = ::builtInSource
         }
     }
 

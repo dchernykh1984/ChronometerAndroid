@@ -7,6 +7,11 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.content.ContextCompat
+import com.dchernykh.chronometer.ChronometerApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +28,9 @@ import kotlinx.coroutines.flow.asStateFlow
  * restarts instead of trusting a local UI flag.
  */
 class RaceService : Service() {
+    // The cutoff source runs here, off the main thread, for as long as timing mode is on.
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(
@@ -38,11 +46,14 @@ class RaceService : Service() {
             startForeground(RaceNotification.ID, notification)
         }
         mutableRunningState.value = true
+        (application as ChronometerApp).sourceController.start(scope)
         // Restart if the system kills us mid-event; the notification returns.
         return START_STICKY
     }
 
     override fun onDestroy() {
+        (application as ChronometerApp).sourceController.stop()
+        scope.cancel()
         mutableRunningState.value = false
         super.onDestroy()
     }

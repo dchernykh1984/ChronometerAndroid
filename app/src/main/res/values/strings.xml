@@ -74,4 +74,14 @@
     <string name="device_r2000">R2000 reader</string>
     <string name="device_not_available">%1$s (not available yet)</string>
     <string name="dead_time">Dead time, s: reads of one bib closer than this are one pass</string>
+    <string name="source_line_stopped">%1$s: stopped</string>
+    <string name="source_line_running">%1$s: running</string>
+    <string name="source_line_restarting">%1$s: starting again in %2$d s</string>
+    <string name="source_line_not_available">%1$s: not available yet</string>
+    <string name="source_error_device">Device: %1$s</string>
+    <string name="source_error_failed">The device stopped: %1$s</string>
+    <string name="source_error_no_chip">A read without a chip id was not used</string>
+    <string name="source_error_time">An event with the device clock never set was not used</string>
+    <string name="source_invalid_events">Events not used: %1$d</string>
+    <string name="source_test_warning">TEST DEVICE: its cutoffs are test data</string>
 </resources>
