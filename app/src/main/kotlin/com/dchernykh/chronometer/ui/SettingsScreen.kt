@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dchernykh.chronometer.R
 import com.dchernykh.chronometer.data.AppLanguage
+import com.dchernykh.chronometer.data.DEAD_TIME_RANGE_S
 import com.dchernykh.chronometer.data.Settings
 import com.dchernykh.chronometer.data.ThemeMode
 import com.dchernykh.chronometer.data.isUploadConfigured
@@ -89,6 +90,7 @@ fun SettingsScreen(
     }
 
     val sendMisconfigured = settings.sendEnabled && !settings.isUploadConfigured
+    val canSave = settings.canBeSaved()
     val hasUnsavedChanges = settings != initialSettings
 
     fun saveAndExit() {
@@ -246,7 +248,7 @@ fun SettingsScreen(
                 settings,
                 onChange = { settings = it },
                 download = download,
-                canDownload = !sendMisconfigured,
+                canDownload = canSave,
                 onDownload = {
                     // The download uses the saved site URL, token and folder: save what the
                     // referee sees, and stay here to see the result.
@@ -308,7 +310,7 @@ fun SettingsScreen(
 
             Button(
                 onClick = { saveAndExit() },
-                enabled = !sendMisconfigured,
+                enabled = canSave,
                 modifier = Modifier.fillMaxWidth().testTag("saveButton"),
             ) { Text(stringResource(R.string.save)) }
         }
@@ -316,7 +318,7 @@ fun SettingsScreen(
         SettingsDialogs(
             confirmNewCompetition = confirmNewCompetition,
             showUnsavedDialog = showUnsavedDialog,
-            saveEnabled = !sendMisconfigured,
+            saveEnabled = canSave,
             onConfirmNewCompetition = {
                 confirmNewCompetition = false
                 viewModel.startNewCompetition { success ->
@@ -432,3 +434,9 @@ private fun saveApplyingLanguage(
     }
     return recreate
 }
+
+/**
+ * Settings that may be stored: uploads either off or fully set, and a dead time in its range
+ * -- a cleared field must not quietly become 1 s, which would split one rider into passes.
+ */
+private fun Settings.canBeSaved(): Boolean = !(sendEnabled && !isUploadConfigured) && deadTimeS in DEAD_TIME_RANGE_S

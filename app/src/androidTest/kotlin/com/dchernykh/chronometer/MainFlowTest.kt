@@ -428,6 +428,10 @@ class MainFlowTest {
         composeRule.onNodeWithTag("deviceLLRP").performScrollTo().assertIsNotEnabled()
         composeRule.onNodeWithTag("deviceTEST_CHIPS").performScrollTo().assertIsSelected()
         waitForText(localizedString(AppLanguage.EN, R.string.dead_time, 1, 120))
+        // A cleared field reads 0, out of range: nothing can be saved until it is fixed.
+        replaceSettingsText("deadTimeField", "")
+        composeRule.onNodeWithTag("saveButton").performScrollTo().assertIsNotEnabled()
+        composeRule.onNodeWithTag("downloadStartProtocol").performScrollTo().assertIsNotEnabled()
         replaceSettingsText("deadTimeField", "8")
         saveSettings()
 
