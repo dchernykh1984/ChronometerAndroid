@@ -14,7 +14,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+/** A batch failing this many times (about 3 minutes of pauses) is dropped, not tried forever. */
+private const val STORE_TRIES = 10
 
 /** At most this many waiting events go on together, so a burst costs one snapshot. */
 private const val BATCH = 200
@@ -135,23 +139,31 @@ class SourceController(
         events: List<SourceEvent>,
     ) {
         var pause: Long? = null
-        // Taken in a competition since replaced: its tables are gone, and so are its events.
-        // The sink makes sure under the lock, for a batch already on its way.
-        while (takenIn == competition()) {
+        var failure: Throwable? = null
+        repeat(STORE_TRIES) {
+            // Taken in a competition since replaced: its tables are gone, and so are its events
+            // and their error. The sink makes sure under the lock, for a batch on its way.
+            if (takenIn != competition()) {
+                storeError.value = null
+                return
+            }
             try {
                 sink(events, takenIn)
-                storeError.value = null
+                // A drop stays said until a new competition: what it lost is lost.
+                storeError.update { it as? SourceError.Dropped }
                 return
             } catch (cancel: CancellationException) {
                 throw cancel
-            } catch (failure: Throwable) {
-                storeError.value = SourceError.NotStored(failure.message ?: failure.javaClass.simpleName)
+            } catch (thrown: Throwable) {
+                failure = thrown
+                storeError.value = SourceError.NotStored(thrown.message ?: thrown.javaClass.simpleName)
                 pause = nextPause(pause, 0)
                 delay(pause)
             }
         }
-        // Its competition was replaced: the error it had goes with it.
-        storeError.value = null
+        // Failing the same way for minutes: kept no longer, so the events behind it are stored.
+        val why = failure?.let { it.message ?: it.javaClass.simpleName }.orEmpty()
+        storeError.value = SourceError.Dropped(events.size, why)
     }
 
     /**
