@@ -12,8 +12,14 @@ import com.dchernykh.chronometer.source.SourceEvent.ChipRead
 import com.dchernykh.chronometer.startprotocol.Download
 import com.dchernykh.chronometer.startprotocol.DownloadProblem
 import com.dchernykh.chronometer.util.TimeFormatter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.json.JSONArray
@@ -232,6 +238,39 @@ class ChipRepositoryTest {
                 assertTrue(old.contentEquals(File(folder, "backup/start-1234.txt").readBytes()))
                 assertEquals(done.map, chips.protocol.value!!.map)
                 assertEquals(listOf("17" to time(0)), made())
+            } finally {
+                server.shutdown()
+            }
+        }
+
+    @Test
+    fun aDownloadWhoseScreenWentAwayStillUsesTheStartTxtItWrote() =
+        runTest {
+            val server = MockWebServer()
+            try {
+                server.enqueue(answer(line(15, "A1")))
+                startTxt("Z1")
+                site(server)
+                val chips = startList()
+                chips.ensureMap()
+                // The reload waits for the lock; the screen goes away while it waits.
+                CutoffRepository.mutationMutex.lock()
+                val download = CoroutineScope(Dispatchers.Default).launch { chips.download() }
+                try {
+                    val start = File(folder, "start.txt")
+                    withContext(Dispatchers.Default) {
+                        withTimeout(10_000) { while (!start.readText().contains("#A1#")) delay(10) }
+                    }
+                    download.cancel()
+                } finally {
+                    CutoffRepository.mutationMutex.unlock()
+                }
+                withContext(Dispatchers.Default) { withTimeout(10_000) { download.join() } }
+                assertEquals(
+                    mapOf("A1" to "15"),
+                    chips.protocol.value!!
+                        .map.bibOf,
+                )
             } finally {
                 server.shutdown()
             }

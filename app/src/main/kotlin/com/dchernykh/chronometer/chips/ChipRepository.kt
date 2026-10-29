@@ -21,6 +21,7 @@ import com.dchernykh.chronometer.startprotocol.StartListException
 import com.dchernykh.chronometer.startprotocol.StartProtocolFile
 import com.dchernykh.chronometer.util.TimeFormatter
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -128,15 +129,19 @@ class ChipRepository(
         }
         return try {
             val lines = withContext(Dispatchers.IO) { client.fetch(settings.siteUrl, settings.token) }
-            val written =
-                withContext(
-                    Dispatchers.IO,
-                ) { StartProtocolFile.replace(settings.folderPath, lines, now(), backupWriter) }
-            if (written) {
-                reloadMap()
-                Download.Done(lines.size, protocolState.value?.map ?: ChipMap())
-            } else {
-                Download.Failed(DownloadProblem.FILE)
+            // Once fetched, the file and the map change together, even when the screen that
+            // asked is gone: a new start.txt with the old map in use would bind no new chip.
+            withContext(NonCancellable) {
+                val written =
+                    withContext(Dispatchers.IO) {
+                        StartProtocolFile.replace(settings.folderPath, lines, now(), backupWriter)
+                    }
+                if (written) {
+                    reloadMap()
+                    Download.Done(lines.size, protocolState.value?.map ?: ChipMap())
+                } else {
+                    Download.Failed(DownloadProblem.FILE)
+                }
             }
         } catch (e: StartListException) {
             Download.Failed(e.problem, e.detail)
