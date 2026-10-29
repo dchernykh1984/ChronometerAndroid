@@ -37,9 +37,12 @@ instead. See the **dependabot-bumps** skill.
   an approval - do not self-approve/merge unless the user explicitly asks.
 - **Tracked files stay ASCII.** A `no-non-ascii` pre-commit hook rejects any byte above
   0x7F in Kotlin, YAML, Markdown, TOML, shell and JSON (the vendored `gradlew` is
-  excluded as upstream code). XML is deliberately not in that list, which is why the
-  Russian and Kazakh strings live in `res/values-ru/` and `res/values-kk/` and nowhere
-  else - a Cyrillic character in a Kotlin string or a comment fails the commit.
+  excluded as upstream code, and Spec Kit's generated files - `.specify/` but the
+  constitution, and the `speckit-*` skills - are out of every hook, as `specify` keeps a
+  file it finds edited instead of updating it). XML is deliberately not in that list,
+  which is why the Russian and Kazakh strings live in `res/values-ru/` and
+  `res/values-kk/` and nowhere else - a Cyrillic character in a Kotlin string or a
+  comment fails the commit.
 - **Write files as UTF-8.** On Windows a PowerShell redirect, `Set-Content` or `Out-File`
   defaults to UTF-16, and that hook then rejects a file whose text looks perfectly plain
   in an editor: the bytes are the problem, not the characters. `file <path>` says which
