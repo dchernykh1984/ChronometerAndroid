@@ -89,10 +89,12 @@ class ChronometerViewModel(
      * now (the button shows that time); with none waiting, the cutoff is at the tap.
      */
     fun recordCutoff(number: String) {
+        // The tap's moment, taken now: the beam check below may wait for a batch of chip reads.
+        val tappedAt = System.currentTimeMillis()
         val event = CutoffEvent.lapEvent(settingsState.value.finishMode)
         viewModelScope.launch {
             if (!beam.assignOldest(number, event)) {
-                repository.record(number, event)
+                repository.record(number, event, tappedAt)
             }
         }
     }
