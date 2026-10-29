@@ -106,8 +106,9 @@ app/schemas/com.dchernykh.chronometer.data.AppDatabase/3.json
 ```
 
 **Structure Decision**: new packages `source`, `chips`, `beam` and `startprotocol` beside the
-existing ones; the UI stays in `ui`. `ChipsScreenKt` joins the Kover exclusions with the other
-screens, which the instrumented tests cover.
+existing ones; the UI stays in `ui`. `ChipsScreenKt`, `PendingBreaksKt`, `SourceLineKt` and
+`SourceSettingsKt` join the Kover exclusions with the other screens, which the instrumented
+tests cover.
 
 ## Design notes
 
