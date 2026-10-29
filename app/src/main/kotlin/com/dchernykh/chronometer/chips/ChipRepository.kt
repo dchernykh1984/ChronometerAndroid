@@ -77,7 +77,7 @@ class ChipRepository(
     /** `start.txt` as last read; null before the first read. */
     val protocol: StateFlow<StartProtocol?> = protocolState.asStateFlow()
 
-    /** True after the raw reads file could not be written; the reads are in Room. */
+    /** True once the raw reads file missed lines, until a new competition; the reads are in Room. */
     val rawFailed: StateFlow<Boolean> = rawFailedState.asStateFlow()
 
     /** Chips read that the map neither binds nor names as a conflict (FR-011), by id. */
@@ -225,7 +225,8 @@ class ChipRepository(
                 withContext(Dispatchers.IO) {
                     backupWriter.appendRaw(settings.folderPath, RawFiles.CHIP_READS, lines)
                 }
-            rawFailedState.value = !written
+            // The file only grows: lines it missed stay missing, and so does the warning.
+            rawFailedState.value = rawFailedState.value || !written
         }
     }
 
