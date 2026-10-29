@@ -18,7 +18,7 @@ All survive "New competition".
 | Column | Type | Note |
 | --- | --- | --- |
 | `id` | INTEGER PK autoincrement | arrival order |
-| `chip` | TEXT | normalised |
+| `chip` | TEXT, indexed | normalised |
 | `timeStr` | TEXT | `D H:M:S.mmm` |
 | `timeMs` | INTEGER | `timeStr` parsed, for the pass rule |
 | `deviceTime`, `antenna`, `reader` | TEXT | empty when not reported |

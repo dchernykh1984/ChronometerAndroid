@@ -77,7 +77,7 @@ app/src/main/kotlin/com/dchernykh/chronometer/
   data/
     AppDatabase.kt          v3: ChipReadEntity, PassEntity, AttributedChipEntity, PendingBreakEntity
     Migrations.kt           MIGRATION_2_3
-    SourceDao.kt            reads, passes, attributed chips, pending breaks
+    ChipDao.kt, PassDao.kt, BeamDao.kt   reads and attributed chips, passes, pending breaks
     CutoffRepository.kt     recordAt(number, timeStr, event); afterChange() shared by every path
     Settings.kt, SettingsStore.kt   cutoff source, devices, dead time
   source/
