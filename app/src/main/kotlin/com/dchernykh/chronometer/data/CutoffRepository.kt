@@ -50,12 +50,13 @@ class CutoffRepository(
     suspend fun record(
         number: String,
         event: String,
+        /** The tap's moment, taken before anything that may wait for [mutationMutex]. */
+        now: Long = System.currentTimeMillis(),
     ) {
         val trimmed = number.trim()
         if (trimmed.isEmpty()) {
             return
         }
-        val now = System.currentTimeMillis()
         val timeStr = TimeFormatter.currentTimeString(now)
 
         mutationMutex.withLock {

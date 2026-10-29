@@ -4,6 +4,7 @@ import androidx.room.Room
 import androidx.work.WorkManager
 import androidx.work.testing.WorkManagerTestInitHelper
 import com.dchernykh.chronometer.io.BackupWriter
+import com.dchernykh.chronometer.util.TimeFormatter
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -87,6 +88,22 @@ class CutoffRepositoryTest {
             val revision = store.clientRevision()
             repository.record("15", CutoffEvent.FINISH)
             assertEquals(revision + 1, store.clientRevision())
+        }
+
+    @Test
+    fun recordUsesTheMomentOfTheTapItIsGiven() =
+        runTest {
+            configure(sendEnabled = false)
+            val tappedAt = System.currentTimeMillis() - 1_500
+            repository.record("15", CutoffEvent.NEXT_LAP, tappedAt)
+            assertEquals(
+                TimeFormatter.currentTimeString(tappedAt),
+                db
+                    .cutoffDao()
+                    .getAll()
+                    .single()
+                    .timeStr,
+            )
         }
 
     @Test
