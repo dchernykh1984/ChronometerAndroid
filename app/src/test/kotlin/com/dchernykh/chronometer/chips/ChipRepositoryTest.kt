@@ -402,6 +402,22 @@ class ChipRepositoryTest {
         }
 
     @Test
+    fun aBatchTakenBeforeANewCompetitionIsDroppedUnderTheLock() =
+        runTest {
+            startTxt("A1")
+            val cutoffs = cutoffs()
+            val chips = ChipRepository(db, store, BackupWriter(), cutoffs)
+            val takenIn = cutoffs.competition
+            assertTrue(cutoffs.startNewCompetition())
+            startTxt("A1")
+            chips.reloadMap()
+            chips.apply(listOf(read("A1", 0)), takenIn)
+            assertTrue(db.chipDao().waitingReadsOf(listOf("A1")).isEmpty())
+            assertEquals(emptyList<Pair<String, String>>(), made())
+            assertFalse(File(folder, "chip_reads.txt").exists())
+        }
+
+    @Test
     fun aNewCompetitionClearsTheRawFileWarning() =
         runTest {
             val blocker = File(folder, "blocker").apply { writeText("") }

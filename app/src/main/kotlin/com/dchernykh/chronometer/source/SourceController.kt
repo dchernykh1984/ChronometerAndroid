@@ -1,6 +1,5 @@
 package com.dchernykh.chronometer.source
 
-import androidx.annotation.VisibleForTesting
 import com.dchernykh.chronometer.chips.ChipMap
 import com.dchernykh.chronometer.data.SettingsStore
 import com.dchernykh.chronometer.data.chosenDevice
@@ -16,7 +15,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import java.util.concurrent.atomic.AtomicLong
 
 /** At most this many waiting events go on together, so a burst costs one snapshot. */
 private const val BATCH = 200
@@ -40,16 +38,17 @@ fun builtInSource(
 class SourceController(
     private val settingsStore: SettingsStore,
     private val now: () -> Long,
-    /** The chip map in use, for the test chips. */
-    chipMap: () -> ChipMap = { ChipMap() },
     /** The phone's clock: an event its device did not time is timed by it as it arrives. */
     private val wallClock: () -> Long = System::currentTimeMillis,
+    /** Which competition an event arrives in; the sink drops one from a competition since replaced. */
+    private val competition: () -> Long = { 0L },
     /** Where events are stored: it outlives a stop, so what arrived is stored all the same. */
     private val storeScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-    private val sink: suspend (List<SourceEvent>) -> Unit,
+    /** Stores events taken in the competition given. */
+    private val sink: suspend (List<SourceEvent>, Long) -> Unit,
 ) {
-    @VisibleForTesting
-    var sourceFor: (DeviceId) -> CutoffSource? = { builtInSource(it, chipMap) }
+    /** The source behind a device; the app gives the test chips its chip map. */
+    var sourceFor: (DeviceId) -> CutoffSource? = { builtInSource(it) { ChipMap() } }
 
     private val statusState = MutableStateFlow(SourceStatus())
 
@@ -60,8 +59,6 @@ class SourceController(
     private val deviceState = MutableStateFlow<DeviceId?>(null)
     private var scope: CoroutineScope? = null
     private var job: Job? = null
-
-    private val competition = AtomicLong()
 
     // App-wide, not a run's: a consumer of a run before a restart that still cannot store
     // shows on the run after it.
@@ -115,7 +112,7 @@ class SourceController(
                         }
                     }
                 }
-                runner.run { channel.send(Taken(competition.get(), it.timedOnArrival(wallClock()))) }
+                runner.run { channel.send(Taken(competition(), it.timedOnArrival(wallClock()))) }
             }
         // Closed once the run has ended, so an event it was handing on as it stopped is kept.
         job?.invokeOnCompletion { channel.close() }
@@ -126,16 +123,23 @@ class SourceController(
      * source's last error and the batch is tried again after a pause growing from 1 s to
      * 30 s, newer events waiting behind it: nothing is dropped, and the app keeps running.
      */
-    @Suppress("TooGenericExceptionCaught") // whatever storing throws, the batch is kept
     private suspend fun store(batch: List<Taken>) {
+        for ((takenIn, events) in batch.groupBy({ it.competition }, { it.event })) {
+            storeTakenIn(takenIn, events)
+        }
+    }
+
+    @Suppress("TooGenericExceptionCaught") // whatever storing throws, the batch is kept
+    private suspend fun storeTakenIn(
+        takenIn: Long,
+        events: List<SourceEvent>,
+    ) {
         var pause: Long? = null
-        while (true) {
-            // Taken in a competition since replaced: its tables are gone, and so is the batch.
-            val current = batch.filter { it.competition == competition.get() }.map { it.event }
+        // Taken in a competition since replaced: its tables are gone, and so are its events.
+        // The sink makes sure under the lock, for a batch already on its way.
+        while (takenIn == competition()) {
             try {
-                if (current.isNotEmpty()) {
-                    sink(current)
-                }
+                sink(events, takenIn)
                 storeError.value = null
                 return
             } catch (cancel: CancellationException) {
@@ -146,15 +150,6 @@ class SourceController(
                 delay(pause)
             }
         }
-    }
-
-    /**
-     * A new competition has cleared the tables: events taken before it, still waiting or
-     * being tried again, are dropped instead of landing in it. One already in the sink, waiting
-     * for the lock, still goes in.
-     */
-    fun discardTaken() {
-        competition.incrementAndGet()
     }
 
     /**

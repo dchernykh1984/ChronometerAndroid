@@ -119,6 +119,17 @@ class BeamRepositoryTest {
         }
 
     @Test
+    fun aBreakTakenBeforeANewCompetitionIsDroppedUnderTheLock() =
+        runTest {
+            val beam = beam()
+            val takenIn = cutoffs.competition
+            assertTrue(cutoffs.startNewCompetition())
+            beam.add(listOf(BeamBreak(1, T0)), takenIn)
+            assertTrue(beam.pending.first().isEmpty())
+            assertFalse(File(folder, "beam_breaks.txt").exists())
+        }
+
+    @Test
     fun pendingBreaksOutliveTheProcess() =
         runTest {
             val name = "beam-${System.nanoTime()}.db"
