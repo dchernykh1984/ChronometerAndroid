@@ -13,9 +13,11 @@ class TestBeamSource(
     private val random: Random = Random.Default,
     private val clock: () -> Long = System::currentTimeMillis,
 ) : CutoffSource {
+    // Counts on when the runner starts the source again, as a device's own counter would.
+    private var seq = 0L
+
     override fun events(): Flow<SourceEvent> =
         flow {
-            var seq = 0L
             while (true) {
                 delay(random.nextLong(FASTEST_MS, SLOWEST_MS + 1))
                 emit(SourceEvent.BeamBreak(++seq, clock()))
