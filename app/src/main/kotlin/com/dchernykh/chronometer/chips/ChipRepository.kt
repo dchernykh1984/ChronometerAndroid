@@ -80,9 +80,13 @@ class ChipRepository(
             waiting.filter { it.chip !in map.bibOf && it.chip !in map.conflicts }
         }
 
-    /** No map until `start.txt` is read again: a new competition moved it aside (FR-016). */
-    fun forgetMap() {
+    /**
+     * A new competition (FR-016): no map until `start.txt` is read again, as it was moved
+     * aside, and the raw reads file starts afresh, so its last failure is no more.
+     */
+    fun startOver() {
         protocolState.value = StartProtocol.Missing
+        rawFailedState.value = false
     }
 
     /** Read `start.txt` if it has not been read yet: at start-up, never from the site. */

@@ -386,12 +386,24 @@ class ChipRepositoryTest {
         }
 
     @Test
+    fun aNewCompetitionClearsTheRawFileWarning() =
+        runTest {
+            val blocker = File(folder, "blocker").apply { writeText("") }
+            store.save(store.load().copy(folderPath = File(blocker, "data").path))
+            val chips = chips()
+            chips.apply(listOf(read("A1", 0)))
+            assertTrue(chips.rawFailed.value)
+            chips.startOver()
+            assertFalse(chips.rawFailed.value)
+        }
+
+    @Test
     fun aForgottenMapBindsNoReadUntilStartTxtIsReadAgain() =
         runTest {
             startTxt("A1")
             val chips = chips()
             chips.ensureMap()
-            chips.forgetMap()
+            chips.startOver()
             assertEquals(StartProtocol.Missing, chips.protocol.value)
             chips.apply(listOf(read("A1", 0)))
             assertEquals(emptyList<Pair<String, String>>(), made())

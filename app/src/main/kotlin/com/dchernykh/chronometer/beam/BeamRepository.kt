@@ -92,6 +92,11 @@ class BeamRepository(
         }
     }
 
+    /** A new competition: the raw beam file starts afresh, so its last failure is no more. */
+    fun startOver() {
+        rawFailedState.value = false
+    }
+
     /** A false break leaves the queue; the raw file keeps it. */
     suspend fun discard(id: Long) {
         dao.deleteBreak(id)
