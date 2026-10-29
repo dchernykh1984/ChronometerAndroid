@@ -75,10 +75,12 @@ class BeamRepository(
     }
 
     /**
-     * Give [number] to the oldest pending break: a cutoff at the break's time, made on
-     * the durable path. False when no break waits, or the number is blank.
+     * Give [number] to the break [id] the Cutoff button showed: a cutoff at the break's time,
+     * made on the durable path. False when that break waits no more, or the number is blank.
+     * A break stored while the tap waited for the lock is not taken: the button did not show it.
      */
-    suspend fun assignOldest(
+    suspend fun assign(
+        id: Long,
         number: String,
         event: String,
     ): Boolean {
@@ -90,16 +92,16 @@ class BeamRepository(
         return CutoffRepository.mutationMutex.withLock {
             // Read and delete in one transaction: a Discard at the same moment cannot also
             // become a cutoff.
-            val id =
+            val cutoff =
                 db.withTransaction {
-                    dao.oldestBreak()?.let { oldest ->
-                        dao.deleteBreak(oldest.id)
+                    dao.breakById(id)?.let { shown ->
+                        dao.deleteBreak(shown.id)
                         db.cutoffDao().insert(
-                            CutoffEntity(number = trimmed, timeStr = oldest.timeStr, event = event, createdAt = now()),
+                            CutoffEntity(number = trimmed, timeStr = shown.timeStr, event = event, createdAt = now()),
                         )
                     }
                 } ?: return@withLock false
-            cutoffs.afterChange(id)
+            cutoffs.afterChange(cutoff)
             true
         }
     }

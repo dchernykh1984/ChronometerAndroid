@@ -14,8 +14,8 @@ interface BeamDao {
     @Query("SELECT * FROM pending_breaks ORDER BY id")
     fun observeBreaks(): Flow<List<PendingBreakEntity>>
 
-    @Query("SELECT * FROM pending_breaks ORDER BY id LIMIT 1")
-    suspend fun oldestBreak(): PendingBreakEntity?
+    @Query("SELECT * FROM pending_breaks WHERE id = :id")
+    suspend fun breakById(id: Long): PendingBreakEntity?
 
     @Query("DELETE FROM pending_breaks WHERE id = :id")
     suspend fun deleteBreak(id: Long): Int
