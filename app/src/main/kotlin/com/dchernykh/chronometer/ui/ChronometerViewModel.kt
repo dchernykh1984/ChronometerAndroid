@@ -85,15 +85,17 @@ class ChronometerViewModel(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), UploadDiagnostics())
 
     /**
-     * The oldest waiting beam break takes the number at its time, whatever the source is
-     * now (the button shows that time); with none waiting, the cutoff is at the tap.
+     * The oldest waiting beam break, the one the button shows, takes the number at its time,
+     * whatever the source is now; with none waiting, the cutoff is at the tap.
      */
     fun recordCutoff(number: String) {
-        // The tap's moment, taken now: the beam check below may wait for a batch of chip reads.
+        // The tap's moment and the break the button shows, taken now: the beam check below may
+        // wait for a batch, and a break stored meanwhile is the next rider's, not this number's.
         val tappedAt = System.currentTimeMillis()
+        val shown = pendingBreaks.value.firstOrNull()?.id
         val event = CutoffEvent.lapEvent(settingsState.value.finishMode)
         viewModelScope.launch {
-            if (!beam.assignOldest(number, event)) {
+            if (shown == null || !beam.assign(shown, number, event)) {
                 repository.record(number, event, tappedAt)
             }
         }

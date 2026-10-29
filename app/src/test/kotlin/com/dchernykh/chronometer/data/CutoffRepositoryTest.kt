@@ -8,13 +8,13 @@ import com.dchernykh.chronometer.util.TimeFormatter
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -526,7 +526,13 @@ class CutoffRepositoryTest {
             assertTrue(repository.startNewCompetition())
 
             assertEquals(1, cleared)
-            assertNull(db.beamDao().oldestBreak())
+            assertTrue(
+                db
+                    .beamDao()
+                    .observeBreaks()
+                    .first()
+                    .isEmpty(),
+            )
             assertTrue(db.chipDao().waitingChips().isEmpty())
             assertTrue(db.passDao().passesOf("15").isEmpty())
             for (name in names) {

@@ -68,7 +68,12 @@ class BeamRepositoryTest {
         runTest {
             val beam = beam()
             beam.add(listOf(BeamBreak(1, T0), BeamBreak(2, T0 + 1_500)))
-            assertTrue(beam.assignOldest(" 1#5 ", CutoffEvent.FINISH))
+            val shown =
+                beam.pending
+                    .first()
+                    .first()
+                    .id
+            assertTrue(beam.assign(shown, " 1#5 ", CutoffEvent.FINISH))
             val cutoff = db.cutoffDao().getAll().single()
             assertEquals("1 5", cutoff.number)
             assertEquals(time(T0), cutoff.timeStr)
@@ -81,9 +86,18 @@ class BeamRepositoryTest {
     fun nothingIsAssignedWithoutABreakOrWithABlankNumber() =
         runTest {
             val beam = beam()
-            assertFalse(beam.assignOldest("15", CutoffEvent.FINISH))
+            assertFalse(beam.assign(1, "15", CutoffEvent.FINISH))
             beam.add(listOf(BeamBreak(1, T0)))
-            assertFalse(beam.assignOldest("  ", CutoffEvent.FINISH))
+            assertFalse(
+                beam.assign(
+                    beam.pending
+                        .first()
+                        .single()
+                        .id,
+                    "  ",
+                    CutoffEvent.FINISH,
+                ),
+            )
             assertEquals(1, beam.pending.first().size)
             assertTrue(db.cutoffDao().getAll().isEmpty())
         }
@@ -93,15 +107,16 @@ class BeamRepositoryTest {
         runTest {
             val beam = beam()
             beam.add(listOf(BeamBreak(1, T0)))
-            beam.discard(
+            val shown =
                 beam.pending
                     .first()
                     .single()
-                    .id,
-            )
+                    .id
+            beam.discard(shown)
             assertTrue(beam.pending.first().isEmpty())
             assertEquals(1, rawLines().size)
-            assertFalse(beam.assignOldest("15", CutoffEvent.FINISH))
+            // Gone since it was shown: the number takes no break.
+            assertFalse(beam.assign(shown, "15", CutoffEvent.FINISH))
         }
 
     @Test
