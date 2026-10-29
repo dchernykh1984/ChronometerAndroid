@@ -13,6 +13,7 @@ import com.dchernykh.chronometer.io.RawFiles
 import com.dchernykh.chronometer.startprotocol.StartProtocolFile
 import com.dchernykh.chronometer.util.TimeFormatter
 import com.dchernykh.chronometer.work.UploadWorker
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
@@ -80,18 +81,28 @@ class CutoffRepository(
      *
      * The snapshot is named by [stamp], a row id rather than the millisecond clock, so two
      * presses in the same millisecond never collide.
+     *
+     * The change is in Room already: what fails from here is a file or an upload, shown as the
+     * file warning, and never undoes the change -- nor makes a source store its batch twice.
      */
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
     internal suspend fun afterChange(stamp: Long) {
-        settingsStore.nextClientRevision()
-        val settings = settingsStore.load()
-        val items = dao.getAll().map { it.toItem() }
-        val backupOk =
-            withContext(Dispatchers.IO) {
-                backupWriter.writeSnapshot(settings.folderPath, items, stamp)
+        try {
+            settingsStore.nextClientRevision()
+            val settings = settingsStore.load()
+            val items = dao.getAll().map { it.toItem() }
+            val backupOk =
+                withContext(Dispatchers.IO) {
+                    backupWriter.writeSnapshot(settings.folderPath, items, stamp)
+                }
+            backupFailedState.value = !backupOk
+            if (settings.isUploadReady) {
+                enqueueUpload()
             }
-        backupFailedState.value = !backupOk
-        if (settings.isUploadReady) {
-            enqueueUpload()
+        } catch (cancel: CancellationException) {
+            throw cancel
+        } catch (failure: Exception) {
+            backupFailedState.value = true
         }
     }
 
