@@ -54,7 +54,8 @@ class CutoffRepository(
         /** The tap's moment, taken before anything that may wait for [mutationMutex]. */
         now: Long = System.currentTimeMillis(),
     ) {
-        val trimmed = number.trim()
+        // No `#` or line break may reach the `number#time#event#` line.
+        val trimmed = RawFiles.field(number)
         if (trimmed.isEmpty()) {
             return
         }
@@ -123,12 +124,7 @@ class CutoffRepository(
         number: String,
         timeStr: String,
     ): Boolean {
-        val cleanedNumber =
-            number
-                .replace('#', ' ')
-                .replace('\n', ' ')
-                .replace('\r', ' ')
-                .trim()
+        val cleanedNumber = RawFiles.field(number)
         val cleanedTime = timeStr.trim()
         if (cleanedNumber.isEmpty() || !TimeFormatter.isValidTimeString(cleanedTime)) {
             return false

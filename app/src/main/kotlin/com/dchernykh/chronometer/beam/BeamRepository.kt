@@ -70,7 +70,8 @@ class BeamRepository(
         number: String,
         event: String,
     ): Boolean {
-        val trimmed = number.trim()
+        // No `#` or line break may reach the `number#time#event#` line.
+        val trimmed = RawFiles.field(number)
         if (trimmed.isEmpty()) {
             return false
         }

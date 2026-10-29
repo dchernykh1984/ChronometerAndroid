@@ -68,13 +68,13 @@ class BeamRepositoryTest {
         runTest {
             val beam = beam()
             beam.add(listOf(BeamBreak(1, T0), BeamBreak(2, T0 + 1_500)))
-            assertTrue(beam.assignOldest(" 15 ", CutoffEvent.FINISH))
+            assertTrue(beam.assignOldest(" 1#5 ", CutoffEvent.FINISH))
             val cutoff = db.cutoffDao().getAll().single()
-            assertEquals("15", cutoff.number)
+            assertEquals("1 5", cutoff.number)
             assertEquals(time(T0), cutoff.timeStr)
             assertEquals(CutoffEvent.FINISH, cutoff.event)
             assertEquals(listOf(2L), beam.pending.first().map { it.seq })
-            assertTrue(File(folder, "results.txt").readText().contains("15#${time(T0)}#"))
+            assertTrue(File(folder, "results.txt").readText().contains("1 5#${time(T0)}#"))
         }
 
     @Test
