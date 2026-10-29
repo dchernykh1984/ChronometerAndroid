@@ -9,6 +9,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
@@ -432,6 +433,10 @@ class MainFlowTest {
         replaceSettingsText("deadTimeField", "")
         composeRule.onNodeWithTag("saveButton").performScrollTo().assertIsNotEnabled()
         composeRule.onNodeWithTag("downloadStartProtocol").performScrollTo().assertIsNotEnabled()
+        // Out of chips the field is hidden and holds Save back no more.
+        selectRadio("sourceHand")
+        composeRule.onNodeWithTag("saveButton").performScrollTo().assertIsEnabled()
+        selectRadio("sourceChips")
         replaceSettingsText("deadTimeField", "8")
         saveSettings()
 
