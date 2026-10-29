@@ -75,21 +75,23 @@ class StartListClient {
             try {
                 get(url)
             } catch (e: IOException) {
-                throw StartListException(
-                    DownloadProblem.NETWORK,
-                    diagnostic("${e.javaClass.simpleName}: ${e.message}", token, encoded),
-                    e,
-                )
+                throw noConnection(e, token, encoded)
             } catch (e: IllegalArgumentException) {
                 // URL takes some invalid ports the connection then refuses.
-                throw StartListException(
-                    DownloadProblem.NETWORK,
-                    diagnostic("${e.javaClass.simpleName}: ${e.message}", token, encoded),
-                    e,
-                )
+                throw noConnection(e, token, encoded)
             }
         return linesOf(body)
     }
+
+    private fun noConnection(
+        e: Exception,
+        token: String,
+        encoded: String,
+    ) = StartListException(
+        DownloadProblem.NETWORK,
+        diagnostic("${e.javaClass.simpleName}: ${e.message}", token, encoded),
+        e,
+    )
 
     private fun get(url: String): String {
         val connection = URL(url).openConnection() as HttpURLConnection
