@@ -14,6 +14,7 @@ import com.dchernykh.chronometer.startprotocol.DownloadProblem
 import com.dchernykh.chronometer.util.TimeFormatter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -282,13 +283,13 @@ class ChipRepositoryTest {
                 site(server)
                 val chips = startList()
                 chips.ensureMap()
-                // The reload waits for the lock; the screen goes away while it waits.
+                // Fetched, the download waits for the lock; the screen goes away meanwhile.
                 CutoffRepository.mutationMutex.lock()
                 val download = CoroutineScope(Dispatchers.Default).launch { chips.download() }
                 try {
-                    val start = File(folder, "start.txt")
                     withContext(Dispatchers.Default) {
-                        withTimeout(10_000) { while (!start.readText().contains("#A1#")) delay(10) }
+                        withTimeout(10_000) { server.takeRequest() }
+                        delay(300)
                     }
                     download.cancel()
                 } finally {
@@ -300,6 +301,34 @@ class ChipRepositoryTest {
                     chips.protocol.value!!
                         .map.bibOf,
                 )
+            } finally {
+                server.shutdown()
+            }
+        }
+
+    @Test
+    fun aDownloadWritesStartTxtOnlyUnderTheLockANewCompetitionTakes() =
+        runTest {
+            val server = MockWebServer()
+            try {
+                server.enqueue(answer(line(15, "A1")))
+                startTxt("Z1")
+                site(server)
+                val chips = startList()
+                CutoffRepository.mutationMutex.lock()
+                val download = CoroutineScope(Dispatchers.Default).async { chips.download() }
+                try {
+                    withContext(Dispatchers.Default) {
+                        withTimeout(10_000) { server.takeRequest() }
+                        delay(300) // fetched: it waits for the lock now
+                    }
+                    assertTrue(File(folder, "start.txt").readText().contains("#Z1#"))
+                } finally {
+                    CutoffRepository.mutationMutex.unlock()
+                }
+                val done = withContext(Dispatchers.Default) { withTimeout(10_000) { download.await() } }
+                assertTrue(done.toString(), done is Download.Done)
+                assertEquals(listOf(line(15, "A1")), File(folder, "start.txt").readLines())
             } finally {
                 server.shutdown()
             }

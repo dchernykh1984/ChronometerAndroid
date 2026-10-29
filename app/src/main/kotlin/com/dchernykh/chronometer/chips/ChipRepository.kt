@@ -113,28 +113,31 @@ class ChipRepository(
      */
     suspend fun reloadMap() {
         // Read under the lock too, so reloads take effect in the order they read the file.
-        CutoffRepository.mutationMutex.withLock {
-            val folder = settingsStore.load().folderPath
-            val protocol =
-                withContext(Dispatchers.IO) {
-                    try {
-                        StartProtocolFile.read(folder)?.let { StartProtocol.Loaded(ChipMap.of(it)) }
-                            // Gone a moment, as a file manager replaces it: the map before binds on.
-                            ?: StartProtocol.Missing(protocolState.value?.map ?: ChipMap())
-                    } catch (e: IOException) {
-                        // A file being copied in, a storage hiccup: the map read before still binds.
-                        StartProtocol.Unreadable(
-                            e.message ?: e.javaClass.simpleName,
-                            protocolState.value?.map ?: ChipMap(),
-                        )
-                    }
+        CutoffRepository.mutationMutex.withLock { reloadUnderLock() }
+    }
+
+    /** [reloadMap]'s work, for a caller that holds [CutoffRepository.mutationMutex]. */
+    private suspend fun reloadUnderLock() {
+        val settings = settingsStore.load()
+        val folder = settings.folderPath
+        val protocol =
+            withContext(Dispatchers.IO) {
+                try {
+                    StartProtocolFile.read(folder)?.let { StartProtocol.Loaded(ChipMap.of(it)) }
+                        // Gone a moment, as a file manager replaces it: the map before binds on.
+                        ?: StartProtocol.Missing(protocolState.value?.map ?: ChipMap())
+                } catch (e: IOException) {
+                    // A file being copied in, a storage hiccup: the map read before still binds.
+                    StartProtocol.Unreadable(
+                        e.message ?: e.javaClass.simpleName,
+                        protocolState.value?.map ?: ChipMap(),
+                    )
                 }
-            val settings = settingsStore.load()
-            val lastCutoff = db.withTransaction { timeWaitingReads(protocol.map, settings) }
-            // Only once the reads it binds are timed: a reload cut short leaves the map before it.
-            protocolState.value = protocol
-            lastCutoff?.let { cutoffs.afterChange(it) }
-        }
+            }
+        val lastCutoff = db.withTransaction { timeWaitingReads(protocol.map, settings) }
+        // Only once the reads it binds are timed: a reload cut short leaves the map before it.
+        protocolState.value = protocol
+        lastCutoff?.let { cutoffs.afterChange(it) }
     }
 
     /**
@@ -151,16 +154,19 @@ class ChipRepository(
             val lines = withContext(Dispatchers.IO) { client.fetch(settings.siteUrl, settings.token) }
             // Once fetched, the file and the map change together, even when the screen that
             // asked is gone: a new start.txt with the old map in use would bind no new chip.
+            // Under the lock, so a new competition comes wholly before or after them.
             withContext(NonCancellable) {
-                val written =
-                    withContext(Dispatchers.IO) {
-                        StartProtocolFile.replace(settings.folderPath, lines, now(), backupWriter)
+                CutoffRepository.mutationMutex.withLock {
+                    val written =
+                        withContext(Dispatchers.IO) {
+                            StartProtocolFile.replace(settingsStore.load().folderPath, lines, now(), backupWriter)
+                        }
+                    if (written) {
+                        reloadUnderLock()
+                        Download.Done(lines.size, protocolState.value?.map ?: ChipMap())
+                    } else {
+                        Download.Failed(DownloadProblem.FILE)
                     }
-                if (written) {
-                    reloadMap()
-                    Download.Done(lines.size, protocolState.value?.map ?: ChipMap())
-                } else {
-                    Download.Failed(DownloadProblem.FILE)
                 }
             }
         } catch (e: StartListException) {
