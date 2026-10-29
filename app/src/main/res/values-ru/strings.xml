@@ -84,4 +84,8 @@
     <string name="source_error_time">Событие с ненастроенными часами устройства не учтено</string>
     <string name="source_invalid_events">Не учтено событий: %1$d</string>
     <string name="source_test_warning">ТЕСТОВОЕ УСТРОЙСТВО: его отсечки - тестовые данные</string>
+    <string name="cutoff_at">Отсечка %1$s</string>
+    <string name="pending_breaks_title">Срабатывания луча ждут номера</string>
+    <string name="discard_break_title">Отбросить срабатывание луча?</string>
+    <string name="discard_break_message">Срабатывание в %1$s уйдёт из очереди; в beam_breaks.txt оно останется.</string>
 </resources>

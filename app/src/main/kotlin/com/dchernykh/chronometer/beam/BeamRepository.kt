@@ -1,0 +1,95 @@
+package com.dchernykh.chronometer.beam
+
+import androidx.room.withTransaction
+import com.dchernykh.chronometer.data.AppDatabase
+import com.dchernykh.chronometer.data.CutoffEntity
+import com.dchernykh.chronometer.data.CutoffRepository
+import com.dchernykh.chronometer.data.PendingBreakEntity
+import com.dchernykh.chronometer.data.SettingsStore
+import com.dchernykh.chronometer.io.BackupWriter
+import com.dchernykh.chronometer.io.RawFiles
+import com.dchernykh.chronometer.source.SourceEvent
+import com.dchernykh.chronometer.util.TimeFormatter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+
+/**
+ * Beam breaks waiting for the referee to give each a number (spec US4, FR-013): kept in
+ * Room first, then in the raw beam file; the oldest takes the next typed number.
+ */
+class BeamRepository(
+    private val db: AppDatabase,
+    private val settingsStore: SettingsStore,
+    private val backupWriter: BackupWriter,
+    private val cutoffs: CutoffRepository,
+    private val now: () -> Long = System::currentTimeMillis,
+) {
+    private val dao = db.beamDao()
+    private val rawFailedState = MutableStateFlow(false)
+
+    /** Oldest first. */
+    val pending: Flow<List<PendingBreakEntity>> = dao.observeBreaks()
+
+    /** True after the raw beam file could not be written; the breaks are in Room. */
+    val rawFailed: StateFlow<Boolean> = rawFailedState.asStateFlow()
+
+    suspend fun add(breaks: List<SourceEvent.BeamBreak>) {
+        if (breaks.isEmpty()) {
+            return
+        }
+        val rows =
+            breaks.map {
+                PendingBreakEntity(
+                    seq = it.seq,
+                    timeStr = TimeFormatter.currentTimeString(it.timeMs ?: now()),
+                    deviceTime = RawFiles.field(it.deviceTime),
+                )
+            }
+        CutoffRepository.mutationMutex.withLock { db.withTransaction { rows.forEach { dao.insertBreak(it) } } }
+        val lines = rows.map { "${it.seq}#${it.timeStr}#${it.deviceTime}#" }
+        val written =
+            withContext(Dispatchers.IO) {
+                backupWriter.appendRaw(settingsStore.load().folderPath, RawFiles.BEAM_BREAKS, lines)
+            }
+        rawFailedState.value = !written
+    }
+
+    /**
+     * Give [number] to the oldest pending break: a cutoff at the break's time, made on
+     * the durable path. False when no break waits, or the number is blank.
+     */
+    suspend fun assignOldest(
+        number: String,
+        event: String,
+    ): Boolean {
+        val trimmed = number.trim()
+        if (trimmed.isEmpty()) {
+            return false
+        }
+        return CutoffRepository.mutationMutex.withLock {
+            // Read and delete in one transaction: a Discard at the same moment cannot also
+            // become a cutoff.
+            val id =
+                db.withTransaction {
+                    dao.oldestBreak()?.let { oldest ->
+                        dao.deleteBreak(oldest.id)
+                        db.cutoffDao().insert(
+                            CutoffEntity(number = trimmed, timeStr = oldest.timeStr, event = event, createdAt = now()),
+                        )
+                    }
+                } ?: return@withLock false
+            cutoffs.afterChange(id)
+            true
+        }
+    }
+
+    /** A false break leaves the queue; the raw file keeps it. */
+    suspend fun discard(id: Long) {
+        dao.deleteBreak(id)
+    }
+}
