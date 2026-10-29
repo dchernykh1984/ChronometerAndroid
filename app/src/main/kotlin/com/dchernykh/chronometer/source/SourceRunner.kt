@@ -109,8 +109,12 @@ class SourceRunner(
         }
     }
 
-    /** One run of the source; what made it end, or null when it just ended. */
-    @Suppress("TooGenericExceptionCaught") // a device library may throw anything
+    /**
+     * One run of the source; what made it end, or null when it just ended. A device library
+     * may throw anything, an Error too (TODO() throws one): the run fails and starts again,
+     * and timing by hand goes on.
+     */
+    @Suppress("TooGenericExceptionCaught")
     private suspend fun runOnce(onEvent: suspend (SourceEvent) -> Unit): SourceError? =
         try {
             source.events().collect { event -> take(event, onEvent) }
@@ -119,7 +123,7 @@ class SourceRunner(
             throw cancel
         } catch (_: GaveUp) {
             null // the device's own words are the last error already
-        } catch (failure: Exception) {
+        } catch (failure: Throwable) {
             SourceError.Failed(failure.message ?: failure.javaClass.simpleName)
         }
 

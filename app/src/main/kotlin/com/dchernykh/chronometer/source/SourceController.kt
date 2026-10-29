@@ -140,7 +140,7 @@ class SourceController(
                 return
             } catch (cancel: CancellationException) {
                 throw cancel
-            } catch (failure: Exception) {
+            } catch (failure: Throwable) {
                 storeError.value = SourceError.NotStored(failure.message ?: failure.javaClass.simpleName)
                 pause = nextPause(pause, 0)
                 delay(pause)
