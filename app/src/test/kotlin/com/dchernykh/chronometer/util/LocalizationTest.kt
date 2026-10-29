@@ -10,6 +10,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import java.io.File
 import java.util.Locale
 
 // Non-ASCII (Cyrillic) literals are banned in source by the no-non-ascii hook, so
@@ -21,6 +22,33 @@ class LocalizationTest {
 
     private fun settingsIn(language: AppLanguage): String =
         LocaleContext.wrap(context(), language).getString(R.string.settings)
+
+    /** A language's strings, by name, as its strings.xml holds them. */
+    private fun stringsOf(folder: String): Map<String, String> =
+        STRING
+            .findAll(File("src/main/res/$folder/strings.xml").readText())
+            .associate { it.groupValues[1] to it.groupValues[2] }
+
+    @Test
+    fun everyStringExistsInEveryLanguageWithTheSamePlaceholders() {
+        val english = stringsOf("values")
+        assertTrue(english.size > 100)
+        for (folder in listOf("values-ru", "values-kk")) {
+            val other = stringsOf(folder)
+            assertEquals(folder, english.keys, other.keys)
+            for ((name, text) in english) {
+                val placeholders = { s: String ->
+                    PLACEHOLDER
+                        .findAll(s)
+                        .map { it.value }
+                        .sorted()
+                        .toList()
+                }
+                assertEquals("$folder $name", placeholders(text), placeholders(other.getValue(name)))
+                assertTrue("$folder $name", other.getValue(name).isNotBlank())
+            }
+        }
+    }
 
     @Test
     fun englishIsTheDefaultResource() {
@@ -100,3 +128,6 @@ class LocalizationTest {
         assertSame(context(), system)
     }
 }
+
+private val STRING = Regex("""<string name="([^"]+)">(.*?)</string>""", RegexOption.DOT_MATCHES_ALL)
+private val PLACEHOLDER = Regex("""%\d\$[sd]""")
