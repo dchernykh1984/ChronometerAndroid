@@ -26,27 +26,47 @@ class BackupWriter {
             val folder = File(folderPath)
             folder.mkdirs()
             val body = if (items.isEmpty()) "" else items.joinToString(separator = "\n", postfix = "\n")
-            writeAtomically(File(folder, "results.txt"), body)
+            writeAtomically(File(folder, "results.txt"), body.toByteArray(Charsets.UTF_8))
             val backupDir = File(folder, "backup").apply { mkdirs() }
             // Never overwrite an existing snapshot (e.g. two presses on the same
             // stamp): pick a free "<stamp>.txt" / "<stamp>-N.txt" name instead.
-            writeAtomically(freeBackupFile(backupDir, stamp), body)
+            writeAtomically(freeBackupFile(backupDir, "$stamp"), body.toByteArray(Charsets.UTF_8))
+            true
+        }.getOrDefault(false)
+
+    /**
+     * Write [body] over [target] in one step, after copying what it held, byte for byte, to
+     * `backup/<name>-<stamp>.txt` under a free name, so an earlier copy is never overwritten.
+     * False, with [target] untouched, when either cannot be written.
+     */
+    fun replaceKeepingBackup(
+        target: File,
+        body: String,
+        stamp: Long,
+    ): Boolean =
+        runCatching {
+            val folder = checkNotNull(target.parentFile).apply { mkdirs() }
+            if (target.isFile) {
+                val backupDir = File(folder, "backup").apply { mkdirs() }
+                writeAtomically(freeBackupFile(backupDir, "${target.nameWithoutExtension}-$stamp"), target.readBytes())
+            }
+            writeAtomically(target, body.toByteArray(Charsets.UTF_8))
             true
         }.getOrDefault(false)
 
     private fun freeBackupFile(
         backupDir: File,
-        stamp: Long,
+        name: String,
     ): File {
-        val base = File(backupDir, "$stamp.txt")
+        val base = File(backupDir, "$name.txt")
         if (!base.exists()) {
             return base
         }
         var suffix = 1
-        while (File(backupDir, "$stamp-$suffix.txt").exists()) {
+        while (File(backupDir, "$name-$suffix.txt").exists()) {
             suffix++
         }
-        return File(backupDir, "$stamp-$suffix.txt")
+        return File(backupDir, "$name-$suffix.txt")
     }
 
     /**
@@ -57,7 +77,7 @@ class BackupWriter {
         runCatching {
             val folder = File(folderPath)
             folder.mkdirs()
-            writeAtomically(File(folder, "results.txt"), "")
+            writeAtomically(File(folder, "results.txt"), ByteArray(0))
             true
         }.getOrDefault(false)
 
@@ -89,11 +109,11 @@ class BackupWriter {
 
     private fun writeAtomically(
         target: File,
-        body: String,
+        body: ByteArray,
     ) {
         val tmp = File(target.parentFile, "${target.name}.tmp")
         tmp.outputStream().use { out ->
-            out.write(body.toByteArray(Charsets.UTF_8))
+            out.write(body)
             out.flush()
             out.fd.sync()
         }

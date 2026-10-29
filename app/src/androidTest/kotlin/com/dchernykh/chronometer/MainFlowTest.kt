@@ -13,6 +13,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -53,6 +54,7 @@ import org.junit.runner.RunWith
 import java.io.File
 import java.net.InetAddress
 import java.net.ServerSocket
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 
 /**
@@ -661,6 +663,59 @@ class MainFlowTest {
         }
         composeRule.onNodeWithTag("chipsBackButton").performClick()
         waitForText("22")
+    }
+
+    @Test
+    fun theDownloadButtonSavesThenFetchesStartTxtAndSaysWhatItLoaded() {
+        val app = appContext() as ChronometerApp
+        val folder = File(app.cacheDir, "ui-download-${System.nanoTime()}").apply { mkdirs() }
+        File(folder, "start.txt").writeText("old#line#\n")
+        val asked = AtomicReference<String>()
+        val lines = listOf("15#R#M#3#1#1990#T#C##0 0:0:0.000#r#A1,X9#", "16#R#M#3#1#1990#T#C##0 0:0:0.000#r#B1,X9#")
+        val body = """{"devices":[{"items":["${lines[0]}","${lines[1]}"]}]}""".toByteArray()
+        ServerSocket(0, 1, InetAddress.getByName("127.0.0.1")).use { server ->
+            server.soTimeout = AWAIT_MS.toInt()
+            thread(name = "start-list", isDaemon = true) {
+                server.accept().use { socket ->
+                    socket.soTimeout = AWAIT_MS.toInt()
+                    val reader = socket.getInputStream().bufferedReader()
+                    asked.set(reader.readLine())
+                    while (!reader.readLine().isNullOrEmpty()) {
+                        // the request's headers
+                    }
+                    socket.getOutputStream().write(
+                        (
+                            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n" +
+                                "Content-Length: ${body.size}\r\nConnection: close\r\n\r\n"
+                        ).toByteArray() + body,
+                    )
+                }
+            }
+            app.settingsStore.save(
+                app.settingsStore.load().copy(
+                    folderPath = folder.path,
+                    siteUrl = "http://127.0.0.1:${server.localPort}",
+                    token = "ui-secret",
+                ),
+            )
+            openSettings()
+            selectRadio("sourceChips")
+            composeRule.onNodeWithTag("downloadStartProtocol").performScrollTo().performClick()
+            val done = localizedString(AppLanguage.EN, R.string.download_done, 2, 2, 2, 1)
+            composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+                composeRule
+                    .onAllNodes(hasTestTag("downloadState") and hasText(done, substring = true))
+                    .fetchSemanticsNodes()
+                    .isNotEmpty()
+            }
+            composeRule.onNodeWithTag("downloadState").assertTextContains("X9 (15, 16)", substring = true)
+            assertEquals("GET /api/v1/start-list/?competition_token=ui-secret HTTP/1.1", asked.get())
+            assertEquals(lines, File(folder, "start.txt").readLines())
+            val kept = File(folder, "backup").listFiles().orEmpty().filter { it.name.startsWith("start-") }
+            assertEquals(listOf("old#line#\n"), kept.map { it.readText() })
+            // The press saved the form: chips are the source now.
+            assertEquals(SourceKind.CHIPS, app.settingsStore.load().cutoffSource)
+        }
     }
 
     @Test

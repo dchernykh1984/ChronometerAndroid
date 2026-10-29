@@ -11,6 +11,7 @@ import com.dchernykh.chronometer.data.CutoffEvent
 import com.dchernykh.chronometer.data.PendingBreakEntity
 import com.dchernykh.chronometer.data.Settings
 import com.dchernykh.chronometer.source.SourceStatus
+import com.dchernykh.chronometer.startprotocol.Download
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +20,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+// One function a screen action: the screens reach the app through this one model.
+@Suppress("TooManyFunctions")
 class ChronometerViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
@@ -47,6 +50,20 @@ class ChronometerViewModel(
 
     /** `start.txt` as last read, for the chips line and the chips screen; null before. */
     val startProtocol: StateFlow<StartProtocol?> = chips.protocol
+
+    private val downloadState = MutableStateFlow<Download?>(null)
+
+    /** The last start list download, for its line in the settings; null before the first. */
+    val download: StateFlow<Download?> = downloadState.asStateFlow()
+
+    /** Fetch the start list now; a press while one runs does nothing. */
+    fun downloadStartProtocol() {
+        if (downloadState.value == Download.Running) {
+            return
+        }
+        downloadState.value = Download.Running
+        viewModelScope.launch { downloadState.value = chips.download() }
+    }
 
     /** Chips read that the map does not hold, by id. */
     val unknownChips: StateFlow<List<ChipSeen>> =

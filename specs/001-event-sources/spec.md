@@ -281,7 +281,8 @@ the dead time and download a start protocol: the cutoff does not come back.
   rebuilds the map and shows how many bibs and chips were loaded and which chips conflict. On a
   network error, an HTTP error, an invalid response or a list with no lines, nothing changes and
   the referee sees why. The answer is invalid when `devices` is not a list or a line is anything
-  but text on one line (no line break `String.lines()` would split at); blank lines are no riders,
+  but text on one line (none of the line breaks Python's `str.splitlines()` knows, at which
+  `start.txt` is read back); blank lines are no riders,
   so an answer of blank lines is a list with no lines. "Reload start protocol" reads `start.txt`
   again.
 - **FR-010**: A bib's chip reads are grouped into passes by their read times, whatever order they

@@ -100,4 +100,16 @@
     <string name="chips_unknown_title">Chips the start protocol does not hold:</string>
     <string name="chips_no_unknown">Every chip read is in the start protocol</string>
     <string name="chips_unknown_row">%1$s: reads %2$d, first %3$s, last %4$s</string>
+    <string name="download_start_protocol">Download start protocol</string>
+    <string name="download_saves_first">Saves these settings, then fetches start.txt from the site into the data folder</string>
+    <string name="download_running">Downloading the start protocol…</string>
+    <string name="download_done">start.txt downloaded, lines %1$d: bibs %2$d, chips %3$d, chips on two bibs %4$d</string>
+    <string name="download_conflicts">On two bibs, not used: %1$s</string>
+    <string name="download_failed">Nothing changed: %1$s</string>
+    <string name="download_no_site">set the site URL (http://…) and the token</string>
+    <string name="download_network">no connection to the site (%1$s)</string>
+    <string name="download_http">the site answered %1$s</string>
+    <string name="download_invalid">the site\'s answer is not a start list (%1$s)</string>
+    <string name="download_empty">the site has no start list for this competition yet</string>
+    <string name="download_file">start.txt could not be written to the data folder</string>
 </resources>

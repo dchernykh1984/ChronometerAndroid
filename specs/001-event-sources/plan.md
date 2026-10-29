@@ -126,6 +126,7 @@ screens, which the instrumented tests cover.
   screen. A test device adds a warning line.
 - **Settings**: a "Cutoff source" section with the three choices, the device list (stubs disabled,
   "not available yet"), the dead time for chips, and "Download start protocol" with its result.
+  The press saves the form first, so the download uses the site URL, token and folder on screen.
 
 ## Complexity Tracking
 

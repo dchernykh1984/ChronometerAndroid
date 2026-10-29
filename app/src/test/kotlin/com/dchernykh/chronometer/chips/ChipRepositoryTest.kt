@@ -9,9 +9,15 @@ import com.dchernykh.chronometer.data.CutoffRepository
 import com.dchernykh.chronometer.data.SettingsStore
 import com.dchernykh.chronometer.io.BackupWriter
 import com.dchernykh.chronometer.source.SourceEvent.ChipRead
+import com.dchernykh.chronometer.startprotocol.Download
+import com.dchernykh.chronometer.startprotocol.DownloadProblem
 import com.dchernykh.chronometer.util.TimeFormatter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import org.json.JSONArray
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -184,6 +190,142 @@ class ChipRepositoryTest {
             // Once timed, the reads wait no more: a reload makes nothing again.
             chips.reloadMap()
             assertEquals(3, made().size)
+        }
+
+    private fun line(
+        bib: Int,
+        chips: String,
+    ) = "$bib#R#M#3#1#1990#T#C##0 0:0:0.000#r#$chips#"
+
+    private fun answer(vararg lines: String) =
+        MockResponse().setBody(
+            JSONObject()
+                .put(
+                    "devices",
+                    JSONArray().put(JSONObject().put("items", JSONArray(lines.toList()))),
+                ).toString(),
+        )
+
+    private fun site(server: MockWebServer) =
+        store.save(store.load().copy(siteUrl = server.url("/").toString(), token = "tok"))
+
+    private fun startList() = ChipRepository(db, store, BackupWriter(), cutoffs(), now = { 1_234L })
+
+    @Test
+    fun aDownloadReplacesStartTxtKeepsTheOldOneAndTimesWaitingReads() =
+        runTest {
+            val server = MockWebServer()
+            try {
+                server.enqueue(answer(line(15, "A1,X9"), line(16, "B1,X9"), line(17, "Q7")))
+                val old = byteArrayOf('o'.code.toByte(), 0xE9.toByte(), '\n'.code.toByte())
+                File(folder, "start.txt").writeBytes(old)
+                site(server)
+                val chips = startList()
+                chips.apply(listOf(read("Q7", 0)))
+                val done = chips.download() as Download.Done
+                assertEquals(3, done.lines)
+                assertEquals(mapOf("A1" to "15", "B1" to "16", "Q7" to "17"), done.map.bibOf)
+                assertEquals(mapOf("X9" to listOf("15", "16")), done.map.conflicts)
+                assertEquals(
+                    listOf(line(15, "A1,X9"), line(16, "B1,X9"), line(17, "Q7")),
+                    File(folder, "start.txt").readLines(),
+                )
+                assertTrue(old.contentEquals(File(folder, "backup/start-1234.txt").readBytes()))
+                assertEquals(done.map, chips.protocol.value!!.map)
+                assertEquals(listOf("17" to time(0)), made())
+            } finally {
+                server.shutdown()
+            }
+        }
+
+    @Test
+    fun aSecondDownloadKeepsEveryEarlierStartTxt() =
+        runTest {
+            val server = MockWebServer()
+            try {
+                server.enqueue(answer(line(15, "A1")))
+                server.enqueue(answer(line(16, "B1")))
+                startTxt("Z1")
+                site(server)
+                val chips = startList()
+                chips.download()
+                chips.download()
+                assertEquals(listOf(line(16, "B1")), File(folder, "start.txt").readLines())
+                assertEquals(listOf(line(15, "A1")), File(folder, "backup/start-1234-1.txt").readLines())
+                assertTrue(File(folder, "backup/start-1234.txt").readText().contains("#Z1#"))
+            } finally {
+                server.shutdown()
+            }
+        }
+
+    @Test
+    fun aFailedDownloadChangesNothing() =
+        runTest {
+            val server = MockWebServer()
+            try {
+                server.enqueue(MockResponse().setResponseCode(500))
+                server.enqueue(answer("  "))
+                server.enqueue(MockResponse().setBody("junk"))
+                startTxt("A1")
+                site(server)
+                val chips = startList()
+                chips.ensureMap()
+                val before = chips.protocol.value
+                val problems = List(3) { (chips.download() as Download.Failed).problem }
+                assertEquals(listOf(DownloadProblem.HTTP, DownloadProblem.EMPTY, DownloadProblem.INVALID), problems)
+                assertEquals(listOf(line(15, "A1")), File(folder, "start.txt").readLines())
+                assertFalse(File(folder, "backup").exists())
+                assertEquals(before, chips.protocol.value)
+            } finally {
+                server.shutdown()
+            }
+        }
+
+    @Test
+    fun aStartTxtThatCannotBeWrittenChangesNothing() =
+        runTest {
+            val server = MockWebServer()
+            try {
+                server.enqueue(answer(line(15, "A1")))
+                val blocker = File(folder, "blocker").apply { writeText("") }
+                site(server)
+                store.save(store.load().copy(folderPath = File(blocker, "data").path))
+                assertEquals(Download.Failed(DownloadProblem.FILE), startList().download())
+            } finally {
+                server.shutdown()
+            }
+        }
+
+    @Test
+    fun nothingButTheButtonAsksTheSite() =
+        runTest {
+            val server = MockWebServer()
+            try {
+                server.enqueue(answer(line(15, "A1")))
+                startTxt("A1")
+                site(server)
+                val chips = startList()
+                chips.ensureMap()
+                chips.apply(listOf(read("A1", 0), read("Q7", 100)))
+                chips.reloadMap()
+                assertEquals(0, server.requestCount)
+                chips.download()
+                assertEquals(1, server.requestCount)
+                assertEquals("/api/v1/start-list/?competition_token=tok", server.takeRequest().path)
+            } finally {
+                server.shutdown()
+            }
+        }
+
+    @Test
+    fun withoutASiteNothingIsAsked() =
+        runTest {
+            store.save(store.load().copy(siteUrl = "", token = "tok"))
+            assertEquals(Download.Failed(DownloadProblem.NO_SITE), chips().download())
+            store.save(store.load().copy(siteUrl = "ftp://site", token = "tok"))
+            assertEquals(Download.Failed(DownloadProblem.NO_SITE), chips().download())
+            store.save(store.load().copy(siteUrl = "https://site", token = " "))
+            assertEquals(Download.Failed(DownloadProblem.NO_SITE), chips().download())
         }
 
     @Test

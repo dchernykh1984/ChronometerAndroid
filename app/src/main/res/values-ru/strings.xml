@@ -100,4 +100,16 @@
     <string name="chips_unknown_title">Чипы, которых нет в стартовом протоколе:</string>
     <string name="chips_no_unknown">Все прочитанные чипы есть в стартовом протоколе</string>
     <string name="chips_unknown_row">%1$s: чтений %2$d, первое %3$s, последнее %4$s</string>
+    <string name="download_start_protocol">Загрузить стартовый протокол</string>
+    <string name="download_saves_first">Сохраняет эти настройки и загружает start.txt с сайта в папку данных</string>
+    <string name="download_running">Загрузка стартового протокола…</string>
+    <string name="download_done">start.txt загружен, строк %1$d: номеров %2$d, чипов %3$d, чипов у двух номеров %4$d</string>
+    <string name="download_conflicts">У двух номеров, не используются: %1$s</string>
+    <string name="download_failed">Ничего не изменилось: %1$s</string>
+    <string name="download_no_site">укажите адрес сайта (http://…) и токен</string>
+    <string name="download_network">нет связи с сайтом (%1$s)</string>
+    <string name="download_http">сайт ответил %1$s</string>
+    <string name="download_invalid">ответ сайта - не стартовый протокол (%1$s)</string>
+    <string name="download_empty">на сайте ещё нет стартового протокола этого соревнования</string>
+    <string name="download_file">start.txt не удалось записать в папку данных</string>
 </resources>

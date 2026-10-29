@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dchernykh.chronometer.R
 import com.dchernykh.chronometer.data.AppLanguage
 import com.dchernykh.chronometer.data.ThemeMode
@@ -66,6 +67,7 @@ fun SettingsScreen(
     var confirmNewCompetition by remember { mutableStateOf(false) }
     var newCompetitionFailed by remember { mutableStateOf(false) }
     var showUnsavedDialog by remember { mutableStateOf(false) }
+    val download by viewModel.download.collectAsStateWithLifecycle()
 
     val manageLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -242,7 +244,20 @@ fun SettingsScreen(
                 Text(stringResource(R.string.finish_mode))
             }
 
-            CutoffSourceSection(settings) { settings = it }
+            CutoffSourceSection(
+                settings,
+                onChange = { settings = it },
+                download = download,
+                canDownload = !sendMisconfigured,
+                onDownload = {
+                    // The download uses the saved site URL, token and folder: save what the
+                    // referee sees, and stay here to see the result.
+                    viewModel.saveSettings(settings)
+                    settings = viewModel.loadSettings()
+                    initialSettings = settings
+                    viewModel.downloadStartProtocol()
+                },
+            )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
