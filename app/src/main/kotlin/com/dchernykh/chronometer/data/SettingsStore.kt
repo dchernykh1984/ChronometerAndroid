@@ -67,7 +67,11 @@ class SettingsStore(
             putString(KEY_BEAM_DEVICE, settings.beamDevice.name)
             putString(KEY_CHIPS_DEVICE, settings.chipsDevice.name)
             // One out of range is no dead time: the one stored stays, never one clamped to 1 s.
-            putInt(KEY_DEAD_TIME, settings.deadTimeS.takeIf { it in DEAD_TIME_RANGE_S } ?: load().deadTimeS)
+            putInt(
+                KEY_DEAD_TIME,
+                settings.deadTimeS.takeIf { it in DEAD_TIME_RANGE_S }
+                    ?: prefs.getInt(KEY_DEAD_TIME, DEFAULT_DEAD_TIME_S).coerceIn(DEAD_TIME_RANGE_S),
+            )
         }
     }
 
