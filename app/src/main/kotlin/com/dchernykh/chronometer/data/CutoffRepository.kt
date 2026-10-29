@@ -47,13 +47,25 @@ class CutoffRepository(
         number: String,
         event: String,
     ) {
+        val now = System.currentTimeMillis()
+        recordAt(number, TimeFormatter.currentTimeString(now), event, now)
+    }
+
+    /**
+     * Record a cutoff at a given time -- a beam break's or a chip pass's rather than the
+     * press's -- through the same durable sequence as [record]. A blank number records
+     * nothing.
+     */
+    suspend fun recordAt(
+        number: String,
+        timeStr: String,
+        event: String,
+        createdAt: Long = System.currentTimeMillis(),
+    ) {
         val trimmed = number.trim()
         if (trimmed.isEmpty()) {
             return
         }
-        val now = System.currentTimeMillis()
-        val timeStr = TimeFormatter.currentTimeString(now)
-
         mutationMutex.withLock {
             val id =
                 dao.insert(
@@ -61,24 +73,32 @@ class CutoffRepository(
                         number = trimmed,
                         timeStr = timeStr,
                         event = event,
-                        createdAt = now,
+                        createdAt = createdAt,
                     ),
                 )
-            settingsStore.nextClientRevision()
+            afterChange(id)
+        }
+    }
 
-            val settings = settingsStore.load()
-            val items = dao.getAll().map { it.toItem() }
-            // Name the snapshot by the unique row id, not the millisecond clock, so two
-            // presses in the same millisecond never collide.
-            val backupOk =
-                withContext(Dispatchers.IO) {
-                    backupWriter.writeSnapshot(settings.folderPath, items, id)
-                }
-            backupFailedState.value = !backupOk
-
-            if (settings.isUploadReady) {
-                enqueueUpload()
+    /**
+     * What every change to the list does once it is in Room: the next revision, a
+     * snapshot, the upload. Callers hold [mutationMutex]; a batch of source cutoffs calls
+     * it once, so a mass finish writes one snapshot rather than one a cutoff.
+     *
+     * The snapshot is named by [stamp], a row id rather than the millisecond clock, so two
+     * presses in the same millisecond never collide.
+     */
+    internal suspend fun afterChange(stamp: Long) {
+        settingsStore.nextClientRevision()
+        val settings = settingsStore.load()
+        val items = dao.getAll().map { it.toItem() }
+        val backupOk =
+            withContext(Dispatchers.IO) {
+                backupWriter.writeSnapshot(settings.folderPath, items, stamp)
             }
+        backupFailedState.value = !backupOk
+        if (settings.isUploadReady) {
+            enqueueUpload()
         }
     }
 
@@ -112,19 +132,7 @@ class CutoffRepository(
 
         return mutationMutex.withLock {
             dao.updateNumberAndTime(id, cleanedNumber, cleanedTime)
-            settingsStore.nextClientRevision()
-
-            val settings = settingsStore.load()
-            val items = dao.getAll().map { it.toItem() }
-            val backupOk =
-                withContext(Dispatchers.IO) {
-                    backupWriter.writeSnapshot(settings.folderPath, items, id)
-                }
-            backupFailedState.value = !backupOk
-
-            if (settings.isUploadReady) {
-                enqueueUpload()
-            }
+            afterChange(id)
             true
         }
     }
