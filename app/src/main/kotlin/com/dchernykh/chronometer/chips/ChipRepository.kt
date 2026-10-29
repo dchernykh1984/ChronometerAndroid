@@ -69,6 +69,10 @@ class ChipRepository(
     private val protocolState = MutableStateFlow<StartProtocol?>(null)
     private val rawFailedState = MutableStateFlow(false)
 
+    init {
+        cutoffs.whenANewCompetitionStarts(::startOver)
+    }
+
     /** `start.txt` as last read; null before the first read. */
     val protocol: StateFlow<StartProtocol?> = protocolState.asStateFlow()
 
@@ -86,7 +90,7 @@ class ChipRepository(
      * A new competition (FR-016): no map until `start.txt` is read again, as it was moved
      * aside, and the raw reads file starts afresh, so its last failure is no more.
      */
-    fun startOver() {
+    private fun startOver() {
         protocolState.value = StartProtocol.Missing
         rawFailedState.value = false
     }

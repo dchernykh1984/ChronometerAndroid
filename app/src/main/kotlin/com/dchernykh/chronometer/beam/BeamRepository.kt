@@ -32,6 +32,10 @@ class BeamRepository(
     private val dao = db.beamDao()
     private val rawFailedState = MutableStateFlow(false)
 
+    init {
+        cutoffs.whenANewCompetitionStarts(::startOver)
+    }
+
     /** Oldest first. */
     val pending: Flow<List<PendingBreakEntity>> = dao.observeBreaks()
 
@@ -93,7 +97,7 @@ class BeamRepository(
     }
 
     /** A new competition: the raw beam file starts afresh, so its last failure is no more. */
-    fun startOver() {
+    private fun startOver() {
         rawFailedState.value = false
     }
 

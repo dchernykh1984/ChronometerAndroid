@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.util.concurrent.CopyOnWriteArrayList
 
 /** Orchestrates the durable-first recording sequence for each cutoff. */
 class CutoffRepository(
@@ -36,6 +37,7 @@ class CutoffRepository(
     val cutoffs: Flow<List<CutoffEntity>> = dao.observeNewestFirst()
 
     private val backupFailedState = MutableStateFlow(false)
+    private val newCompetitionListeners = CopyOnWriteArrayList<() -> Unit>()
 
     /** True after the most recent cutoff failed to write its local files. */
     val backupFailed: StateFlow<Boolean> = backupFailedState.asStateFlow()
@@ -186,14 +188,14 @@ class CutoffRepository(
      * `backup/`, `results.txt` is emptied, the cutoffs and what the sources left -- pending
      * beam breaks, chip reads, passes -- are cleared in one transaction, the token dropped and
      * the point number reset; the revision counter keeps counting. Backups on disk are
-     * preserved. [onCleared] runs under the same lock, so no source event is applied with the
-     * last competition's chip map.
+     * preserved. What registered with [whenANewCompetitionStarts] starts over under the same
+     * lock, so no source event is applied with the last competition's chip map.
      *
      * The files go first. If one cannot be moved or `results.txt` cannot be reset, the files
      * moved are put back and the Room/settings state is kept intact, so the referee does not
      * lose the current competition.
      */
-    suspend fun startNewCompetition(onCleared: () -> Unit = {}): Boolean =
+    suspend fun startNewCompetition(): Boolean =
         mutationMutex.withLock {
             val folder = settingsStore.load().folderPath
             val filesOk =
@@ -220,10 +222,19 @@ class CutoffRepository(
                 db.passDao().clearPasses()
             }
             settingsStore.resetForNewCompetition()
-            onCleared()
+            newCompetitionListeners.forEach { it() }
             backupFailedState.value = false
             true
         }
+
+    /**
+     * [listener] runs, under [mutationMutex], once a new competition has cleared the tables:
+     * whoever keeps a competition's state in memory starts over with it, without its caller
+     * having to remember.
+     */
+    internal fun whenANewCompetitionStarts(listener: () -> Unit) {
+        newCompetitionListeners += listener
+    }
 
     /** Size of the data folder (results + backups) for the settings info line. */
     suspend fun dataFolderSizeBytes(): Long =
