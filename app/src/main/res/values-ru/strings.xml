@@ -119,4 +119,5 @@
     <string name="download_bad_line">строка в ответе сайта - не одна строка текста</string>
     <string name="chips_start_protocol_unreadable_kept">start.txt не читается (%1$s): используется карта, прочитанная до этого</string>
     <string name="chips_no_start_protocol_kept">В папке данных нет start.txt: используется карта, прочитанная до этого</string>
+    <string name="download_unusable">start.txt загружен, но его карту не удалось применить: %1$s</string>
 </resources>

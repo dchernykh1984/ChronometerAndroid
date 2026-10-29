@@ -29,6 +29,9 @@ enum class DownloadProblem {
 
     /** A line that is not one line of text. */
     BAD_LINE,
+
+    /** Downloaded and written, but its map could not be used; the detail says why. */
+    UNUSABLE,
     EMPTY,
     FILE,
 }

@@ -119,4 +119,5 @@
     <string name="download_bad_line">a line in the site\'s answer is not one line of text</string>
     <string name="chips_start_protocol_unreadable_kept">start.txt cannot be read (%1$s): the map read before it is still used</string>
     <string name="chips_no_start_protocol_kept">No start.txt in the data folder: the map read before is still used</string>
+    <string name="download_unusable">start.txt was downloaded, but its map could not be used: %1$s</string>
 </resources>
