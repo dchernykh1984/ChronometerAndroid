@@ -154,6 +154,7 @@ class SourceControllerTest {
             runCurrent()
             advanceTimeBy(2)
             runCurrent()
+            choose(SourceKind.CHIPS)
             controller.restart()
             runCurrent()
             release.complete(Unit)
@@ -173,6 +174,32 @@ class SourceControllerTest {
             runCurrent()
             assertEquals(DeviceId.R2000, controller.device.value)
             assertEquals(SourceState.NotAvailable, controller.status.value.state)
+        }
+
+    @Test
+    fun aSaveThatKeepsTheDeviceLeavesTheRunningSourceAlone() =
+        runTest {
+            choose(SourceKind.BEAM)
+            var runs = 0
+            val controller =
+                controller(
+                    CutoffSource {
+                        flow {
+                            runs++
+                            awaitCancellation()
+                        }
+                    },
+                )
+            controller.start(backgroundScope)
+            runCurrent()
+            store.save(store.load().copy(deadTimeS = 9, finishMode = true))
+            controller.restart()
+            runCurrent()
+            assertEquals(1, runs)
+            choose(SourceKind.CHIPS)
+            controller.restart()
+            runCurrent()
+            assertEquals(2, runs)
         }
 
     @Test
