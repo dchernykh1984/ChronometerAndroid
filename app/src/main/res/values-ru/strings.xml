@@ -88,4 +88,12 @@
     <string name="pending_breaks_title">Срабатывания луча ждут номера</string>
     <string name="discard_break_title">Отбросить срабатывание луча?</string>
     <string name="discard_break_message">Срабатывание в %1$s уйдёт из очереди; в beam_breaks.txt оно останется.</string>
+    <string name="chips_map_summary">Стартовый протокол: номеров %1$d, чипов %2$d, чипов у двух номеров %3$d</string>
+    <string name="chips_no_start_protocol">В папке данных нет start.txt: чтения сохраняются, отсечки не создаются</string>
+    <string name="chips_start_protocol_unreadable">start.txt не читается (%1$s): чтения сохраняются, отсечки не создаются</string>
+    <string name="chips_title">Чипы</string>
+    <string name="chips_unbound_lines">Строк без чипов: %1$d</string>
+    <string name="chips_conflicts_title">Чипы у двух номеров, не используются:</string>
+    <string name="chips_no_conflicts">Ни один чип не стоит у двух номеров</string>
+    <string name="reload_start_protocol">Перечитать стартовый протокол</string>
 </resources>

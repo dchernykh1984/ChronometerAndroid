@@ -88,4 +88,12 @@
     <string name="pending_breaks_title">Beam breaks waiting for a number</string>
     <string name="discard_break_title">Discard this beam break?</string>
     <string name="discard_break_message">The break at %1$s leaves the queue; beam_breaks.txt keeps it.</string>
+    <string name="chips_map_summary">Start protocol: bibs %1$d, chips %2$d, chips on two bibs %3$d</string>
+    <string name="chips_no_start_protocol">No start.txt in the data folder: reads are kept, no cutoffs are made</string>
+    <string name="chips_start_protocol_unreadable">start.txt cannot be read (%1$s): reads are kept, no cutoffs are made</string>
+    <string name="chips_title">Chips</string>
+    <string name="chips_unbound_lines">Lines that bind no chip: %1$d</string>
+    <string name="chips_conflicts_title">Chips on two bibs, not used:</string>
+    <string name="chips_no_conflicts">No chip is on two bibs</string>
+    <string name="reload_start_protocol">Reload start protocol</string>
 </resources>

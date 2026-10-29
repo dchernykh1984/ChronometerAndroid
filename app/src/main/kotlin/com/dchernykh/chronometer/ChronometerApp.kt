@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.SystemClock
 import androidx.room.Room
 import com.dchernykh.chronometer.beam.BeamRepository
+import com.dchernykh.chronometer.chips.ChipRepository
 import com.dchernykh.chronometer.data.AppDatabase
 import com.dchernykh.chronometer.data.CutoffRepository
 import com.dchernykh.chronometer.data.MIGRATION_1_2
@@ -28,6 +29,8 @@ class ChronometerApp : Application() {
     val backupWriter = BackupWriter()
 
     val cutoffRepository by lazy { CutoffRepository(this, database.cutoffDao(), settingsStore, backupWriter) }
+
+    val chipRepository by lazy { ChipRepository(settingsStore) }
 
     val beamRepository by lazy { BeamRepository(database, settingsStore, backupWriter, cutoffRepository) }
 

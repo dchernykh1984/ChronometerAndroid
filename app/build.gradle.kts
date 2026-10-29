@@ -128,6 +128,7 @@ kover {
                     "com.dchernykh.chronometer.ChronometerApp",
                     "com.dchernykh.chronometer.MainActivity*",
                     "com.dchernykh.chronometer.ui.MainScreenKt",
+                    "com.dchernykh.chronometer.ui.ChipsScreenKt",
                     "com.dchernykh.chronometer.ui.SettingsScreenKt",
                     "com.dchernykh.chronometer.ui.ChronometerViewModel",
                     "com.dchernykh.chronometer.ui.StoragePermission",
