@@ -117,4 +117,5 @@
     <string name="source_error_ended">Құрылғы тоқтады: оның оқиғалары аяқталды</string>
     <string name="download_not_a_start_list">сайттың жауабы старт хаттамасы емес</string>
     <string name="download_bad_line">сайт жауабындағы жол бір жолдық мәтін емес</string>
+    <string name="chips_start_protocol_unreadable_kept">start.txt оқылмайды (%1$s): бұған дейін оқылған карта қолданылады</string>
 </resources>

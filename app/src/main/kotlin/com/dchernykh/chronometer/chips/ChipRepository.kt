@@ -42,8 +42,10 @@ sealed interface StartProtocol {
 
     data object Missing : StartProtocol
 
+    /** It could not be read; [map] is the one read before it, kept in use mid-race. */
     data class Unreadable(
         val reason: String,
+        override val map: ChipMap = ChipMap(),
     ) : StartProtocol
 
     data class Loaded(
@@ -111,7 +113,11 @@ class ChipRepository(
                         StartProtocolFile.read(folder)?.let { StartProtocol.Loaded(ChipMap.of(it)) }
                             ?: StartProtocol.Missing
                     } catch (e: IOException) {
-                        StartProtocol.Unreadable(e.message ?: e.javaClass.simpleName)
+                        // A file being copied in, a storage hiccup: the map read before still binds.
+                        StartProtocol.Unreadable(
+                            e.message ?: e.javaClass.simpleName,
+                            protocolState.value?.map ?: ChipMap(),
+                        )
                     }
                 }
             val settings = settingsStore.load()
