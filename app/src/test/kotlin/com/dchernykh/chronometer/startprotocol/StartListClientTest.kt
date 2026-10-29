@@ -68,6 +68,7 @@ class StartListClientTest {
         val problems =
             mapOf(
                 """{"devices": [""" to DownloadProblem.INVALID,
+                """{"devices": []} /*""" to DownloadProblem.INVALID,
                 "not json" to DownloadProblem.NOT_A_START_LIST,
                 "[1]" to DownloadProblem.NOT_A_START_LIST,
                 """{"devices": {}}""" to DownloadProblem.NOT_A_START_LIST,

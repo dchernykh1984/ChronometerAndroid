@@ -127,17 +127,15 @@ class StartListClient {
          * good start.txt; no line at all is a failure, so a press before the upload neither.
          */
         fun linesOf(body: String): List<String> {
-            val tokener = JSONTokener(body)
-            val root =
+            // The parser may throw at the end too (an unterminated comment after the object).
+            val devices =
                 try {
-                    tokener.nextValue()
+                    val tokener = JSONTokener(body)
+                    (tokener.nextValue() as? JSONObject)?.takeIf { tokener.nextClean() == 0.toChar() }?.let {
+                        it.opt("devices") ?: JSONArray()
+                    }
                 } catch (e: JSONException) {
                     throw StartListException(DownloadProblem.INVALID, e.message.orEmpty(), e)
-                }
-            val devices =
-                (root as? JSONObject)?.takeIf { tokener.nextClean() == 0.toChar() }?.let {
-                    it.opt("devices")
-                        ?: JSONArray()
                 }
             if (devices !is JSONArray) {
                 notAStartList()
