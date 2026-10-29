@@ -188,16 +188,25 @@ class CutoffRepository(
      * preserved. [onCleared] runs under the same lock, so no source event is applied with the
      * last competition's chip map.
      *
-     * The files go first. If one cannot be moved or reset, the existing Room/settings state
-     * is kept intact so the referee does not lose the current competition.
+     * The files go first. If one cannot be moved or `results.txt` cannot be reset, the files
+     * moved are put back and the Room/settings state is kept intact, so the referee does not
+     * lose the current competition.
      */
     suspend fun startNewCompetition(onCleared: () -> Unit = {}): Boolean =
         mutationMutex.withLock {
             val folder = settingsStore.load().folderPath
             val filesOk =
                 withContext(Dispatchers.IO) {
-                    backupWriter.moveAside(folder, SET_ASIDE, System.currentTimeMillis()) &&
-                        backupWriter.resetResults(folder)
+                    val moved = backupWriter.moveAside(folder, SET_ASIDE, System.currentTimeMillis())
+                    when {
+                        moved == null -> false
+                        backupWriter.resetResults(folder) -> true
+                        else -> {
+                            // The competition stays as it was: its files go back too.
+                            backupWriter.putBack(moved)
+                            false
+                        }
+                    }
                 }
             if (!filesOk) {
                 backupFailedState.value = true
