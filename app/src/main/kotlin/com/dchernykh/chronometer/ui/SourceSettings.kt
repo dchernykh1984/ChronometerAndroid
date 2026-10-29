@@ -135,7 +135,12 @@ private fun downloadText(download: Download): String =
                     }.joinToString("; ") { (chip, bibs) -> "$chip (${bibs.joinToString()})" }
             if (conflicts.isEmpty()) done else done + "\n" + stringResource(R.string.download_conflicts, conflicts)
         }
-        is Download.Failed -> stringResource(R.string.download_failed, problemText(download))
+        is Download.Failed ->
+            if (download.problem == DownloadProblem.UNUSABLE) {
+                stringResource(R.string.download_unusable, download.detail)
+            } else {
+                stringResource(R.string.download_failed, problemText(download))
+            }
     }
 
 @Composable
@@ -147,6 +152,7 @@ private fun problemText(failed: Download.Failed): String =
         DownloadProblem.INVALID -> stringResource(R.string.download_invalid, failed.detail)
         DownloadProblem.NOT_A_START_LIST -> stringResource(R.string.download_not_a_start_list)
         DownloadProblem.BAD_LINE -> stringResource(R.string.download_bad_line)
+        DownloadProblem.UNUSABLE -> stringResource(R.string.download_unusable, failed.detail)
         DownloadProblem.EMPTY -> stringResource(R.string.download_empty)
         DownloadProblem.FILE -> stringResource(R.string.download_file)
     }

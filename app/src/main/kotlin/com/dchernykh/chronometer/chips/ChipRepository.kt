@@ -1,5 +1,6 @@
 package com.dchernykh.chronometer.chips
 
+import android.util.Log
 import androidx.room.withTransaction
 import com.dchernykh.chronometer.data.AppDatabase
 import com.dchernykh.chronometer.data.ChipReadEntity
@@ -21,6 +22,7 @@ import com.dchernykh.chronometer.startprotocol.StartListClient
 import com.dchernykh.chronometer.startprotocol.StartListException
 import com.dchernykh.chronometer.startprotocol.StartProtocolFile
 import com.dchernykh.chronometer.util.TimeFormatter
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
@@ -33,6 +35,7 @@ import kotlinx.coroutines.withContext
 import java.io.IOException
 
 private const val MS_PER_SECOND = 1_000L
+private const val TAG = "ChipRepository"
 
 // SQLite's oldest limit on the values of one statement is 999.
 private const val CHIPS_A_QUERY = 900
@@ -145,6 +148,7 @@ class ChipRepository(
      * one kept in `backup/`, and its map is used at once. Asked only from the button: nothing
      * else in the app contacts the site for it (SC-005).
      */
+    @Suppress("TooGenericExceptionCaught")
     suspend fun download(client: StartListClient = StartListClient()): Download {
         val settings = settingsStore.load()
         if (!hasAllowedUploadScheme(settings.siteUrl) || settings.token.isBlank()) {
@@ -171,6 +175,12 @@ class ChipRepository(
             }
         } catch (e: StartListException) {
             Download.Failed(e.problem, e.detail)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Room failing as the map is used, say: said on screen, never the end of the app.
+            Log.w(TAG, "start list downloaded, its map not used", e)
+            Download.Failed(DownloadProblem.UNUSABLE, e.message ?: e.javaClass.simpleName)
         }
     }
 

@@ -119,4 +119,5 @@
     <string name="download_bad_line">сайт жауабындағы жол бір жолдық мәтін емес</string>
     <string name="chips_start_protocol_unreadable_kept">start.txt оқылмайды (%1$s): бұған дейін оқылған карта қолданылады</string>
     <string name="chips_no_start_protocol_kept">Деректер қалтасында start.txt жоқ: бұған дейін оқылған карта қолданылады</string>
+    <string name="download_unusable">start.txt жүктелді, бірақ оның картасын қолдану мүмкін болмады: %1$s</string>
 </resources>
