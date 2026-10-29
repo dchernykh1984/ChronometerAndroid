@@ -522,7 +522,8 @@ class CutoffRepositoryTest {
             db.passDao().insertPass(PassEntity(bib = "15", firstMs = 1, lastMs = 1))
             var cleared = 0
 
-            assertTrue(repository.startNewCompetition { cleared++ })
+            repository.whenANewCompetitionStarts { cleared++ }
+            assertTrue(repository.startNewCompetition())
 
             assertEquals(1, cleared)
             assertNull(db.beamDao().oldestBreak())
@@ -550,7 +551,8 @@ class CutoffRepositoryTest {
             File(folder, "backup").writeText("not a folder")
             var cleared = false
 
-            assertFalse(repository.startNewCompetition { cleared = true })
+            repository.whenANewCompetitionStarts { cleared = true }
+            assertFalse(repository.startNewCompetition())
 
             assertFalse(cleared)
             assertEquals(1, db.cutoffDao().getAll().size)

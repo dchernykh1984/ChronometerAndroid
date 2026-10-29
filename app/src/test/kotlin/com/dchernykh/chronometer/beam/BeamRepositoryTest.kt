@@ -113,7 +113,8 @@ class BeamRepositoryTest {
             beam.add(listOf(BeamBreak(1, T0)))
             assertTrue(beam.rawFailed.value)
             assertEquals(1, beam.pending.first().size)
-            beam.startOver()
+            store.save(store.load().copy(folderPath = folder.path))
+            assertTrue(cutoffs.startNewCompetition())
             assertFalse(beam.rawFailed.value)
         }
 
