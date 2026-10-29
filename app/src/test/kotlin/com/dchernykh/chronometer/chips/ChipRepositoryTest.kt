@@ -432,6 +432,31 @@ class ChipRepositoryTest {
         }
 
     @Test
+    fun aBatchWaitingForTheLockUsesTheSettingsAsTheyAreWhenItGetsIt() =
+        runTest {
+            startTxt("A1")
+            val chips = chips()
+            chips.ensureMap()
+            CutoffRepository.mutationMutex.lock()
+            val batch = CoroutineScope(Dispatchers.Default).launch { chips.apply(listOf(read("A1", 0))) }
+            try {
+                withContext(Dispatchers.Default) { delay(200) } // the batch waits for the lock
+                store.save(store.load().copy(finishMode = true))
+            } finally {
+                CutoffRepository.mutationMutex.unlock()
+            }
+            withContext(Dispatchers.Default) { withTimeout(10_000) { batch.join() } }
+            assertEquals(
+                CutoffEvent.FINISH,
+                db
+                    .cutoffDao()
+                    .getAll()
+                    .single()
+                    .event,
+            )
+        }
+
+    @Test
     fun finishModeMakesFinishCutoffs() =
         runTest {
             startTxt("A1")
