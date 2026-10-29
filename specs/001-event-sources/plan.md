@@ -119,6 +119,8 @@ tests cover.
   deletion. The consumer runs in the controller's own scope: what a source sent is stored after
   a stop too, and a restart's consumer starts after the one before. A batch that cannot be
   stored is tried again after a pause growing from 1 s to 30 s and shown as the last error.
+  Each event carries the competition it arrived in, counted by `CutoffRepository`; one from a
+  competition since replaced is dropped under the lock, where a new competition starts.
   Saving the settings restarts a running source only when they choose another device.
 - **`CutoffRepository`**: `record()` keeps its behaviour; the part after the Room insert (revision,
   snapshot, upload) becomes `afterChange(stamp)`, used by hand cutoffs, chip cutoffs and assigned

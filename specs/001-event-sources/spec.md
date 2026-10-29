@@ -216,8 +216,8 @@ the dead time and download a start protocol: the cutoff does not come back.
 - A start protocol line without a bib, with `NOT_PAID` or with fewer than 12 `#` separators: its
   chips are not bound.
 - `start.txt` missing or unreadable on a Reload mid-race (a file being copied in): the map read
-  before it stays in use, and the chips line says so. Only "New competition" leaves the chips
-  without a map.
+  before it stays in use, and the chips line says so. Only "New competition", or another data
+  folder without a `start.txt`, leaves the chips without a map.
 - A relay of three stages with bib 21 and chips `A1;B1;C1`: A1 binds to 21, B1 to 22, C1 to 23.
 - Pending beam breaks when the source changes: they stay pending and visible until assigned or
   discarded.
