@@ -150,6 +150,8 @@ class SourceController(
                 delay(pause)
             }
         }
+        // Its competition was replaced: the error it had goes with it.
+        storeError.value = null
     }
 
     /**
