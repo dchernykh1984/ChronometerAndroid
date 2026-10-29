@@ -152,6 +152,20 @@ class ChipRepositoryTest {
         }
 
     @Test
+    fun anotherDataFolderWithoutStartTxtLeavesNoMap() =
+        runTest {
+            startTxt("A1")
+            val chips = chips()
+            chips.reloadMap()
+            val other = File(context.cacheDir, "chips-other-${System.nanoTime()}").apply { mkdirs() }
+            store.save(store.load().copy(folderPath = other.path))
+            chips.reloadMap(keepMap = false)
+            assertEquals(StartProtocol.Missing(), chips.protocol.value)
+            chips.apply(listOf(read("A1", 0)))
+            assertEquals(emptyList<Pair<String, String>>(), made())
+        }
+
+    @Test
     fun aStartTxtThatCannotBeReadOnAReloadLeavesTheMapReadBeforeInUse() =
         runTest {
             startTxt("A1")

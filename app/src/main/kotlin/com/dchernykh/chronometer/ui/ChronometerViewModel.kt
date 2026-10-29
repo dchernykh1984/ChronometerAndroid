@@ -141,9 +141,9 @@ class ChronometerViewModel(
         app.settingsStore.save(settings)
         // Re-read so normalized values (generated uuid, default folder) propagate.
         settingsState.value = app.settingsStore.load()
-        // Another data folder holds another start.txt.
+        // Another data folder holds another event's start.txt, or none: the map before is not it.
         if (settingsState.value.folderPath != folderBefore) {
-            reloadStartProtocol()
+            viewModelScope.launch { chips.reloadMap(keepMap = false) }
         }
         // A device chosen anew while timing mode is on runs at once.
         app.sourceController.restart()

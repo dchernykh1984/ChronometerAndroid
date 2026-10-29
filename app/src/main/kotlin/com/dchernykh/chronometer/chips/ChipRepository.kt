@@ -113,14 +113,17 @@ class ChipRepository(
      * Read `start.txt` from the data folder again and use its map: the waiting reads of the
      * chips it binds join their bibs' passes, and a pass that starts makes its cutoff, in time
      * order (FR-011). A chip that moved to another bib keeps its past cutoffs on the old one.
+     * A `start.txt` missing or unreadable leaves the map in use, unless [keepMap] is false: in
+     * another data folder, another event's, no map is the only right one.
      */
-    suspend fun reloadMap() {
+    suspend fun reloadMap(keepMap: Boolean = true) {
         // Read under the lock too, so reloads take effect in the order they read the file.
-        CutoffRepository.mutationMutex.withLock { reloadUnderLock() }
+        CutoffRepository.mutationMutex.withLock { reloadUnderLock(keepMap) }
     }
 
     /** [reloadMap]'s work, for a caller that holds [CutoffRepository.mutationMutex]. */
-    private suspend fun reloadUnderLock() {
+    private suspend fun reloadUnderLock(keepMap: Boolean = true) {
+        val before = protocolState.value?.map?.takeIf { keepMap } ?: ChipMap()
         val settings = settingsStore.load()
         val folder = settings.folderPath
         val protocol =
@@ -128,12 +131,12 @@ class ChipRepository(
                 try {
                     StartProtocolFile.read(folder)?.let { StartProtocol.Loaded(ChipMap.of(it)) }
                         // Gone a moment, as a file manager replaces it: the map before binds on.
-                        ?: StartProtocol.Missing(protocolState.value?.map ?: ChipMap())
+                        ?: StartProtocol.Missing(before)
                 } catch (e: IOException) {
                     // A file being copied in, a storage hiccup: the map read before still binds.
                     StartProtocol.Unreadable(
                         e.message ?: e.javaClass.simpleName,
-                        protocolState.value?.map ?: ChipMap(),
+                        before,
                     )
                 }
             }
