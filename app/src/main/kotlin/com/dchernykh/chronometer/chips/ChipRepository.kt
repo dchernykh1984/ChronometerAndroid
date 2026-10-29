@@ -158,6 +158,8 @@ class ChipRepository(
         if (!hasAllowedUploadScheme(settings.siteUrl) || settings.token.isBlank()) {
             return Download.Failed(DownloadProblem.NO_SITE)
         }
+        // Asked in this competition: a new one started meanwhile has a start list of its own.
+        val askedIn = cutoffs.competition
         return try {
             val lines = withContext(Dispatchers.IO) { client.fetch(settings.siteUrl, settings.token) }
             // Once fetched, the file and the map change together, even when the screen that
@@ -165,6 +167,9 @@ class ChipRepository(
             // Under the lock, so a new competition comes wholly before or after them.
             withContext(NonCancellable) {
                 CutoffRepository.mutationMutex.withLock {
+                    if (askedIn != cutoffs.competition) {
+                        return@withLock Download.Failed(DownloadProblem.STALE)
+                    }
                     val written =
                         withContext(Dispatchers.IO) {
                             StartProtocolFile.replace(settingsStore.load().folderPath, lines, now(), backupWriter)
