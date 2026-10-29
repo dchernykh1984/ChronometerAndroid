@@ -81,24 +81,19 @@ class CutoffRepositoryTest {
         }
 
     @Test
-    fun recordAtStoresTheGivenTimeSnapshotsAndQueuesTheUpload() =
+    fun recordBumpsTheRevision() =
         runTest {
-            configure(sendEnabled = true)
+            configure(sendEnabled = false)
             val revision = store.clientRevision()
-            repository.recordAt("15", "20390 10:00:00.123", CutoffEvent.FINISH)
-
-            val all = db.cutoffDao().getAll()
-            assertEquals(listOf("15" to "20390 10:00:00.123"), all.map { it.number to it.timeStr })
-            assertTrue(File(folder, "results.txt").readText().contains("15#20390 10:00:00.123#"))
+            repository.record("15", CutoffEvent.FINISH)
             assertEquals(revision + 1, store.clientRevision())
-            assertTrue(uploadWork().isNotEmpty())
         }
 
     @Test
-    fun recordAtIgnoresABlankNumber() =
+    fun recordIgnoresABlankNumber() =
         runTest {
             configure(sendEnabled = false)
-            repository.recordAt("  ", "20390 10:00:00.123", CutoffEvent.NEXT_LAP)
+            repository.record("  ", CutoffEvent.NEXT_LAP)
             assertTrue(db.cutoffDao().getAll().isEmpty())
         }
 
