@@ -88,4 +88,12 @@
     <string name="pending_breaks_title">Сәуле іске қосылулары нөмір күтуде</string>
     <string name="discard_break_title">Сәуленің бұл іске қосылуын тастау керек пе?</string>
     <string name="discard_break_message">%1$s кезіндегі іске қосылу кезектен шығады; beam_breaks.txt оны сақтайды.</string>
+    <string name="chips_map_summary">Старт хаттамасы: нөмірлер %1$d, чиптер %2$d, екі нөмірдегі чиптер %3$d</string>
+    <string name="chips_no_start_protocol">Деректер қалтасында start.txt жоқ: оқулар сақталады, белгілеулер жасалмайды</string>
+    <string name="chips_start_protocol_unreadable">start.txt оқылмайды (%1$s): оқулар сақталады, белгілеулер жасалмайды</string>
+    <string name="chips_title">Чиптер</string>
+    <string name="chips_unbound_lines">Чипсіз жолдар: %1$d</string>
+    <string name="chips_conflicts_title">Екі нөмірдегі чиптер, қолданылмайды:</string>
+    <string name="chips_no_conflicts">Ешбір чип екі нөмірде емес</string>
+    <string name="reload_start_protocol">Старт хаттамасын қайта оқу</string>
 </resources>

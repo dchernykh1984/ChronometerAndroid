@@ -592,6 +592,40 @@ class MainFlowTest {
     }
 
     @Test
+    fun theChipsLineOpensTheMapAndReloadReadsANewStartTxt() {
+        val app = appContext() as ChronometerApp
+        val folder = File(app.cacheDir, "ui-chips-${System.nanoTime()}").apply { mkdirs() }
+        val start = File(folder, "start.txt")
+
+        fun line(
+            bib: String,
+            chips: String,
+        ) = "$bib#R#M#3#1#1990#T#C##0 0:0:0.000#r#$chips#\n"
+        start.writeText(line("15", "A1,X9") + line("16", "B1,x9"))
+        // Another folder in the settings makes the app read its start.txt.
+        app.settingsStore.save(app.settingsStore.load().copy(folderPath = folder.path))
+        openSettings()
+        selectRadio("sourceChips")
+        saveSettings()
+        waitForText(localizedString(AppLanguage.EN, R.string.chips_map_summary, 2, 2, 1))
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            if (composeRule.onAllNodesWithTag("chipsSummary").fetchSemanticsNodes().isEmpty()) {
+                composeRule.onNodeWithTag("chipsLine").performClick()
+            }
+            composeRule.onAllNodesWithTag("chipsSummary").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithText("X9: 15, 16").assertExists()
+        start.writeText(line("15", "A1"))
+        val noConflicts = localizedString(AppLanguage.EN, R.string.chips_no_conflicts)
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            composeRule.onNodeWithTag("reloadStartProtocol").performClick()
+            composeRule.onAllNodesWithText(noConflicts).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithTag("chipsBackButton").performClick()
+        waitForTag("numberField")
+    }
+
+    @Test
     fun enablingTimingModeShowsDoNotDisturbHint() {
         grantNotificationPermission()
         composeRule.onNodeWithTag("timingModeToggle").performClick()

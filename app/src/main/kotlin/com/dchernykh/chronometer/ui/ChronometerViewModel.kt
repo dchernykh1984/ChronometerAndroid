@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.dchernykh.chronometer.ChronometerApp
+import com.dchernykh.chronometer.chips.StartProtocol
 import com.dchernykh.chronometer.data.CutoffEntity
 import com.dchernykh.chronometer.data.CutoffEvent
 import com.dchernykh.chronometer.data.PendingBreakEntity
@@ -23,6 +24,7 @@ class ChronometerViewModel(
     private val app = application as ChronometerApp
     private val repository = app.cutoffRepository
     private val beam = app.beamRepository
+    private val chips = app.chipRepository
 
     private val settingsState = MutableStateFlow(app.settingsStore.load())
 
@@ -40,6 +42,13 @@ class ChronometerViewModel(
     val backupFailed: StateFlow<Boolean> =
         combine(repository.backupFailed, beam.rawFailed) { snapshot, raw -> snapshot || raw }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
+
+    /** `start.txt` as last read, for the chips line and the chips screen; null before. */
+    val startProtocol: StateFlow<StartProtocol?> = chips.protocol
+
+    init {
+        viewModelScope.launch { chips.ensureMap() }
+    }
 
     /** Beam breaks waiting for a number, oldest first. */
     val pendingBreaks: StateFlow<List<PendingBreakEntity>> =
@@ -63,6 +72,11 @@ class ChronometerViewModel(
                 repository.record(number, event)
             }
         }
+    }
+
+    /** Read start.txt again, after the referee put a new one in the data folder. */
+    fun reloadStartProtocol() {
+        viewModelScope.launch { chips.reloadMap() }
     }
 
     /** A false beam break leaves the queue; beam_breaks.txt keeps it. */
@@ -96,9 +110,14 @@ class ChronometerViewModel(
     }
 
     fun saveSettings(settings: Settings) {
+        val folderBefore = settingsState.value.folderPath
         app.settingsStore.save(settings)
         // Re-read so normalized values (generated uuid, default folder) propagate.
         settingsState.value = app.settingsStore.load()
+        // Another data folder holds another start.txt.
+        if (settingsState.value.folderPath != folderBefore) {
+            reloadStartProtocol()
+        }
         // A source chosen anew while timing mode is on runs at once.
         app.sourceController.restart()
         // Flush cutoffs recorded while sending was off/misconfigured.

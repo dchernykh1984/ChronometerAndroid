@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dchernykh.chronometer.data.SettingsStore
+import com.dchernykh.chronometer.ui.ChipsScreen
 import com.dchernykh.chronometer.ui.ChronometerViewModel
 import com.dchernykh.chronometer.ui.MainScreen
 import com.dchernykh.chronometer.ui.SettingsScreen
@@ -51,6 +52,7 @@ private fun AppRoot() {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     ChronometerTheme(themeMode = settings.themeMode) {
         var showSettings by rememberSaveable { mutableStateOf(false) }
+        var showChips by rememberSaveable { mutableStateOf(false) }
         // Held here, not in MainScreen: opening Settings swaps MainScreen out of
         // the composition, which would reset its own state. Hoisting the pending
         // number and DSQ reason to this stable parent keeps them across the trip.
@@ -58,10 +60,13 @@ private fun AppRoot() {
         var dsqReason by rememberSaveable { mutableStateOf("") }
         if (showSettings) {
             SettingsScreen(viewModel, onBack = { showSettings = false })
+        } else if (showChips) {
+            ChipsScreen(viewModel, onBack = { showChips = false })
         } else {
             MainScreen(
                 viewModel = viewModel,
                 onOpenSettings = { showSettings = true },
+                onOpenChips = { showChips = true },
                 number = number,
                 onNumberChange = { number = it },
                 dsqReason = dsqReason,
