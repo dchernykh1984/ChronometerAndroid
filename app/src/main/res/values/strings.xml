@@ -96,4 +96,8 @@
     <string name="chips_conflicts_title">Chips on two bibs, not used:</string>
     <string name="chips_no_conflicts">No chip is on two bibs</string>
     <string name="reload_start_protocol">Reload start protocol</string>
+    <string name="chips_unknown_count">Unknown chips: %1$d</string>
+    <string name="chips_unknown_title">Chips the start protocol does not hold:</string>
+    <string name="chips_no_unknown">Every chip read is in the start protocol</string>
+    <string name="chips_unknown_row">%1$s: reads %2$d, first %3$s, last %4$s</string>
 </resources>

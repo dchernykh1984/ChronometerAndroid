@@ -3,12 +3,14 @@ package com.dchernykh.chronometer.chips
 import androidx.room.Room
 import androidx.work.testing.WorkManagerTestInitHelper
 import com.dchernykh.chronometer.data.AppDatabase
+import com.dchernykh.chronometer.data.ChipSeen
 import com.dchernykh.chronometer.data.CutoffEvent
 import com.dchernykh.chronometer.data.CutoffRepository
 import com.dchernykh.chronometer.data.SettingsStore
 import com.dchernykh.chronometer.io.BackupWriter
 import com.dchernykh.chronometer.source.SourceEvent.ChipRead
 import com.dchernykh.chronometer.util.TimeFormatter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -154,6 +156,34 @@ class ChipRepositoryTest {
             assertEquals(2, rawLines().size)
             assertEquals(listOf("Q7", "X9"), db.chipDao().waitingChips().sorted())
             assertFalse(chips.rawFailed.value)
+        }
+
+    @Test
+    fun unknownChipsAreListedUntilAMapBindsThem() =
+        runTest {
+            startTxt("A1,C5", "C5")
+            val chips = chips()
+            chips.apply(listOf(read("X9", 0), read("C5", 500), read("x-9", 1_000), read("A1", 2_000)))
+            val first = TimeFormatter.millisOf(time(0))!!
+            assertEquals(listOf(ChipSeen("X9", first, first + 1_000, 2)), chips.unknown.first())
+            startTxt("A1,C5", "X9,C5")
+            chips.reloadMap()
+            assertEquals(emptyList<ChipSeen>(), chips.unknown.first())
+            assertEquals(listOf("15" to time(2_000), "16" to time(0)), made())
+        }
+
+    @Test
+    fun readsOfNewlyKnownChipsBecomeCutoffsInTimeOrder() =
+        runTest {
+            val chips = chips()
+            chips.apply(listOf(read("Y1", 5_000), read("X1", 0), read("Y1", 30_000)))
+            assertEquals(emptyList<Pair<String, String>>(), made())
+            startTxt("X1", "Y1")
+            chips.reloadMap()
+            assertEquals(listOf("15" to time(0), "16" to time(5_000), "16" to time(30_000)), made())
+            // Once timed, the reads wait no more: a reload makes nothing again.
+            chips.reloadMap()
+            assertEquals(3, made().size)
         }
 
     @Test

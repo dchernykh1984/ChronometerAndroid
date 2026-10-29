@@ -37,24 +37,19 @@ class ChipPassVectorsTest {
     }
 
     @Test
-    fun everyCaseWithoutAMapChangeOneReadAtATime() = runCases(batched = false)
+    fun everyCaseOneReadAtATime() = runCases(batched = false)
 
     @Test
-    fun everyCaseWithoutAMapChangeInBatches() = runCases(batched = true)
+    fun everyCaseInBatches() = runCases(batched = true)
 
     private fun runCases(batched: Boolean) =
         runTest {
-            var ran = 0
             for (i in 0 until cases.length()) {
                 val case = cases.getJSONObject(i)
                 val events = case.getJSONArray("events").let { all -> (0 until all.length()).map(all::getJSONObject) }
-                if (events.any { it.has("map") }) {
-                    continue
-                }
                 assertEquals(case.getString("name"), expected(case), crossings(case, events, batched))
-                ran++
             }
-            assertEquals(10, ran)
+            assertEquals(14, cases.length())
         }
 
     private fun expected(case: JSONObject): List<Pair<String, String>> {
@@ -97,6 +92,10 @@ class ChipPassVectorsTest {
                 }
                 if (event.has("dead_time_ms")) {
                     store.save(store.load().copy(deadTimeS = seconds(event.getLong("dead_time_ms"))))
+                }
+                if (event.has("map")) {
+                    File(folder, "start.txt").writeText(startTxt(event.getJSONObject("map")))
+                    chips.reloadMap()
                 }
             }
             chips.apply(waiting)

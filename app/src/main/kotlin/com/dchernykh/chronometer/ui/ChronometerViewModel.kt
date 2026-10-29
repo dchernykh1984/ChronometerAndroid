@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.dchernykh.chronometer.ChronometerApp
 import com.dchernykh.chronometer.chips.StartProtocol
+import com.dchernykh.chronometer.data.ChipSeen
 import com.dchernykh.chronometer.data.CutoffEntity
 import com.dchernykh.chronometer.data.CutoffEvent
 import com.dchernykh.chronometer.data.PendingBreakEntity
@@ -46,6 +47,10 @@ class ChronometerViewModel(
 
     /** `start.txt` as last read, for the chips line and the chips screen; null before. */
     val startProtocol: StateFlow<StartProtocol?> = chips.protocol
+
+    /** Chips read that the map does not hold, by id. */
+    val unknownChips: StateFlow<List<ChipSeen>> =
+        chips.unknown.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     init {
         viewModelScope.launch { chips.ensureMap() }
