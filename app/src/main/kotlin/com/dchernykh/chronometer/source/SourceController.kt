@@ -50,6 +50,11 @@ class SourceController(
     var sourceFor: (DeviceId) -> CutoffSource? = { builtInSource(it, chipMap) }
 
     private val statusState = MutableStateFlow(SourceStatus())
+
+    // A run writes its status only while it is the current one: stop() runs on the main
+    // thread, the run's status on a worker, and a late write must not undo the stop.
+    private val statusLock = Any()
+    private var run = 0L
     private val deviceState = MutableStateFlow<DeviceId?>(null)
     private var scope: CoroutineScope? = null
     private var job: Job? = null
@@ -64,6 +69,7 @@ class SourceController(
     /** Run the chosen source in [scope] until [stop]; the settings are read now. */
     fun start(scope: CoroutineScope) {
         stop()
+        val thisRun = synchronized(statusLock) { run }
         this.scope = scope
         val device = chosenDevice()
         deviceState.value = device
@@ -96,7 +102,13 @@ class SourceController(
                 launch {
                     combine(runner.status, storeError) { status, error ->
                         if (error == null) status else status.copy(lastError = error)
-                    }.collect { statusState.value = it }
+                    }.collect { status ->
+                        synchronized(statusLock) {
+                            if (run == thisRun) {
+                                statusState.value = status
+                            }
+                        }
+                    }
                 }
                 runner.run { channel.send(it.timedOnArrival(wallClock())) }
             }
@@ -157,7 +169,10 @@ class SourceController(
         events = null
         scope = null
         deviceState.value = null
-        statusState.value = SourceStatus()
+        synchronized(statusLock) {
+            run++
+            statusState.value = SourceStatus()
+        }
     }
 }
 
