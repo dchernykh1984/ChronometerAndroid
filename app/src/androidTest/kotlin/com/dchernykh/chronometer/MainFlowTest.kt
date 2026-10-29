@@ -629,7 +629,7 @@ class MainFlowTest {
         waitForText(localizedString(AppLanguage.EN, R.string.chips_map_summary, 2, 2, 1))
         composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
             if (composeRule.onAllNodesWithTag("chipsSummary").fetchSemanticsNodes().isEmpty()) {
-                composeRule.onNodeWithTag("chipsLine").performClick()
+                composeRule.onNodeWithTag("chipsOpen").performClick()
             }
             composeRule.onAllNodesWithTag("chipsSummary").fetchSemanticsNodes().isNotEmpty()
         }
