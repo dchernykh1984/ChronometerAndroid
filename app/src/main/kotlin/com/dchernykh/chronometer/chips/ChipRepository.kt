@@ -41,7 +41,10 @@ private const val CHIPS_A_QUERY = 900
 sealed interface StartProtocol {
     val map: ChipMap get() = ChipMap()
 
-    data object Missing : StartProtocol
+    /** There is none; [map] is the one read before it, kept in use mid-race. */
+    data class Missing(
+        override val map: ChipMap = ChipMap(),
+    ) : StartProtocol
 
     /** It could not be read; [map] is the one read before it, kept in use mid-race. */
     data class Unreadable(
@@ -92,7 +95,7 @@ class ChipRepository(
      * aside, and the raw reads file starts afresh, so its last failure is no more.
      */
     private fun startOver() {
-        protocolState.value = StartProtocol.Missing
+        protocolState.value = StartProtocol.Missing()
         rawFailedState.value = false
     }
 
@@ -116,7 +119,8 @@ class ChipRepository(
                 withContext(Dispatchers.IO) {
                     try {
                         StartProtocolFile.read(folder)?.let { StartProtocol.Loaded(ChipMap.of(it)) }
-                            ?: StartProtocol.Missing
+                            // Gone a moment, as a file manager replaces it: the map before binds on.
+                            ?: StartProtocol.Missing(protocolState.value?.map ?: ChipMap())
                     } catch (e: IOException) {
                         // A file being copied in, a storage hiccup: the map read before still binds.
                         StartProtocol.Unreadable(

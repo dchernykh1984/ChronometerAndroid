@@ -75,7 +75,12 @@ internal fun ChipsLine(
 @Composable
 private fun protocolSummary(protocol: StartProtocol): String =
     when (protocol) {
-        StartProtocol.Missing -> stringResource(R.string.chips_no_start_protocol)
+        is StartProtocol.Missing ->
+            if (protocol.map.bibOf.isEmpty()) {
+                stringResource(R.string.chips_no_start_protocol)
+            } else {
+                stringResource(R.string.chips_no_start_protocol_kept)
+            }
         is StartProtocol.Unreadable ->
             if (protocol.map.bibOf.isEmpty()) {
                 stringResource(R.string.chips_start_protocol_unreadable, protocol.reason)
