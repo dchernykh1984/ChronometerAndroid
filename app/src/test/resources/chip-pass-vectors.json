@@ -1,0 +1,92 @@
+{
+  "about": "Shared cases for turning chip reads into crossings (spec FR-009, FR-010). Times are milliseconds on one clock; events are applied in order; crossings are listed in the order they are made, as [bib, time of the pass's first read].",
+  "default_dead_time_ms": 5000,
+  "cases": [
+    {
+      "name": "two chips of one bib, then a second pass",
+      "map": {"A": "15", "B": "15"},
+      "events": [{"read": ["A", 0]}, {"read": ["B", 300]}, {"read": ["A", 2000]}, {"read": ["A", 9000]}],
+      "crossings": [["15", 0], ["15", 9000]]
+    },
+    {
+      "name": "a rider standing at the antenna, read every 4 s for a minute",
+      "map": {"A": "15"},
+      "events": [{"read": ["A", 0]}, {"read": ["A", 4000]}, {"read": ["A", 8000]}, {"read": ["A", 12000]}, {"read": ["A", 16000]}, {"read": ["A", 20000]}, {"read": ["A", 24000]}, {"read": ["A", 28000]}, {"read": ["A", 32000]}, {"read": ["A", 36000]}, {"read": ["A", 40000]}, {"read": ["A", 44000]}, {"read": ["A", 48000]}, {"read": ["A", 52000]}, {"read": ["A", 56000]}, {"read": ["A", 60000]}],
+      "crossings": [["15", 0]]
+    },
+    {
+      "name": "a gap of exactly the dead time starts a new pass",
+      "map": {"A": "15"},
+      "events": [{"read": ["A", 0]}, {"read": ["A", 5000]}],
+      "crossings": [["15", 0], ["15", 5000]]
+    },
+    {
+      "name": "a longer dead time joins what a shorter one splits",
+      "dead_time_ms": 10000,
+      "map": {"A": "15"},
+      "events": [{"read": ["A", 0]}, {"read": ["A", 7000]}],
+      "crossings": [["15", 0]]
+    },
+    {
+      "name": "two bibs at the same moment",
+      "map": {"A": "15", "C": "22"},
+      "events": [{"read": ["A", 0]}, {"read": ["C", 0]}],
+      "crossings": [["15", 0], ["22", 0]]
+    },
+    {
+      "name": "a late read joins its pass and moves nothing",
+      "map": {"A": "15"},
+      "events": [{"read": ["A", 10000]}, {"read": ["A", 6000]}],
+      "crossings": [["15", 10000]]
+    },
+    {
+      "name": "a late read of an earlier pass makes that pass's crossing",
+      "map": {"A": "15"},
+      "events": [{"read": ["A", 10000]}, {"read": ["A", 0]}],
+      "crossings": [["15", 10000], ["15", 0]]
+    },
+    {
+      "name": "a late read between two passes merges them without a new crossing",
+      "map": {"A": "15"},
+      "events": [{"read": ["A", 0]}, {"read": ["A", 8000]}, {"read": ["A", 4000]}, {"read": ["A", 11000]}],
+      "crossings": [["15", 0], ["15", 8000]]
+    },
+    {
+      "name": "a chip that becomes known gets its crossings, in time order",
+      "map": {},
+      "events": [{"read": ["C", 0]}, {"read": ["C", 1000]}, {"read": ["C", 20000]}, {"map": {"C": "22"}}],
+      "crossings": [["22", 0], ["22", 20000]]
+    },
+    {
+      "name": "reads of a chip that becomes known join a pass that already has a crossing",
+      "map": {"A": "15"},
+      "events": [{"read": ["A", 0]}, {"read": ["C", 3000]}, {"map": {"A": "15", "C": "15"}}],
+      "crossings": [["15", 0]]
+    },
+    {
+      "name": "a changed dead time applies to reads from then on",
+      "dead_time_ms": 10000,
+      "map": {"A": "15"},
+      "events": [{"read": ["A", 0]}, {"read": ["A", 8000]}, {"dead_time_ms": 5000}, {"read": ["A", 12000]}, {"read": ["A", 18000]}],
+      "crossings": [["15", 0], ["15", 18000]]
+    },
+    {
+      "name": "reads of a chip that becomes known, from long before a pass with a crossing up to it, join it",
+      "map": {"A": "7"},
+      "events": [{"read": ["A", 8000]}, {"read": ["B", 0]}, {"read": ["B", 2000]}, {"read": ["B", 4000]}, {"read": ["B", 6000]}, {"read": ["B", 9000]}, {"map": {"A": "7", "B": "7"}}],
+      "crossings": [["7", 8000]]
+    },
+    {
+      "name": "a chip moved to another bib keeps its past crossings on the old bib",
+      "map": {"A": "15"},
+      "events": [{"read": ["A", 0]}, {"map": {"A": "16"}}, {"read": ["A", 20000]}],
+      "crossings": [["15", 0], ["16", 20000]]
+    },
+    {
+      "name": "an unknown chip never makes a crossing",
+      "map": {"A": "15"},
+      "events": [{"read": ["X", 0]}, {"read": ["X", 9000]}],
+      "crossings": []
+    }
+  ]
+}

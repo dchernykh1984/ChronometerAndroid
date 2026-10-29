@@ -4,6 +4,7 @@ import android.app.Application
 import android.os.SystemClock
 import androidx.room.Room
 import com.dchernykh.chronometer.beam.BeamRepository
+import com.dchernykh.chronometer.chips.ChipMap
 import com.dchernykh.chronometer.chips.ChipRepository
 import com.dchernykh.chronometer.data.AppDatabase
 import com.dchernykh.chronometer.data.CutoffRepository
@@ -30,14 +31,22 @@ class ChronometerApp : Application() {
 
     val cutoffRepository by lazy { CutoffRepository(this, database.cutoffDao(), settingsStore, backupWriter) }
 
-    val chipRepository by lazy { ChipRepository(settingsStore) }
+    val chipRepository by lazy { ChipRepository(database, settingsStore, backupWriter, cutoffRepository) }
 
     val beamRepository by lazy { BeamRepository(database, settingsStore, backupWriter, cutoffRepository) }
 
-    /** The cutoff source timing mode runs; beam breaks go to the queue that waits for numbers. */
+    /**
+     * The cutoff source timing mode runs: beam breaks go to the queue that waits for numbers,
+     * chip reads to their passes.
+     */
     val sourceController by lazy {
-        SourceController(settingsStore, SystemClock::elapsedRealtime) { batch ->
+        SourceController(
+            settingsStore,
+            SystemClock::elapsedRealtime,
+            chipMap = { chipRepository.protocol.value?.map ?: ChipMap() },
+        ) { batch ->
             beamRepository.add(batch.filterIsInstance<SourceEvent.BeamBreak>())
+            chipRepository.apply(batch.filterIsInstance<SourceEvent.ChipRead>())
         }
     }
 

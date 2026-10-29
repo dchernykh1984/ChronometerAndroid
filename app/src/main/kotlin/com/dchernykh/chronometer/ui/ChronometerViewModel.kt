@@ -40,8 +40,9 @@ class ChronometerViewModel(
 
     /** Diagnostics (do not affect recording): last file outcome + upload state. */
     val backupFailed: StateFlow<Boolean> =
-        combine(repository.backupFailed, beam.rawFailed) { snapshot, raw -> snapshot || raw }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
+        combine(repository.backupFailed, beam.rawFailed, chips.rawFailed) { snapshot, breaks, reads ->
+            snapshot || breaks || reads
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
 
     /** `start.txt` as last read, for the chips line and the chips screen; null before. */
     val startProtocol: StateFlow<StartProtocol?> = chips.protocol

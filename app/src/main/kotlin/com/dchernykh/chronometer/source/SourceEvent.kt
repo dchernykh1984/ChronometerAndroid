@@ -1,5 +1,6 @@
 package com.dchernykh.chronometer.source
 
+import com.dchernykh.chronometer.chips.normaliseChip
 import kotlinx.coroutines.flow.Flow
 
 /** A device's events as a cold flow; it ends or throws when the device fails (FR-005). */
@@ -29,7 +30,9 @@ sealed interface SourceEvent {
         val rssi: Double? = null,
         val reader: String = "",
     ) : SourceEvent {
-        override fun problem(): EventProblem? = if (chip.isBlank()) EventProblem.NO_CHIP else timeProblem(timeMs)
+        // Chips are compared normalised: an id without an ASCII letter or digit is no id.
+        override fun problem(): EventProblem? =
+            if (normaliseChip(chip).isEmpty()) EventProblem.NO_CHIP else timeProblem(timeMs)
     }
 
     data class BeamBreak(

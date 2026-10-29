@@ -2,6 +2,7 @@ package com.dchernykh.chronometer.util
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.TimeZone
@@ -52,6 +53,20 @@ class TimeFormatterTest {
         withUtc {
             assertTrue(TimeFormatter.isValidTimeString(TimeFormatter.currentTimeString(123_456_789L)))
         }
+    }
+
+    @Test
+    fun aTimeStringReadsBackAsTheMillisecondsItWasWrittenFrom() {
+        withUtc {
+            val ms = 20_389 * 86_400_000L + 11 * 3_600_000L + 35 * 60_000L + 29_615
+            assertEquals(ms, TimeFormatter.millisOf(TimeFormatter.currentTimeString(ms)))
+        }
+        assertEquals(5L, TimeFormatter.millisOf("0 0:0:0.005"))
+        assertNull(TimeFormatter.millisOf("0 24:0:0.000"))
+        assertNull(TimeFormatter.millisOf("1 2:3:4"))
+        // A day count whose milliseconds a Long cannot hold.
+        assertNull(TimeFormatter.millisOf("106751991167 0:0:0.000"))
+        assertEquals(106_751_991_166L * 86_400_000L, TimeFormatter.millisOf("106751991166 0:0:0.000"))
     }
 
     private fun withUtc(block: () -> Unit) {
