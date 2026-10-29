@@ -24,6 +24,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -432,6 +433,10 @@ class MainFlowTest {
         // A cleared field reads 0, out of range: nothing can be saved until it is fixed.
         replaceSettingsText("deadTimeField", "")
         composeRule.onNodeWithTag("saveButton").performScrollTo().assertIsNotEnabled()
+        // What is typed next is the dead time, not ten times it.
+        composeRule.onNodeWithTag("deadTimeField").performTextInput("3")
+        assertEquals("3", editableTextOf("deadTimeField"))
+        replaceSettingsText("deadTimeField", "")
         composeRule.onNodeWithTag("downloadStartProtocol").performScrollTo().assertIsNotEnabled()
         // Out of chips the field is hidden and holds Save back no more.
         selectRadio("sourceHand")
