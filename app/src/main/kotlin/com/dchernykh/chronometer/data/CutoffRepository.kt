@@ -51,25 +51,13 @@ class CutoffRepository(
         number: String,
         event: String,
     ) {
-        val now = System.currentTimeMillis()
-        recordAt(number, TimeFormatter.currentTimeString(now), event, now)
-    }
-
-    /**
-     * Record a cutoff at a given time -- a beam break's or a chip pass's rather than the
-     * press's -- through the same durable sequence as [record]. A blank number records
-     * nothing.
-     */
-    suspend fun recordAt(
-        number: String,
-        timeStr: String,
-        event: String,
-        createdAt: Long = System.currentTimeMillis(),
-    ) {
         val trimmed = number.trim()
         if (trimmed.isEmpty()) {
             return
         }
+        val now = System.currentTimeMillis()
+        val timeStr = TimeFormatter.currentTimeString(now)
+
         mutationMutex.withLock {
             val id =
                 dao.insert(
@@ -77,7 +65,7 @@ class CutoffRepository(
                         number = trimmed,
                         timeStr = timeStr,
                         event = event,
-                        createdAt = createdAt,
+                        createdAt = now,
                     ),
                 )
             afterChange(id)
