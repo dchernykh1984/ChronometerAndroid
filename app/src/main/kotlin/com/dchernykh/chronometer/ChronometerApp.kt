@@ -45,9 +45,9 @@ class ChronometerApp : Application() {
             settingsStore,
             SystemClock::elapsedRealtime,
             competition = { cutoffRepository.competition },
-        ) { batch, takenIn ->
-            beamRepository.add(batch.filterIsInstance<SourceEvent.BeamBreak>(), takenIn)
-            chipRepository.apply(batch.filterIsInstance<SourceEvent.ChipRead>(), takenIn)
+        ) { batch, takenIn, firstTry ->
+            beamRepository.add(batch.filterIsInstance<SourceEvent.BeamBreak>(), takenIn, rawToo = firstTry)
+            chipRepository.apply(batch.filterIsInstance<SourceEvent.ChipRead>(), takenIn, rawToo = firstTry)
         }.apply {
             // The test chips pass the riders of the map in use.
             sourceFor = { builtInSource(it) { chipRepository.protocol.value?.map ?: ChipMap() } }

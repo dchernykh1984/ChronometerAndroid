@@ -43,6 +43,8 @@ class BeamRepository(
     suspend fun add(
         breaks: List<SourceEvent.BeamBreak>,
         takenIn: Long = cutoffs.competition,
+        /** False on a retry: the raw lines were written on the first try. */
+        rawToo: Boolean = true,
     ) {
         if (breaks.isEmpty()) {
             return
@@ -59,10 +61,12 @@ class BeamRepository(
             if (takenIn != cutoffs.competition) {
                 return@withLock // the last competition's: its tables are gone
             }
+            // The raw file first, under the lock a new competition moves it aside under: what
+            // the device reported is kept even when Room cannot take it.
+            if (rawToo) {
+                raw.append(settingsStore.load().folderPath, rows.map { "${it.seq}#${it.timeStr}#${it.deviceTime}#" })
+            }
             db.withTransaction { rows.forEach { dao.insertBreak(it) } }
-            val lines = rows.map { "${it.seq}#${it.timeStr}#${it.deviceTime}#" }
-            // Under the lock too: a new competition moves the file aside before or after it.
-            raw.append(settingsStore.load().folderPath, lines)
         }
     }
 

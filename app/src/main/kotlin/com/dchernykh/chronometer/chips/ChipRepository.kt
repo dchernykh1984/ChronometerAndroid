@@ -243,6 +243,8 @@ class ChipRepository(
         reads: List<SourceEvent.ChipRead>,
         /** The competition they were taken in: dropped once a new one has started. */
         takenIn: Long = cutoffs.competition,
+        /** False on a retry: the raw lines were written on the first try. */
+        rawToo: Boolean = true,
     ) {
         if (reads.isEmpty()) {
             return
@@ -256,14 +258,20 @@ class ChipRepository(
             val settings = settingsStore.load()
             val map = protocolState.value?.map ?: ChipMap()
             val rows = reads.map { read -> rowOf(read, map) }
+            // The raw file first, under the lock a new competition moves it aside under: what
+            // the device reported is kept even when Room cannot take it.
+            if (rawToo) {
+                raw.append(
+                    settings.folderPath,
+                    rows.map {
+                        "${it.chip}#${it.timeStr}#${it.deviceTime}#${it.antenna}#${RawFiles.signal(
+                            it.rssi,
+                        )}#${it.reader}#"
+                    },
+                )
+            }
             db.withTransaction { storeAndTime(rows, settings) }?.let { cutoffs.afterChange(it) }
             waiting.value = withWaiting(waiting.value, rows.filter { it.bib == null })
-            val lines =
-                rows.map {
-                    "${it.chip}#${it.timeStr}#${it.deviceTime}#${it.antenna}#${RawFiles.signal(it.rssi)}#${it.reader}#"
-                }
-            // Under the lock too: a new competition moves the file aside before or after it.
-            raw.append(settings.folderPath, lines)
         }
     }
 

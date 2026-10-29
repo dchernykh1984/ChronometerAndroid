@@ -23,8 +23,10 @@
 
 - **Decision**: a batch of events is applied in one Room transaction: chip reads inserted, passes
   updated, the cutoffs they make inserted, pending beam breaks inserted. After the commit the
-  revision is bumped, `results.txt` and its snapshot are written, the raw lines are appended and
-  the upload is queued -- the path a hand cutoff takes today.
+  revision is bumped, `results.txt` and its snapshot are written and the upload is queued -- the
+  path a hand cutoff takes today. The raw lines are appended before the transaction, once a batch
+  however often it is tried, as the desktop writes its raw reads before timing them: a batch Room
+  cannot take is still in the device's own record.
 - **Rationale**: constitution II; unlike the desktop, a pass and its cutoff commit together, so a
   crash can neither lose nor repeat a chip cutoff. Batching (all events waiting in the channel,
   at most 200) keeps a burst from costing one fsync per read.
