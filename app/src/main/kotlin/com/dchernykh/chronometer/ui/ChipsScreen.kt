@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,6 +19,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -42,23 +44,30 @@ internal fun ChipsLine(
     if (settings.cutoffSource != SourceKind.CHIPS || protocol == null) {
         return
     }
-    Column(
+    // The whole line opens the chips screen; the button says that it does.
+    Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clickable(role = Role.Button, onClick = onOpen)
                 .testTag("chipsLine"),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = protocolSummary(protocol),
-            style = MaterialTheme.typography.labelMedium,
-            color = if (protocol is StartProtocol.Loaded) Color.Unspecified else MaterialTheme.colorScheme.error,
-        )
-        if (unknownChips > 0) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                stringResource(R.string.chips_unknown_count, unknownChips),
+                text = protocolSummary(protocol),
                 style = MaterialTheme.typography.labelMedium,
+                color = if (protocol is StartProtocol.Loaded) Color.Unspecified else MaterialTheme.colorScheme.error,
             )
+            if (unknownChips > 0) {
+                Text(
+                    stringResource(R.string.chips_unknown_count, unknownChips),
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+        }
+        TextButton(onClick = onOpen, modifier = Modifier.testTag("chipsOpen")) {
+            Text(stringResource(R.string.chips_open))
         }
     }
 }

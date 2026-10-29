@@ -113,4 +113,5 @@
     <string name="download_empty">the site has no start list for this competition yet</string>
     <string name="download_file">start.txt could not be written to the data folder</string>
     <string name="source_error_not_stored">Events not stored, trying again: %1$s</string>
+    <string name="chips_open">Details</string>
 </resources>

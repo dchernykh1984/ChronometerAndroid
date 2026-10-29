@@ -113,4 +113,5 @@
     <string name="download_empty">сайтта бұл жарыстың старт хаттамасы әлі жоқ</string>
     <string name="download_file">start.txt деректер қалтасына жазылмады</string>
     <string name="source_error_not_stored">Оқиғалар сақталмады, қайталау: %1$s</string>
+    <string name="chips_open">Толығырақ</string>
 </resources>
