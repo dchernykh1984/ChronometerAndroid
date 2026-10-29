@@ -3,6 +3,7 @@ package com.dchernykh.chronometer.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -28,27 +29,38 @@ import com.dchernykh.chronometer.R
 import com.dchernykh.chronometer.chips.StartProtocol
 import com.dchernykh.chronometer.data.Settings
 import com.dchernykh.chronometer.source.SourceKind
+import com.dchernykh.chronometer.util.TimeFormatter
 
 /** In chips mode: what the chip map holds, or why there is none; opens the chips screen. */
 @Composable
 internal fun ChipsLine(
     settings: Settings,
     protocol: StartProtocol?,
+    unknownChips: Int,
     onOpen: () -> Unit,
 ) {
     if (settings.cutoffSource != SourceKind.CHIPS || protocol == null) {
         return
     }
-    Text(
-        text = protocolSummary(protocol),
-        style = MaterialTheme.typography.labelMedium,
-        color = if (protocol is StartProtocol.Loaded) Color.Unspecified else MaterialTheme.colorScheme.error,
+    Column(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clickable(role = Role.Button, onClick = onOpen)
                 .testTag("chipsLine"),
-    )
+    ) {
+        Text(
+            text = protocolSummary(protocol),
+            style = MaterialTheme.typography.labelMedium,
+            color = if (protocol is StartProtocol.Loaded) Color.Unspecified else MaterialTheme.colorScheme.error,
+        )
+        if (unknownChips > 0) {
+            Text(
+                stringResource(R.string.chips_unknown_count, unknownChips),
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
+    }
 }
 
 @Composable
@@ -73,6 +85,7 @@ fun ChipsScreen(
     onBack: () -> Unit,
 ) {
     val protocol by viewModel.startProtocol.collectAsStateWithLifecycle()
+    val unknown by viewModel.unknownChips.collectAsStateWithLifecycle()
     BackHandler(onBack = onBack)
     Scaffold(
         topBar = {
@@ -104,9 +117,27 @@ fun ChipsScreen(
                 val heading =
                     if (map.conflicts.isEmpty()) R.string.chips_no_conflicts else R.string.chips_conflicts_title
                 item { Text(stringResource(heading), style = MaterialTheme.typography.titleSmall) }
-                items(map.conflicts.entries.sortedBy { it.key }, key = { it.key }) { (chip, bibs) ->
+                items(map.conflicts.entries.sortedBy { it.key }, key = { "conflict-${it.key}" }) { (chip, bibs) ->
                     Text("$chip: ${bibs.joinToString()}", modifier = Modifier.testTag("chipConflict"))
                 }
+            }
+            item {
+                Text(
+                    stringResource(if (unknown.isEmpty()) R.string.chips_no_unknown else R.string.chips_unknown_title),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+            }
+            items(unknown, key = { "unknown-${it.chip}" }) { seen ->
+                Text(
+                    stringResource(
+                        R.string.chips_unknown_row,
+                        seen.chip,
+                        seen.reads,
+                        timeOfDay(TimeFormatter.localTimeString(seen.firstMs)),
+                        timeOfDay(TimeFormatter.localTimeString(seen.lastMs)),
+                    ),
+                    modifier = Modifier.testTag("unknownChip"),
+                )
             }
         }
     }

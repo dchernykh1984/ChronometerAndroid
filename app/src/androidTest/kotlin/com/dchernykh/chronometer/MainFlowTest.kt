@@ -95,6 +95,8 @@ class MainFlowTest {
             app.database.cutoffDao().deleteAll()
             // A waiting beam break would take the next test's Cutoff.
             app.database.beamDao().clearBreaks()
+            app.database.chipDao().clearReads()
+            app.database.passDao().clearPasses()
         }
         val workManager = WorkManager.getInstance(appContext())
         workManager.cancelAllWork().result.get()
@@ -624,6 +626,41 @@ class MainFlowTest {
         }
         composeRule.onNodeWithTag("chipsBackButton").performClick()
         waitForTag("numberField")
+    }
+
+    @Test
+    fun anUnknownChipIsListedUntilANewStartTxtTimesIt() {
+        val app = appContext() as ChronometerApp
+        val folder = File(app.cacheDir, "ui-unknown-${System.nanoTime()}").apply { mkdirs() }
+        val start = File(folder, "start.txt")
+
+        fun line(
+            bib: String,
+            chips: String,
+        ) = "$bib#R#M#3#1#1990#T#C##0 0:0:0.000#r#$chips#\n"
+        start.writeText(line("15", "A1"))
+        app.settingsStore.save(app.settingsStore.load().copy(folderPath = folder.path))
+        openSettings()
+        selectRadio("sourceChips")
+        saveSettings()
+        waitForText(localizedString(AppLanguage.EN, R.string.chips_map_summary, 1, 1, 0))
+        runBlocking { app.chipRepository.apply(listOf(SourceEvent.ChipRead("x-9", System.currentTimeMillis()))) }
+        waitForText(localizedString(AppLanguage.EN, R.string.chips_unknown_count, 1))
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            if (composeRule.onAllNodesWithTag("unknownChip").fetchSemanticsNodes().isEmpty()) {
+                composeRule.onNodeWithTag("chipsLine").performClick()
+            }
+            composeRule.onAllNodesWithTag("unknownChip").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithTag("unknownChip").assertTextContains("X9", substring = true)
+        start.writeText(line("15", "A1") + line("22", "X9"))
+        val noneUnknown = localizedString(AppLanguage.EN, R.string.chips_no_unknown)
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            composeRule.onNodeWithTag("reloadStartProtocol").performClick()
+            composeRule.onAllNodesWithText(noneUnknown).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithTag("chipsBackButton").performClick()
+        waitForText("22")
     }
 
     @Test

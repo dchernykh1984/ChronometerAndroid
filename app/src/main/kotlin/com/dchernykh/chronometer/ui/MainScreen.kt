@@ -81,6 +81,7 @@ fun MainScreen(
     val sourceStatus by viewModel.sourceStatus.collectAsStateWithLifecycle()
     val pendingBreaks by viewModel.pendingBreaks.collectAsStateWithLifecycle()
     val startProtocol by viewModel.startProtocol.collectAsStateWithLifecycle()
+    val unknownChips by viewModel.unknownChips.collectAsStateWithLifecycle()
     val focusRequester = remember { FocusRequester() }
     val logState = rememberLazyListState()
     // Landscape has little vertical room, so shrink the input controls to keep the
@@ -260,7 +261,7 @@ fun MainScreen(
                 modifier = Modifier.padding(top = 8.dp),
             )
             SourceLine(settings, sourceStatus)
-            ChipsLine(settings, startProtocol, onOpenChips)
+            ChipsLine(settings, startProtocol, unknownChips.size, onOpenChips)
             PendingBreaks(pendingBreaks, viewModel::discardBreak)
 
             HorizontalDivider(modifier = Modifier.padding(vertical = if (landscape) 6.dp else 12.dp))

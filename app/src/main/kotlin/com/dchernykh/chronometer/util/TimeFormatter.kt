@@ -19,8 +19,11 @@ object TimeFormatter {
 
     private val TIME_PATTERN = Regex("""^(\d+) (\d{1,2}):(\d{1,2}):(\d{1,2})\.(\d{3})$""")
 
-    fun currentTimeString(nowMs: Long = System.currentTimeMillis()): String {
-        val local = nowMs + TimeZone.getDefault().rawOffset
+    fun currentTimeString(nowMs: Long = System.currentTimeMillis()): String =
+        localTimeString(nowMs + TimeZone.getDefault().rawOffset)
+
+    /** The "D H:M:S.mmm" string of milliseconds on its own scale, the one [millisOf] gives. */
+    fun localTimeString(local: Long): String {
         val days = local / MS_PER_DAY
         var rem = local % MS_PER_DAY
         val hours = rem / MS_PER_HOUR

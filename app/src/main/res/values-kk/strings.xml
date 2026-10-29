@@ -96,4 +96,8 @@
     <string name="chips_conflicts_title">Екі нөмірдегі чиптер, қолданылмайды:</string>
     <string name="chips_no_conflicts">Ешбір чип екі нөмірде емес</string>
     <string name="reload_start_protocol">Старт хаттамасын қайта оқу</string>
+    <string name="chips_unknown_count">Белгісіз чиптер: %1$d</string>
+    <string name="chips_unknown_title">Старт хаттамасында жоқ чиптер:</string>
+    <string name="chips_no_unknown">Оқылған барлық чиптер старт хаттамасында бар</string>
+    <string name="chips_unknown_row">%1$s: оқулар %2$d, алғашқысы %3$s, соңғысы %4$s</string>
 </resources>

@@ -96,4 +96,8 @@
     <string name="chips_conflicts_title">Чипы у двух номеров, не используются:</string>
     <string name="chips_no_conflicts">Ни один чип не стоит у двух номеров</string>
     <string name="reload_start_protocol">Перечитать стартовый протокол</string>
+    <string name="chips_unknown_count">Неизвестных чипов: %1$d</string>
+    <string name="chips_unknown_title">Чипы, которых нет в стартовом протоколе:</string>
+    <string name="chips_no_unknown">Все прочитанные чипы есть в стартовом протоколе</string>
+    <string name="chips_unknown_row">%1$s: чтений %2$d, первое %3$s, последнее %4$s</string>
 </resources>
