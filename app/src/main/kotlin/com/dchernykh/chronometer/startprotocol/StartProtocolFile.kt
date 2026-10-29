@@ -1,5 +1,6 @@
 package com.dchernykh.chronometer.startprotocol
 
+import com.dchernykh.chronometer.io.BackupWriter
 import com.dchernykh.chronometer.io.RawFiles
 import java.io.File
 import java.nio.ByteBuffer
@@ -20,6 +21,14 @@ object StartProtocolFile {
         val file = File(folderPath, NAME)
         return if (file.isFile) lines(file.readBytes()) else null
     }
+
+    /** Replace start.txt with [lines] in one step, keeping the old one in `backup/`. */
+    fun replace(
+        folderPath: String,
+        lines: List<String>,
+        stamp: Long,
+        writer: BackupWriter,
+    ): Boolean = writer.replaceKeepingBackup(File(folderPath, NAME), lines.joinToString("\n", postfix = "\n"), stamp)
 
     /**
      * Each line decoded on its own, as UTF-8, else cp1251, else Latin-1, and split at every

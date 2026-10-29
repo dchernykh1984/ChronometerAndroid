@@ -100,4 +100,16 @@
     <string name="chips_unknown_title">Старт хаттамасында жоқ чиптер:</string>
     <string name="chips_no_unknown">Оқылған барлық чиптер старт хаттамасында бар</string>
     <string name="chips_unknown_row">%1$s: оқулар %2$d, алғашқысы %3$s, соңғысы %4$s</string>
+    <string name="download_start_protocol">Старт хаттамасын жүктеу</string>
+    <string name="download_saves_first">Осы баптауларды сақтап, start.txt-ті сайттан деректер қалтасына жүктейді</string>
+    <string name="download_running">Старт хаттамасы жүктелуде…</string>
+    <string name="download_done">start.txt жүктелді, жолдар %1$d: нөмірлер %2$d, чиптер %3$d, екі нөмірдегі чиптер %4$d</string>
+    <string name="download_conflicts">Екі нөмірде, қолданылмайды: %1$s</string>
+    <string name="download_failed">Ештеңе өзгерген жоқ: %1$s</string>
+    <string name="download_no_site">сайт мекенжайы (http://…) мен токенді көрсетіңіз</string>
+    <string name="download_network">сайтпен байланыс жоқ (%1$s)</string>
+    <string name="download_http">сайт жауап берді: %1$s</string>
+    <string name="download_invalid">сайттың жауабы старт хаттамасы емес (%1$s)</string>
+    <string name="download_empty">сайтта бұл жарыстың старт хаттамасы әлі жоқ</string>
+    <string name="download_file">start.txt деректер қалтасына жазылмады</string>
 </resources>

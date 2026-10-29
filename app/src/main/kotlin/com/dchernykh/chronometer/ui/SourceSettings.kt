@@ -6,10 +6,13 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -18,15 +21,23 @@ import com.dchernykh.chronometer.R
 import com.dchernykh.chronometer.data.Settings
 import com.dchernykh.chronometer.source.DeviceId
 import com.dchernykh.chronometer.source.SourceKind
+import com.dchernykh.chronometer.startprotocol.Download
+import com.dchernykh.chronometer.startprotocol.DownloadProblem
 
 private const val DEAD_TIME_DIGITS = 3
 
-/** Where cutoffs come from, the device that makes them and, for chips, the dead time. */
+/**
+ * Where cutoffs come from, the device that makes them and, for chips, the dead time and the
+ * start protocol download.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun CutoffSourceSection(
     settings: Settings,
     onChange: (Settings) -> Unit,
+    download: Download?,
+    canDownload: Boolean,
+    onDownload: () -> Unit,
 ) {
     Text(stringResource(R.string.cutoff_source))
     FlowRow(
@@ -80,8 +91,60 @@ internal fun CutoffSourceSection(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth().testTag("deadTimeField"),
         )
+        StartListDownload(download, canDownload, onDownload)
     }
 }
+
+/** "Download start protocol" and what the last download did (FR-009). */
+@Composable
+private fun StartListDownload(
+    download: Download?,
+    enabled: Boolean,
+    onDownload: () -> Unit,
+) {
+    OutlinedButton(
+        onClick = onDownload,
+        enabled = enabled && download != Download.Running,
+        modifier = Modifier.fillMaxWidth().testTag("downloadStartProtocol"),
+    ) { Text(stringResource(R.string.download_start_protocol)) }
+    Text(stringResource(R.string.download_saves_first), style = MaterialTheme.typography.bodySmall)
+    download?.let {
+        Text(
+            text = downloadText(it),
+            color = if (it is Download.Failed) MaterialTheme.colorScheme.error else Color.Unspecified,
+            modifier = Modifier.testTag("downloadState"),
+        )
+    }
+}
+
+@Composable
+private fun downloadText(download: Download): String =
+    when (download) {
+        Download.Running -> stringResource(R.string.download_running)
+        is Download.Done -> {
+            val map = download.map
+            val done =
+                stringResource(R.string.download_done, download.lines, map.bibs, map.bibOf.size, map.conflicts.size)
+            val conflicts =
+                map.conflicts.entries
+                    .sortedBy {
+                        it.key
+                    }.joinToString("; ") { (chip, bibs) -> "$chip (${bibs.joinToString()})" }
+            if (conflicts.isEmpty()) done else done + "\n" + stringResource(R.string.download_conflicts, conflicts)
+        }
+        is Download.Failed -> stringResource(R.string.download_failed, problemText(download))
+    }
+
+@Composable
+private fun problemText(failed: Download.Failed): String =
+    when (failed.problem) {
+        DownloadProblem.NO_SITE -> stringResource(R.string.download_no_site)
+        DownloadProblem.NETWORK -> stringResource(R.string.download_network, failed.detail)
+        DownloadProblem.HTTP -> stringResource(R.string.download_http, failed.detail)
+        DownloadProblem.INVALID -> stringResource(R.string.download_invalid, failed.detail)
+        DownloadProblem.EMPTY -> stringResource(R.string.download_empty)
+        DownloadProblem.FILE -> stringResource(R.string.download_file)
+    }
 
 private val KINDS =
     listOf(

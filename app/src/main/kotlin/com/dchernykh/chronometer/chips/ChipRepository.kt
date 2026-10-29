@@ -10,9 +10,14 @@ import com.dchernykh.chronometer.data.CutoffRepository
 import com.dchernykh.chronometer.data.PassEntity
 import com.dchernykh.chronometer.data.Settings
 import com.dchernykh.chronometer.data.SettingsStore
+import com.dchernykh.chronometer.data.hasAllowedUploadScheme
 import com.dchernykh.chronometer.io.BackupWriter
 import com.dchernykh.chronometer.io.RawFiles
 import com.dchernykh.chronometer.source.SourceEvent
+import com.dchernykh.chronometer.startprotocol.Download
+import com.dchernykh.chronometer.startprotocol.DownloadProblem
+import com.dchernykh.chronometer.startprotocol.StartListClient
+import com.dchernykh.chronometer.startprotocol.StartListException
 import com.dchernykh.chronometer.startprotocol.StartProtocolFile
 import com.dchernykh.chronometer.util.TimeFormatter
 import kotlinx.coroutines.Dispatchers
@@ -87,21 +92,49 @@ class ChipRepository(
      * order (FR-011). A chip that moved to another bib keeps its past cutoffs on the old one.
      */
     suspend fun reloadMap() {
-        val folder = settingsStore.load().folderPath
-        val protocol =
-            withContext(Dispatchers.IO) {
-                try {
-                    StartProtocolFile.read(folder)?.let { StartProtocol.Loaded(ChipMap.of(it)) }
-                        ?: StartProtocol.Missing
-                } catch (e: IOException) {
-                    StartProtocol.Unreadable(e.message ?: e.javaClass.simpleName)
-                }
-            }
+        // Read under the lock too, so reloads take effect in the order they read the file.
         CutoffRepository.mutationMutex.withLock {
+            val folder = settingsStore.load().folderPath
+            val protocol =
+                withContext(Dispatchers.IO) {
+                    try {
+                        StartProtocolFile.read(folder)?.let { StartProtocol.Loaded(ChipMap.of(it)) }
+                            ?: StartProtocol.Missing
+                    } catch (e: IOException) {
+                        StartProtocol.Unreadable(e.message ?: e.javaClass.simpleName)
+                    }
+                }
             protocolState.value = protocol
             val settings = settingsStore.load()
             val lastCutoff = db.withTransaction { timeWaitingReads(protocol.map, settings) }
             lastCutoff?.let { cutoffs.afterChange(it) }
+        }
+    }
+
+    /**
+     * "Download start protocol" (FR-009): the site's start list replaces start.txt, the old
+     * one kept in `backup/`, and its map is used at once. Asked only from the button: nothing
+     * else in the app contacts the site for it (SC-005).
+     */
+    suspend fun download(client: StartListClient = StartListClient()): Download {
+        val settings = settingsStore.load()
+        if (!hasAllowedUploadScheme(settings.siteUrl) || settings.token.isBlank()) {
+            return Download.Failed(DownloadProblem.NO_SITE)
+        }
+        return try {
+            val lines = withContext(Dispatchers.IO) { client.fetch(settings.siteUrl, settings.token) }
+            val written =
+                withContext(
+                    Dispatchers.IO,
+                ) { StartProtocolFile.replace(settings.folderPath, lines, now(), backupWriter) }
+            if (written) {
+                reloadMap()
+                Download.Done(lines.size, protocolState.value?.map ?: ChipMap())
+            } else {
+                Download.Failed(DownloadProblem.FILE)
+            }
+        } catch (e: StartListException) {
+            Download.Failed(e.problem, e.detail)
         }
     }
 
