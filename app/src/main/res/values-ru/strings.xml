@@ -117,4 +117,5 @@
     <string name="source_error_ended">Устройство остановилось: его события закончились</string>
     <string name="download_not_a_start_list">ответ сайта - не стартовый протокол</string>
     <string name="download_bad_line">строка в ответе сайта - не одна строка текста</string>
+    <string name="chips_start_protocol_unreadable_kept">start.txt не читается (%1$s): используется карта, прочитанная до этого</string>
 </resources>

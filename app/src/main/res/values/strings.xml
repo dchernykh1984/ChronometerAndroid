@@ -117,4 +117,5 @@
     <string name="source_error_ended">The device stopped: its events came to an end</string>
     <string name="download_not_a_start_list">the site\'s answer is not a start list</string>
     <string name="download_bad_line">a line in the site\'s answer is not one line of text</string>
+    <string name="chips_start_protocol_unreadable_kept">start.txt cannot be read (%1$s): the map read before it is still used</string>
 </resources>

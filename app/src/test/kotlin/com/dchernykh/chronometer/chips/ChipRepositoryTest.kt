@@ -138,6 +138,22 @@ class ChipRepositoryTest {
         }
 
     @Test
+    fun aStartTxtThatCannotBeReadOnAReloadLeavesTheMapReadBeforeInUse() =
+        runTest {
+            startTxt("A1")
+            val chips = chips()
+            chips.reloadMap()
+            File(folder, "start.txt").setReadable(false)
+            chips.reloadMap()
+            if (File(folder, "start.txt").canRead()) {
+                return@runTest // running as root reads every file
+            }
+            assertTrue(chips.protocol.value is StartProtocol.Unreadable)
+            chips.apply(listOf(read("A1", 0)))
+            assertEquals(listOf("15" to time(0)), made())
+        }
+
+    @Test
     fun aReadIsKeptWithWhatTheDeviceGaveAndItsPassMakesACutoff() =
         runTest {
             startTxt("A1")
