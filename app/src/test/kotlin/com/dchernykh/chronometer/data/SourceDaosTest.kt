@@ -46,12 +46,12 @@ class SourceDaosTest {
         runTest {
             chips.insertReads(listOf(read("A", 5), read("B", 9), read("A", 1), read("A", 7)))
             assertEquals(1, chips.attribute("B", "15"))
-            assertEquals(listOf(ChipSeen("A", 1, 7, 3)), chips.observeWaiting().first())
+            assertEquals(listOf(ChipSeen("A", 1, 7, 3)), chips.waitingSummary())
             assertEquals(listOf("A"), chips.waitingChips())
             assertEquals(listOf(1L, 5L, 7L), chips.waitingReadsOf(listOf("A", "B")).map { it.timeMs })
             // A chip's reads wait one by one: a read after a map dropped it waits again.
             chips.insertReads(listOf(read("B", 20)))
-            assertEquals(listOf(ChipSeen("A", 1, 7, 3), ChipSeen("B", 20, 20, 1)), chips.observeWaiting().first())
+            assertEquals(listOf(ChipSeen("A", 1, 7, 3), ChipSeen("B", 20, 20, 1)), chips.waitingSummary())
         }
 
     @Test
@@ -86,7 +86,7 @@ class SourceDaosTest {
             passes.insertPass(PassEntity(bib = "15", firstMs = 1, lastMs = 1))
             chips.clearReads()
             passes.clearPasses()
-            assertEquals(emptyList<ChipSeen>(), chips.observeWaiting().first())
+            assertEquals(emptyList<ChipSeen>(), chips.waitingSummary())
             assertEquals(emptyList<PassEntity>(), passes.passesOf("15"))
         }
 }

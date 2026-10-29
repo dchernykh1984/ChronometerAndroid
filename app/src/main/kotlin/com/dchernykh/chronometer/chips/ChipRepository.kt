@@ -87,11 +87,15 @@ class ChipRepository(
     /** True once the raw reads file missed lines, until a new competition; the reads are in Room. */
     val rawFailed: StateFlow<Boolean> = raw.failed
 
+    // The chips with waiting reads, as ChronometerPython keeps its runs: read from Room once a
+    // map reload and kept up to date with each batch, so no batch costs a query over them all.
+    private val waiting = MutableStateFlow<Map<String, ChipSeen>>(emptyMap())
+
     /** Chips read that the map neither binds nor names as a conflict (FR-011), by id. */
     val unknown: Flow<List<ChipSeen>> =
-        combine(db.chipDao().observeWaiting(), protocolState) { waiting, protocol ->
+        combine(waiting, protocolState) { seen, protocol ->
             val map = protocol?.map ?: ChipMap()
-            waiting.filter { it.chip !in map.bibOf && it.chip !in map.conflicts }
+            seen.values.filter { it.chip !in map.bibOf && it.chip !in map.conflicts }.sortedBy { it.chip }
         }
 
     /**
@@ -100,6 +104,7 @@ class ChipRepository(
      */
     private fun startOver() {
         protocolState.value = StartProtocol.Missing()
+        waiting.value = emptyMap()
         raw.startOver()
     }
 
@@ -144,6 +149,7 @@ class ChipRepository(
         val lastCutoff = db.withTransaction { timeWaitingReads(protocol.map, settings) }
         // Only once the reads it binds are timed: a reload cut short leaves the map before it.
         protocolState.value = protocol
+        waiting.value = db.chipDao().waitingSummary().associateBy { it.chip }
         lastCutoff?.let { cutoffs.afterChange(it) }
     }
 
@@ -250,6 +256,7 @@ class ChipRepository(
             val map = protocolState.value?.map ?: ChipMap()
             val rows = reads.map { read -> rowOf(read, map) }
             db.withTransaction { storeAndTime(rows, settings) }?.let { cutoffs.afterChange(it) }
+            waiting.value = withWaiting(waiting.value, rows.filter { it.bib == null })
             val lines =
                 rows.map {
                     "${it.chip}#${it.timeStr}#${it.deviceTime}#${it.antenna}#${RawFiles.signal(it.rssi)}#${it.reader}#"
@@ -366,4 +373,27 @@ private class PassBook(
             }
         }
     }
+}
+
+/** [seen] with [reads] of chips no map binds added in: first and last read, and count. */
+private fun withWaiting(
+    seen: Map<String, ChipSeen>,
+    reads: List<ChipReadEntity>,
+): Map<String, ChipSeen> {
+    if (reads.isEmpty()) {
+        return seen
+    }
+    val next = seen.toMutableMap()
+    for (read in reads) {
+        val was = next[read.chip]
+        next[read.chip] =
+            was?.copy(
+                firstMs = minOf(was.firstMs, read.timeMs),
+                lastMs = maxOf(was.lastMs, read.timeMs),
+                reads =
+                    was.reads + 1,
+            )
+                ?: ChipSeen(read.chip, read.timeMs, read.timeMs, 1)
+    }
+    return next
 }
