@@ -1,6 +1,7 @@
 package com.dchernykh.chronometer.ui
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.dchernykh.chronometer.ChronometerApp
@@ -12,6 +13,7 @@ import com.dchernykh.chronometer.data.PendingBreakEntity
 import com.dchernykh.chronometer.data.Settings
 import com.dchernykh.chronometer.source.SourceStatus
 import com.dchernykh.chronometer.startprotocol.Download
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -69,8 +71,13 @@ class ChronometerViewModel(
     val unknownChips: StateFlow<List<ChipSeen>> =
         chips.unknown.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
+    // A map reload or a discard that fails (Room, say) changes nothing and is logged: it must
+    // not end the app mid-race. Recording a cutoff is not run under it: losing one silently
+    // would be worse.
+    private val logged = CoroutineExceptionHandler { _, failure -> Log.w(TAG, "chips or beam action", failure) }
+
     init {
-        viewModelScope.launch { chips.ensureMap() }
+        viewModelScope.launch(logged) { chips.ensureMap() }
     }
 
     /** Beam breaks waiting for a number, oldest first. */
@@ -103,12 +110,12 @@ class ChronometerViewModel(
 
     /** Read start.txt again, after the referee put a new one in the data folder. */
     fun reloadStartProtocol() {
-        viewModelScope.launch { chips.reloadMap() }
+        viewModelScope.launch(logged) { chips.reloadMap() }
     }
 
     /** A false beam break leaves the queue; beam_breaks.txt keeps it. */
     fun discardBreak(id: Long) {
-        viewModelScope.launch { beam.discard(id) }
+        viewModelScope.launch(logged) { beam.discard(id) }
     }
 
     fun recordDisqualification(
@@ -143,7 +150,7 @@ class ChronometerViewModel(
         settingsState.value = app.settingsStore.load()
         // Another data folder holds another event's start.txt, or none: the map before is not it.
         if (settingsState.value.folderPath != folderBefore) {
-            viewModelScope.launch { chips.reloadMap(keepMap = false) }
+            viewModelScope.launch(logged) { chips.reloadMap(keepMap = false) }
         }
         // A device chosen anew while timing mode is on runs at once.
         app.sourceController.restart()
@@ -167,5 +174,6 @@ class ChronometerViewModel(
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L
+        const val TAG = "ChronometerViewModel"
     }
 }
