@@ -316,7 +316,11 @@ class SourceControllerTest {
                     taken += batch
                 }.apply { sourceFor = { source } }
             controller.start(backgroundScope)
-            advanceTimeBy(10 * 60_000L)
+            // Ten tries with pauses of 1, 2, 4, 8, 16 and four of 30 s between them: 151 s.
+            advanceTimeBy(151_000L - 10)
+            runCurrent()
+            assertEquals(SourceError.NotStored("constraint failed"), controller.status.value.lastError)
+            advanceTimeBy(20)
             runCurrent()
             assertEquals(listOf(breaks[1]), taken.flatten())
             assertEquals(SourceError.Dropped(1, "constraint failed"), controller.status.value.lastError)
@@ -341,6 +345,35 @@ class SourceControllerTest {
             advanceTimeBy(5_000)
             runCurrent()
             assertNull(controller.status.value.lastError)
+        }
+
+    @Test
+    fun aRetryRepeatsOnlyTheKindOfEventsThatFailed() =
+        runTest {
+            choose(SourceKind.BEAM)
+            val read = SourceEvent.ChipRead("A1", 1_761_725_400_100)
+            var readFailures = 1
+            val controller =
+                SourceController(store, { testScheduler.currentTime }, storeScope = backgroundScope) { batch, _ ->
+                    if (batch.any { it is SourceEvent.ChipRead }) {
+                        check(readFailures-- <= 0) { "database is locked" }
+                    }
+                    taken += batch
+                }.apply {
+                    sourceFor = {
+                        CutoffSource {
+                            flow {
+                                emit(breaks[0])
+                                emit(read)
+                                awaitCancellation()
+                            }
+                        }
+                    }
+                }
+            controller.start(backgroundScope)
+            advanceTimeBy(2_000)
+            runCurrent()
+            assertEquals(listOf(listOf<SourceEvent>(breaks[0]), listOf<SourceEvent>(read)), taken)
         }
 
     @Test

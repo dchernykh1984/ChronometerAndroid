@@ -128,8 +128,10 @@ class SourceController(
      * 30 s, newer events waiting behind it: nothing is dropped, and the app keeps running.
      */
     private suspend fun store(batch: List<Taken>) {
-        for ((takenIn, events) in batch.groupBy({ it.competition }, { it.event })) {
-            storeTakenIn(takenIn, events)
+        // One competition and one kind of event a call: a retry repeats only what failed, so a
+        // beam break stored beside chip reads that failed is not queued twice.
+        for ((group, events) in batch.groupBy({ it.competition to it.event.javaClass }, { it.event })) {
+            storeTakenIn(group.first, events)
         }
     }
 
@@ -140,7 +142,7 @@ class SourceController(
     ) {
         var pause: Long? = null
         var failure: Throwable? = null
-        repeat(STORE_TRIES) {
+        repeat(STORE_TRIES) { tried ->
             // Taken in a competition since replaced: its tables are gone, and so are its events
             // and their error. The sink makes sure under the lock, for a batch on its way.
             if (takenIn != competition()) {
@@ -157,8 +159,11 @@ class SourceController(
             } catch (thrown: Throwable) {
                 failure = thrown
                 storeError.value = SourceError.NotStored(thrown.message ?: thrown.javaClass.simpleName)
-                pause = nextPause(pause, 0)
-                delay(pause)
+                // No pause after the last try: the events behind it have waited long enough.
+                if (tried < STORE_TRIES - 1) {
+                    pause = nextPause(pause, 0)
+                    delay(pause)
+                }
             }
         }
         // Failing the same way for minutes: kept no longer, so the events behind it are stored.
