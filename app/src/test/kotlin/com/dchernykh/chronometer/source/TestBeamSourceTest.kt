@@ -27,4 +27,13 @@ class TestBeamSourceTest {
             assertTrue(gaps.toString(), gaps.all { it in 5_000L..20_000L })
             assertTrue(breaks.all { it.problem() == null })
         }
+
+    @Test
+    fun aRestartedTestBeamCountsOn() =
+        runTest {
+            val source = TestBeamSource(Random(7)) { BASE_MS + testScheduler.currentTime }
+            val first = source.events().take(2).toList()
+            val again = source.events().take(2).toList()
+            assertEquals(listOf(1L, 2L, 3L, 4L), (first + again).map { (it as SourceEvent.BeamBreak).seq })
+        }
 }
