@@ -88,6 +88,7 @@ internal fun CutoffSourceSection(
                 )
             },
             label = { Text(stringResource(R.string.dead_time, DEAD_TIME_RANGE_S.first, DEAD_TIME_RANGE_S.last)) },
+            isError = settings.deadTimeS !in DEAD_TIME_RANGE_S,
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth().testTag("deadTimeField"),
