@@ -25,7 +25,8 @@ All survive "New competition".
 | `rssi` | REAL, nullable | |
 | `bib` | TEXT, nullable | the bib whose passes hold the read; null while no map binds the chip |
 
-Index on (`bib`, `chip`): the waiting reads are found by `bib IS NULL`.
+Index on (`bib`, `chip`, `timeMs`): the waiting reads are found by `bib IS NULL`, and the
+unknown chips are grouped from the index alone, however many reads a stray chip has.
 
 `passes`
 
