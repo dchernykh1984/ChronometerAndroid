@@ -21,6 +21,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.shadows.ShadowLog
 import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
@@ -120,6 +121,7 @@ class CutoffRepositoryTest {
                     assertTrue(backupFailed.value)
                 }
             assertEquals(listOf("15"), db.cutoffDao().getAll().map { it.number })
+            assertTrue(ShadowLog.getLogsForTag("CutoffRepository").any { it.throwable?.message == "disk I/O error" })
         }
 
     @Test
