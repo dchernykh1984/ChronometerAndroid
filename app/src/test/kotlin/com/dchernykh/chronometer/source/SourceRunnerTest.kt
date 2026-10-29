@@ -56,6 +56,27 @@ class SourceRunnerTest {
         }
 
     @Test
+    fun aSourceThrowingAnErrorFailsItsRunAndStartsAgain() =
+        runTest {
+            var starts = 0
+            val runner =
+                runner {
+                    flow<SourceEvent> {
+                        starts++
+                        TODO("LLRP reader")
+                    }
+                }
+            backgroundScope.launch { runner.run {} }
+            advanceTimeBy(1_000L + 1)
+            runCurrent()
+            assertEquals(2, starts)
+            assertEquals(
+                SourceError.Failed("An operation is not implemented: LLRP reader"),
+                runner.status.value.lastError,
+            )
+        }
+
+    @Test
     fun usableEventsGoOnInOrderAndInvalidOnesAreCounted() =
         runTest {
             val good = SourceEvent.BeamBreak(1, 1_761_725_400_000)
