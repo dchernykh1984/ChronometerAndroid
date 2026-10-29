@@ -298,6 +298,27 @@ class SourceControllerTest {
         }
 
     @Test
+    fun aStoreErrorGoesWithTheCompetitionItFailedFor() =
+        runTest {
+            choose(SourceKind.BEAM)
+            var competition = 0L
+            val controller =
+                SourceController(
+                    store,
+                    { testScheduler.currentTime },
+                    competition = { competition },
+                    storeScope = backgroundScope,
+                ) { _, _ -> error("database or disk is full") }.apply { sourceFor = { endless } }
+            controller.start(backgroundScope)
+            runCurrent()
+            assertEquals(SourceError.NotStored("database or disk is full"), controller.status.value.lastError)
+            competition++
+            advanceTimeBy(5_000)
+            runCurrent()
+            assertNull(controller.status.value.lastError)
+        }
+
+    @Test
     fun aRestartRunsTheSourceTheSettingsNowChoose() =
         runTest {
             choose(SourceKind.BEAM)
