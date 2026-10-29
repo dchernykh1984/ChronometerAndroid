@@ -74,4 +74,14 @@
     <string name="device_r2000">Считыватель R2000</string>
     <string name="device_not_available">%1$s (пока недоступно)</string>
     <string name="dead_time">Мёртвое время, с: чтения одного номера ближе него - один проход</string>
+    <string name="source_line_stopped">%1$s: остановлено</string>
+    <string name="source_line_running">%1$s: работает</string>
+    <string name="source_line_restarting">%1$s: перезапуск через %2$d с</string>
+    <string name="source_line_not_available">%1$s: пока недоступно</string>
+    <string name="source_error_device">Устройство: %1$s</string>
+    <string name="source_error_failed">Устройство остановилось: %1$s</string>
+    <string name="source_error_no_chip">Чтение без номера чипа не учтено</string>
+    <string name="source_error_time">Событие с ненастроенными часами устройства не учтено</string>
+    <string name="source_invalid_events">Не учтено событий: %1$d</string>
+    <string name="source_test_warning">ТЕСТОВОЕ УСТРОЙСТВО: его отсечки - тестовые данные</string>
 </resources>

@@ -8,6 +8,7 @@ import com.dchernykh.chronometer.data.CutoffEntity
 import com.dchernykh.chronometer.data.CutoffEvent
 import com.dchernykh.chronometer.data.CutoffRepository
 import com.dchernykh.chronometer.data.Settings
+import com.dchernykh.chronometer.source.SourceStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -37,6 +38,9 @@ class ChronometerViewModel(
 
     /** Diagnostics (do not affect recording): last backup outcome + upload state. */
     val backupFailed: StateFlow<Boolean> = repository.backupFailed
+
+    /** The cutoff source's state, for its line on the main screen. */
+    val sourceStatus: StateFlow<SourceStatus> = app.sourceController.status
 
     val uploadDiagnostics: StateFlow<UploadDiagnostics> =
         combine(repository.uploadWorkInfo, app.uploadErrorStore.error, ::uploadDiagnosticsOf)
@@ -76,6 +80,8 @@ class ChronometerViewModel(
         app.settingsStore.save(settings)
         // Re-read so normalized values (generated uuid, default folder) propagate.
         settingsState.value = app.settingsStore.load()
+        // A source chosen anew while timing mode is on runs at once.
+        app.sourceController.restart()
         // Flush cutoffs recorded while sending was off/misconfigured.
         viewModelScope.launch { repository.uploadPendingCutoffs() }
     }

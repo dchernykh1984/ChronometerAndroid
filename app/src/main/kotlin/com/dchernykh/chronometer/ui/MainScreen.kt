@@ -77,6 +77,7 @@ fun MainScreen(
     val uploadDiagnostics by viewModel.uploadDiagnostics.collectAsStateWithLifecycle()
     val backupFailed by viewModel.backupFailed.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val sourceStatus by viewModel.sourceStatus.collectAsStateWithLifecycle()
     val focusRequester = remember { FocusRequester() }
     val logState = rememberLazyListState()
     // Landscape has little vertical room, so shrink the input controls to keep the
@@ -253,6 +254,7 @@ fun MainScreen(
                 backupFailed = backupFailed,
                 modifier = Modifier.padding(top = 8.dp),
             )
+            SourceLine(settings, sourceStatus)
 
             HorizontalDivider(modifier = Modifier.padding(vertical = if (landscape) 6.dp else 12.dp))
 
