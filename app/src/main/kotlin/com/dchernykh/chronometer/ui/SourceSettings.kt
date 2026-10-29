@@ -82,7 +82,8 @@ internal fun CutoffSourceSection(
     }
     if (kind == SourceKind.CHIPS) {
         OutlinedTextField(
-            value = settings.deadTimeS.toString(),
+            // Cleared, the field stays empty: a "0" before the cursor would make 3 typed read 30.
+            value = if (settings.deadTimeS == 0) "" else settings.deadTimeS.toString(),
             onValueChange = { typed ->
                 onChange(
                     settings.copy(deadTimeS = typed.filter(Char::isDigit).take(DEAD_TIME_DIGITS).toIntOrNull() ?: 0),
