@@ -43,7 +43,7 @@ private const val CHIPS_A_QUERY = 900
 
 /** What `start.txt` gave the chip map; [map] is empty without a usable file. */
 sealed interface StartProtocol {
-    val map: ChipMap get() = ChipMap()
+    val map: ChipMap
 
     /** There is none; [map] is the one read before it, kept in use mid-race. */
     data class Missing(
