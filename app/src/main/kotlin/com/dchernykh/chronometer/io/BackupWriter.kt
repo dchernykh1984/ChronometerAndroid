@@ -56,22 +56,35 @@ class BackupWriter {
 
     /**
      * Move the files [names] in the data folder into `backup/<name>-<stamp>.txt` under free
-     * names; a missing one is skipped. False at the first that cannot be moved; those moved
-     * before it stay in `backup/`, where nothing is lost.
+     * names; a missing one is skipped. The moves made, from and to, or null when one cannot be
+     * made -- and then those made before it are put back, so nothing has moved.
      */
     fun moveAside(
         folderPath: String,
         names: List<String>,
         stamp: Long,
-    ): Boolean =
-        runCatching {
-            val folder = File(folderPath)
-            val backupDir = File(folder, "backup")
-            names.map { File(folder, it) }.filter { it.isFile }.all { file ->
-                backupDir.mkdirs()
-                file.renameTo(freeBackupFile(backupDir, "${file.nameWithoutExtension}-$stamp"))
-            }
-        }.getOrDefault(false)
+    ): List<Pair<File, File>>? {
+        val moved = mutableListOf<Pair<File, File>>()
+        val folder = File(folderPath)
+        val backupDir = File(folder, "backup")
+        val allMoved =
+            runCatching {
+                names.map { File(folder, it) }.filter { it.isFile }.all { file ->
+                    backupDir.mkdirs()
+                    val to = freeBackupFile(backupDir, "${file.nameWithoutExtension}-$stamp")
+                    file.renameTo(to).also { if (it) moved += file to to }
+                }
+            }.getOrDefault(false)
+        if (!allMoved) {
+            putBack(moved)
+        }
+        return moved.takeIf { allMoved }
+    }
+
+    /** Files [moveAside] moved, back where they were. */
+    fun putBack(moved: List<Pair<File, File>>) {
+        moved.asReversed().forEach { (from, to) -> to.renameTo(from) }
+    }
 
     private fun freeBackupFile(
         backupDir: File,

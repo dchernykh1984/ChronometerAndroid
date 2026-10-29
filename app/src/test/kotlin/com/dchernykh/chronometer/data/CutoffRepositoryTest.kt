@@ -526,6 +526,23 @@ class CutoffRepositoryTest {
         }
 
     @Test
+    fun aNewCompetitionWhoseResultsCannotBeResetPutsItsFilesBack() =
+        runTest {
+            configure(sendEnabled = false)
+            folder.mkdirs()
+            File(folder, "start.txt").writeText("15#\n")
+            File(folder, "chip_reads.txt").writeText("A1#\n")
+            // A folder by that name cannot be replaced by the emptied results.txt.
+            File(folder, "results.txt").apply { mkdirs() }.resolve("in-the-way").writeText("x")
+
+            assertFalse(repository.startNewCompetition())
+
+            assertEquals("15#\n", File(folder, "start.txt").readText())
+            assertEquals("A1#\n", File(folder, "chip_reads.txt").readText())
+            assertTrue(File(folder, "backup").listFiles().orEmpty().isEmpty())
+        }
+
+    @Test
     fun startNewCompetitionKeepsStateWhenResultsResetFails() =
         runTest {
             val blocker =
