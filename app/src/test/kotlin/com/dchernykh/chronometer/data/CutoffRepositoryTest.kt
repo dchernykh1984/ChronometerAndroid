@@ -123,6 +123,22 @@ class CutoffRepositoryTest {
         }
 
     @Test
+    fun aTypedHashOrLineBreakNeverReachesTheResultsLine() =
+        runTest {
+            configure(sendEnabled = false)
+            repository.record("12#A\n7", CutoffEvent.NEXT_LAP)
+            assertEquals(
+                "12 A 7",
+                db
+                    .cutoffDao()
+                    .getAll()
+                    .single()
+                    .number,
+            )
+            assertTrue(File(folder, "results.txt").readText().startsWith("12 A 7#"))
+        }
+
+    @Test
     fun recordIgnoresABlankNumber() =
         runTest {
             configure(sendEnabled = false)
