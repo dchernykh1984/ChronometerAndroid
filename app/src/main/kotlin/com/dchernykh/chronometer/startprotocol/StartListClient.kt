@@ -21,7 +21,15 @@ enum class DownloadProblem {
     NO_SITE,
     NETWORK,
     HTTP,
+
+    /** Not JSON at all; the detail is the parser's own words. */
     INVALID,
+
+    /** JSON, or not even text, but no object with a list of devices. */
+    NOT_A_START_LIST,
+
+    /** A line that is not one line of text. */
+    BAD_LINE,
     EMPTY,
     FILE,
 }
@@ -100,7 +108,7 @@ class StartListClient {
                     .decode(ByteBuffer.wrap(bytes))
                     .toString()
             } catch (_: CharacterCodingException) {
-                invalid("not UTF-8")
+                notAStartList()
             }
         } finally {
             connection.disconnect()
@@ -124,14 +132,15 @@ class StartListClient {
                 try {
                     tokener.nextValue()
                 } catch (e: JSONException) {
-                    invalid(e.message.orEmpty())
+                    throw StartListException(DownloadProblem.INVALID, e.message.orEmpty(), e)
                 }
-            if (root !is JSONObject || tokener.nextClean() != 0.toChar()) {
-                invalid("not a JSON object")
-            }
-            val devices = root.opt("devices") ?: JSONArray()
+            val devices =
+                (root as? JSONObject)?.takeIf { tokener.nextClean() == 0.toChar() }?.let {
+                    it.opt("devices")
+                        ?: JSONArray()
+                }
             if (devices !is JSONArray) {
-                invalid("devices is not a list")
+                notAStartList()
             }
             val lines = (0 until devices.length()).flatMap { itemsOf(devices.opt(it)) }
             if (lines.isEmpty()) {
@@ -146,10 +155,10 @@ class StartListClient {
                 .map { items.opt(it) }
                 .map { line ->
                     (line as? String)?.takeUnless { RawFiles.LINE_BREAKS.containsMatchIn(it) }
-                        ?: invalid("a line is not one line of text")
+                        ?: throw StartListException(DownloadProblem.BAD_LINE)
                 }.filter(String::isNotBlank)
         }
 
-        private fun invalid(why: String): Nothing = throw StartListException(DownloadProblem.INVALID, why)
+        private fun notAStartList(): Nothing = throw StartListException(DownloadProblem.NOT_A_START_LIST)
     }
 }

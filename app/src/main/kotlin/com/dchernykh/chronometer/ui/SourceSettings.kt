@@ -144,6 +144,8 @@ private fun problemText(failed: Download.Failed): String =
         DownloadProblem.NETWORK -> stringResource(R.string.download_network, failed.detail)
         DownloadProblem.HTTP -> stringResource(R.string.download_http, failed.detail)
         DownloadProblem.INVALID -> stringResource(R.string.download_invalid, failed.detail)
+        DownloadProblem.NOT_A_START_LIST -> stringResource(R.string.download_not_a_start_list)
+        DownloadProblem.BAD_LINE -> stringResource(R.string.download_bad_line)
         DownloadProblem.EMPTY -> stringResource(R.string.download_empty)
         DownloadProblem.FILE -> stringResource(R.string.download_file)
     }

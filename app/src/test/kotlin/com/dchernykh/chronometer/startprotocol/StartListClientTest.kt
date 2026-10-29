@@ -64,20 +64,21 @@ class StartListClientTest {
     }
 
     @Test
-    fun anythingButLinesOfTextIsInvalid() {
-        val bodies =
-            listOf(
-                "not json",
-                "[1]",
-                """{"devices": {}}""",
-                """{"devices": null}""",
-                """{"devices": [{"items": [7]}]}""",
-                """{"devices": [{"items": ["15#A#\u2028"]}]}""",
-                """{"devices": [{"items": ["15#A#\r"]}]}""",
-                """{"devices": [{"items": ["15#A#"]}]} and more""",
+    fun anythingButLinesOfTextIsRefusedSayingWhy() {
+        val problems =
+            mapOf(
+                """{"devices": [""" to DownloadProblem.INVALID,
+                "not json" to DownloadProblem.NOT_A_START_LIST,
+                "[1]" to DownloadProblem.NOT_A_START_LIST,
+                """{"devices": {}}""" to DownloadProblem.NOT_A_START_LIST,
+                """{"devices": null}""" to DownloadProblem.NOT_A_START_LIST,
+                """{"devices": [{"items": ["15#A#"]}]} and more""" to DownloadProblem.NOT_A_START_LIST,
+                """{"devices": [{"items": [7]}]}""" to DownloadProblem.BAD_LINE,
+                """{"devices": [{"items": ["15#A#\u2028"]}]}""" to DownloadProblem.BAD_LINE,
+                """{"devices": [{"items": ["15#A#\r"]}]}""" to DownloadProblem.BAD_LINE,
             )
-        for (body in bodies) {
-            assertEquals(body, DownloadProblem.INVALID, problemOf { StartListClient.linesOf(body) }.problem)
+        for ((body, problem) in problems) {
+            assertEquals(body, problem, problemOf { StartListClient.linesOf(body) }.problem)
         }
     }
 
@@ -93,6 +94,6 @@ class StartListClientTest {
         server.enqueue(
             MockResponse().setBody(Buffer().write(byteArrayOf('{'.code.toByte(), 0xFF.toByte(), '}'.code.toByte()))),
         )
-        assertEquals(DownloadProblem.INVALID, problemOf { fetch() }.problem)
+        assertEquals(DownloadProblem.NOT_A_START_LIST, problemOf { fetch() }.problem)
     }
 }

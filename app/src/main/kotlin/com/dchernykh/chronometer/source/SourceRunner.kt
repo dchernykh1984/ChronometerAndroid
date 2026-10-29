@@ -33,10 +33,13 @@ sealed interface SourceError {
         val problem: EventProblem,
     ) : SourceError
 
-    /** The source failed or ended. */
+    /** The source failed, as its exception words it. */
     data class Failed(
         val message: String,
     ) : SourceError
+
+    /** The source's events came to an end. */
+    data object Ended : SourceError
 
     /** Events could not be stored; they are tried again. */
     data class NotStored(
@@ -111,7 +114,7 @@ class SourceRunner(
     private suspend fun runOnce(onEvent: suspend (SourceEvent) -> Unit): SourceError? =
         try {
             source.events().collect { event -> take(event, onEvent) }
-            SourceError.Failed("ended")
+            SourceError.Ended
         } catch (cancel: CancellationException) {
             throw cancel
         } catch (_: GaveUp) {

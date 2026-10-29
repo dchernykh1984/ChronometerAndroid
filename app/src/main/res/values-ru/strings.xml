@@ -109,9 +109,12 @@
     <string name="download_no_site">укажите адрес сайта (http://…) и токен</string>
     <string name="download_network">нет связи с сайтом (%1$s)</string>
     <string name="download_http">сайт ответил %1$s</string>
-    <string name="download_invalid">ответ сайта - не стартовый протокол (%1$s)</string>
+    <string name="download_invalid">ответ сайта - не JSON (%1$s)</string>
     <string name="download_empty">на сайте ещё нет стартового протокола этого соревнования</string>
     <string name="download_file">start.txt не удалось записать в папку данных</string>
     <string name="source_error_not_stored">События не сохранены, повтор: %1$s</string>
     <string name="chips_open">Подробнее</string>
+    <string name="source_error_ended">Устройство остановилось: его события закончились</string>
+    <string name="download_not_a_start_list">ответ сайта - не стартовый протокол</string>
+    <string name="download_bad_line">строка в ответе сайта - не одна строка текста</string>
 </resources>

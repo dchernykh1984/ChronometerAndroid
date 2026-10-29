@@ -109,9 +109,12 @@
     <string name="download_no_site">set the site URL (http://…) and the token</string>
     <string name="download_network">no connection to the site (%1$s)</string>
     <string name="download_http">the site answered %1$s</string>
-    <string name="download_invalid">the site\'s answer is not a start list (%1$s)</string>
+    <string name="download_invalid">the site\'s answer is not JSON (%1$s)</string>
     <string name="download_empty">the site has no start list for this competition yet</string>
     <string name="download_file">start.txt could not be written to the data folder</string>
     <string name="source_error_not_stored">Events not stored, trying again: %1$s</string>
     <string name="chips_open">Details</string>
+    <string name="source_error_ended">The device stopped: its events came to an end</string>
+    <string name="download_not_a_start_list">the site\'s answer is not a start list</string>
+    <string name="download_bad_line">a line in the site\'s answer is not one line of text</string>
 </resources>
