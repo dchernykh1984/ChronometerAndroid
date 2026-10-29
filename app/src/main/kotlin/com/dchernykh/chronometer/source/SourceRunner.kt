@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.util.concurrent.TimeUnit
 
 /** What a source is doing (data model, "Source state"). */
 sealed interface SourceState {
@@ -62,7 +63,6 @@ data class SourceStatus(
 private const val FIRST_PAUSE_MS = 1_000L
 private const val LONGEST_PAUSE_MS = 30_000L
 private const val STEADY_MS = 30_000L
-private const val MS_PER_SECOND = 1_000L
 
 /** The pause before the next start, after a run of [ranMs] that failed (spec FR-005). */
 fun nextPause(
@@ -104,7 +104,7 @@ class SourceRunner(
                 pause = nextPause(pause, now() - started)
                 statusState.update {
                     it.copy(
-                        state = SourceState.Restarting((pause / MS_PER_SECOND).toInt()),
+                        state = SourceState.Restarting(TimeUnit.MILLISECONDS.toSeconds(pause).toInt()),
                         lastError = failure ?: it.lastError,
                     )
                 }
