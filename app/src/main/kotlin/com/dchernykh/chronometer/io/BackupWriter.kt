@@ -3,6 +3,7 @@ package com.dchernykh.chronometer.io
 import android.os.Build
 import java.io.File
 import java.io.IOException
+import java.io.RandomAccessFile
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
@@ -124,8 +125,16 @@ class BackupWriter {
     ): Boolean =
         runCatching {
             if (lines.isNotEmpty()) {
-                val folder = File(folderPath).apply { mkdirs() }
-                File(folder, name).appendText(lines.joinToString(separator = "\n", postfix = "\n"), Charsets.UTF_8)
+                val file = File(File(folderPath).apply { mkdirs() }, name)
+                // A line an earlier failure cut short ends there, not on this append's first.
+                val cut =
+                    file.length() > 0 &&
+                        RandomAccessFile(file, "r").use {
+                            it.seek(it.length() - 1)
+                            it.read() != '\n'.code
+                        }
+                val text = lines.joinToString(separator = "\n", postfix = "\n")
+                file.appendText(if (cut) "\n$text" else text, Charsets.UTF_8)
             }
             true
         }.getOrDefault(false)
