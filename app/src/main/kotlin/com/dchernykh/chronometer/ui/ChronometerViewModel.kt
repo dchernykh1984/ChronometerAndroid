@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 // One function a screen action: the screens reach the app through this one model.
@@ -164,8 +165,9 @@ class ChronometerViewModel(
             val success = repository.startNewCompetition()
             if (success) {
                 settingsState.value = app.settingsStore.load()
-                // Its start.txt went to backup/: the last download's line says nothing true now.
-                downloadState.value = null
+                // Its start.txt went to backup/: the last download's line says nothing true now. One
+                // still running stays shown -- and one at a time -- and ends saying the competition changed.
+                downloadState.update { if (it == Download.Running) it else null }
             }
             onDone(success)
         }
