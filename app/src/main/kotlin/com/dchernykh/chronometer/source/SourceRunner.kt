@@ -37,6 +37,11 @@ sealed interface SourceError {
     data class Failed(
         val message: String,
     ) : SourceError
+
+    /** Events could not be stored; they are tried again. */
+    data class NotStored(
+        val message: String,
+    ) : SourceError
 }
 
 data class SourceStatus(

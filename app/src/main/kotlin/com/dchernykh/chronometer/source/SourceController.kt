@@ -3,12 +3,17 @@ package com.dchernykh.chronometer.source
 import androidx.annotation.VisibleForTesting
 import com.dchernykh.chronometer.chips.ChipMap
 import com.dchernykh.chronometer.data.SettingsStore
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 /** At most this many waiting events go on together, so a burst costs one snapshot. */
@@ -35,6 +40,8 @@ class SourceController(
     private val now: () -> Long,
     /** The chip map in use, for the test chips. */
     chipMap: () -> ChipMap = { ChipMap() },
+    /** Where events are stored: it outlives a stop, so what arrived is stored all the same. */
+    private val storeScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
     private val sink: suspend (List<SourceEvent>) -> Unit,
 ) {
     @VisibleForTesting
@@ -44,6 +51,8 @@ class SourceController(
     private val deviceState = MutableStateFlow<DeviceId?>(null)
     private var scope: CoroutineScope? = null
     private var job: Job? = null
+    private var events: Channel<SourceEvent>? = null
+    private var consumer: Job? = null
 
     val status: StateFlow<SourceStatus> = statusState.asStateFlow()
 
@@ -70,21 +79,57 @@ class SourceController(
         }
         val runner = SourceRunner(source, now)
         // Unlimited: the source never waits for Room, whatever a burst of reads holds.
-        val events = Channel<SourceEvent>(Channel.UNLIMITED)
+        val channel = Channel<SourceEvent>(Channel.UNLIMITED)
+        val storeError = MutableStateFlow<SourceError?>(null)
+        events = channel
+        val previous = consumer
+        // After the run before it has stored everything it took, so events keep their order.
+        consumer =
+            storeScope.launch {
+                previous?.join()
+                for (first in channel) {
+                    val batch = mutableListOf(first)
+                    while (batch.size < BATCH) {
+                        batch += channel.tryReceive().getOrNull() ?: break
+                    }
+                    store(batch, storeError)
+                }
+            }
         job =
             scope.launch {
-                launch { runner.status.collect { statusState.value = it } }
                 launch {
-                    for (first in events) {
-                        val batch = mutableListOf(first)
-                        while (batch.size < BATCH) {
-                            batch += events.tryReceive().getOrNull() ?: break
-                        }
-                        sink(batch)
-                    }
+                    combine(runner.status, storeError) { status, error ->
+                        if (error == null) status else status.copy(lastError = error)
+                    }.collect { statusState.value = it }
                 }
-                runner.run { events.send(it) }
+                runner.run { channel.send(it) }
             }
+    }
+
+    /**
+     * Hand [batch] on until it is stored. A failure -- a full disk, say -- shows as the
+     * source's last error and the batch is tried again after a pause growing from 1 s to
+     * 30 s, newer events waiting behind it: nothing is dropped, and the app keeps running.
+     */
+    @Suppress("TooGenericExceptionCaught") // whatever storing throws, the batch is kept
+    private suspend fun store(
+        batch: List<SourceEvent>,
+        error: MutableStateFlow<SourceError?>,
+    ) {
+        var pause: Long? = null
+        while (true) {
+            try {
+                sink(batch)
+                error.value = null
+                return
+            } catch (cancel: CancellationException) {
+                throw cancel
+            } catch (failure: Exception) {
+                error.value = SourceError.NotStored(failure.message ?: failure.javaClass.simpleName)
+                pause = nextPause(pause, 0)
+                delay(pause)
+            }
+        }
     }
 
     /** Start again with the settings as they are now, if it is running. */
@@ -95,6 +140,9 @@ class SourceController(
     fun stop() {
         job?.cancel()
         job = null
+        // What the source sent is stored all the same: the consumer ends once it has it all.
+        events?.close()
+        events = null
         scope = null
         deviceState.value = null
         statusState.value = SourceStatus()
