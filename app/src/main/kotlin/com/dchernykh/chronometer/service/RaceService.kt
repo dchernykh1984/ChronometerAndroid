@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class RaceService : Service() {
     // The cutoff source runs here, off the main thread, for as long as timing mode is on.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var sourceStarted = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -46,7 +47,11 @@ class RaceService : Service() {
             startForeground(RaceNotification.ID, notification)
         }
         mutableRunningState.value = true
-        (application as ChronometerApp).sourceController.start(scope)
+        if (!sourceStarted) {
+            // Once a service: another start command must not restart a running device.
+            sourceStarted = true
+            (application as ChronometerApp).sourceController.start(scope)
+        }
         // Restart if the system kills us mid-event; the notification returns.
         return START_STICKY
     }
