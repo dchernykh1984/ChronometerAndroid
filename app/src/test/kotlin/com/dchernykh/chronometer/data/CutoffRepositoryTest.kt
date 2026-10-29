@@ -579,6 +579,27 @@ class CutoffRepositoryTest {
         }
 
     @Test
+    fun aNewCompetitionWhoseRowsCannotBeClearedPutsItsFilesBack() =
+        runTest {
+            configure(sendEnabled = false)
+            repository.record("11", CutoffEvent.NEXT_LAP)
+            File(folder, "start.txt").writeText("15#\n")
+            val lockedClear =
+                object : CutoffDao by db.cutoffDao() {
+                    override suspend fun deleteAll() = error("database is locked")
+                }
+            val failing =
+                CutoffRepository(RuntimeEnvironment.getApplication(), db, store, BackupWriter(), dao = lockedClear)
+
+            assertFalse(failing.startNewCompetition())
+
+            assertEquals("15#\n", File(folder, "start.txt").readText())
+            assertTrue(File(folder, "results.txt").readText().startsWith("11#"))
+            assertEquals(1, db.cutoffDao().getAll().size)
+            assertTrue(failing.backupFailed.value)
+        }
+
+    @Test
     fun startNewCompetitionKeepsStateWhenResultsResetFails() =
         runTest {
             val blocker =

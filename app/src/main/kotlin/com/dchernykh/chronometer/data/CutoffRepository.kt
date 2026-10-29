@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.util.concurrent.CopyOnWriteArrayList
 
 /** Orchestrates the durable-first recording sequence for each cutoff. */
@@ -197,34 +198,56 @@ class CutoffRepository(
      */
     suspend fun startNewCompetition(): Boolean =
         mutationMutex.withLock {
-            val folder = settingsStore.load().folderPath
-            val filesOk =
-                withContext(Dispatchers.IO) {
-                    val moved = backupWriter.moveAside(folder, SET_ASIDE, System.currentTimeMillis())
-                    when {
-                        moved == null -> false
-                        backupWriter.resetResults(folder) -> true
-                        else -> {
+            // Once a file has moved, the rest is done, or undone, whatever cancels the caller.
+            withContext(NonCancellable) {
+                val folder = settingsStore.load().folderPath
+                val moved =
+                    withContext(Dispatchers.IO) {
+                        backupWriter.moveAside(folder, SET_ASIDE, System.currentTimeMillis())?.takeIf { moved ->
                             // The competition stays as it was: its files go back too.
-                            backupWriter.putBack(moved)
-                            false
+                            backupWriter.resetResults(folder).also { if (!it) backupWriter.putBack(moved) }
                         }
                     }
+                val started = moved != null && clearTables(folder, moved)
+                if (started) {
+                    settingsStore.resetForNewCompetition()
+                    newCompetitionListeners.forEach { it() }
                 }
-            if (!filesOk) {
-                backupFailedState.value = true
-                return@withLock false
+                backupFailedState.value = !started
+                started
             }
+        }
+
+    /**
+     * The competition's rows gone in one transaction. When that fails, Room still holds the
+     * competition, so its files come back and `results.txt` is written from Room again.
+     */
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun clearTables(
+        folder: String,
+        moved: List<Pair<File, File>>,
+    ): Boolean =
+        try {
             db.withTransaction {
                 dao.deleteAll()
                 db.beamDao().clearBreaks()
                 db.chipDao().clearReads()
                 db.passDao().clearPasses()
             }
-            settingsStore.resetForNewCompetition()
-            newCompetitionListeners.forEach { it() }
-            backupFailedState.value = false
             true
+        } catch (failure: Exception) {
+            Log.w(TAG, "new competition kept: its rows could not be cleared", failure)
+            withContext(Dispatchers.IO) {
+                backupWriter.putBack(moved)
+                runCatching {
+                    backupWriter.writeSnapshot(
+                        folder,
+                        dao.getAll().map { it.toItem() },
+                        System.currentTimeMillis(),
+                    )
+                }
+            }
+            false
         }
 
     /**
