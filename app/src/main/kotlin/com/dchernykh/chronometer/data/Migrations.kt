@@ -40,22 +40,17 @@ val MIGRATION_2_3 =
                     "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `chip` TEXT NOT NULL, " +
                     "`timeStr` TEXT NOT NULL, `timeMs` INTEGER NOT NULL, " +
                     "`deviceTime` TEXT NOT NULL, `antenna` TEXT NOT NULL, " +
-                    "`reader` TEXT NOT NULL, `rssi` REAL)",
+                    "`reader` TEXT NOT NULL, `rssi` REAL, `bib` TEXT)",
             )
             db.execSQL(
-                "CREATE INDEX IF NOT EXISTS `index_chip_reads_chip` ON `chip_reads` (`chip`)",
+                "CREATE INDEX IF NOT EXISTS `index_chip_reads_bib_chip` ON `chip_reads` (`bib`, `chip`)",
             )
             db.execSQL(
                 "CREATE TABLE IF NOT EXISTS `passes` (" +
                     "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `bib` TEXT NOT NULL, " +
-                    "`firstMs` INTEGER NOT NULL, `lastMs` INTEGER NOT NULL, " +
-                    "`issued` INTEGER NOT NULL)",
+                    "`firstMs` INTEGER NOT NULL, `lastMs` INTEGER NOT NULL)",
             )
             db.execSQL("CREATE INDEX IF NOT EXISTS `index_passes_bib` ON `passes` (`bib`)")
-            db.execSQL(
-                "CREATE TABLE IF NOT EXISTS `attributed_chips` (" +
-                    "`chip` TEXT NOT NULL, PRIMARY KEY(`chip`))",
-            )
             db.execSQL(
                 "CREATE TABLE IF NOT EXISTS `pending_breaks` (" +
                     "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `seq` INTEGER NOT NULL, " +

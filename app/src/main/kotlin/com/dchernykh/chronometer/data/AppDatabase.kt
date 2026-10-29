@@ -8,7 +8,6 @@ import androidx.room.RoomDatabase
         CutoffEntity::class,
         ChipReadEntity::class,
         PassEntity::class,
-        AttributedChipEntity::class,
         PendingBreakEntity::class,
     ],
     version = 3,

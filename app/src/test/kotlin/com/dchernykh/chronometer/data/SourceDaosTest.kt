@@ -42,21 +42,24 @@ class SourceDaosTest {
     ) = ChipReadEntity(chip = chip, timeStr = "t$timeMs", timeMs = timeMs)
 
     @Test
-    fun chipsInNoPassAreListedWithFirstLastAndCount() =
+    fun waitingReadsAreListedByChipWithFirstLastAndCount() =
         runTest {
             chips.insertReads(listOf(read("A", 5), read("B", 9), read("A", 1), read("A", 7)))
-            chips.attribute(listOf(AttributedChipEntity("B")))
-            assertEquals(listOf(ChipSeen("A", 1, 7, 3)), chips.observeUnattributed().first())
-            assertEquals(listOf("A"), chips.unattributedChips())
-            assertEquals(listOf(1L, 5L, 7L), chips.readsOf(listOf("A")).map { it.timeMs })
+            assertEquals(1, chips.attribute("B", "15"))
+            assertEquals(listOf(ChipSeen("A", 1, 7, 3)), chips.observeWaiting().first())
+            assertEquals(listOf("A"), chips.waitingChips())
+            assertEquals(listOf(1L, 5L, 7L), chips.waitingReadsOf(listOf("A", "B")).map { it.timeMs })
+            // A chip's reads wait one by one: a read after a map dropped it waits again.
+            chips.insertReads(listOf(read("B", 20)))
+            assertEquals(listOf(ChipSeen("A", 1, 7, 3), ChipSeen("B", 20, 20, 1)), chips.observeWaiting().first())
         }
 
     @Test
     fun passesComeInTimeOrderAndChange() =
         runTest {
-            val late = passes.insertPass(PassEntity(bib = "15", firstMs = 90, lastMs = 95, issued = true))
-            val early = passes.insertPass(PassEntity(bib = "15", firstMs = 10, lastMs = 20, issued = true))
-            passes.insertPass(PassEntity(bib = "16", firstMs = 0, lastMs = 0, issued = true))
+            val late = passes.insertPass(PassEntity(bib = "15", firstMs = 90, lastMs = 95))
+            val early = passes.insertPass(PassEntity(bib = "15", firstMs = 10, lastMs = 20))
+            passes.insertPass(PassEntity(bib = "16", firstMs = 0, lastMs = 0))
             assertEquals(listOf(early, late), passes.passesOf("15").map { it.id })
             passes.updatePass(passes.passesOf("15").first().copy(lastMs = 30))
             passes.deletePasses(listOf(late))
@@ -79,12 +82,10 @@ class SourceDaosTest {
     fun aNewCompetitionClearsEveryTable() =
         runTest {
             chips.insertReads(listOf(read("A", 1)))
-            passes.insertPass(PassEntity(bib = "15", firstMs = 1, lastMs = 1, issued = true))
-            chips.attribute(listOf(AttributedChipEntity("A")))
+            passes.insertPass(PassEntity(bib = "15", firstMs = 1, lastMs = 1))
             chips.clearReads()
             passes.clearPasses()
-            chips.clearAttributed()
-            assertEquals(emptyList<ChipSeen>(), chips.observeUnattributed().first())
+            assertEquals(emptyList<ChipSeen>(), chips.observeWaiting().first())
             assertEquals(emptyList<PassEntity>(), passes.passesOf("15"))
         }
 }

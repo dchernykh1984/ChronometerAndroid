@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 3,
-    "identityHash": "719b053fcee963e3ef73ce8dba914ef8",
+    "identityHash": "1a3df92f9522ee7f829b8df7712a6ba6",
     "entities": [
       {
         "tableName": "cutoffs",
@@ -48,7 +48,7 @@
       },
       {
         "tableName": "chip_reads",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `chip` TEXT NOT NULL, `timeStr` TEXT NOT NULL, `timeMs` INTEGER NOT NULL, `deviceTime` TEXT NOT NULL, `antenna` TEXT NOT NULL, `reader` TEXT NOT NULL, `rssi` REAL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `chip` TEXT NOT NULL, `timeStr` TEXT NOT NULL, `timeMs` INTEGER NOT NULL, `deviceTime` TEXT NOT NULL, `antenna` TEXT NOT NULL, `reader` TEXT NOT NULL, `rssi` REAL, `bib` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
@@ -96,6 +96,11 @@
             "fieldPath": "rssi",
             "columnName": "rssi",
             "affinity": "REAL"
+          },
+          {
+            "fieldPath": "bib",
+            "columnName": "bib",
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -106,19 +111,20 @@
         },
         "indices": [
           {
-            "name": "index_chip_reads_chip",
+            "name": "index_chip_reads_bib_chip",
             "unique": false,
             "columnNames": [
+              "bib",
               "chip"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_chip_reads_chip` ON `${TABLE_NAME}` (`chip`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_chip_reads_bib_chip` ON `${TABLE_NAME}` (`bib`, `chip`)"
           }
         ]
       },
       {
         "tableName": "passes",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `bib` TEXT NOT NULL, `firstMs` INTEGER NOT NULL, `lastMs` INTEGER NOT NULL, `issued` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `bib` TEXT NOT NULL, `firstMs` INTEGER NOT NULL, `lastMs` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -143,12 +149,6 @@
             "columnName": "lastMs",
             "affinity": "INTEGER",
             "notNull": true
-          },
-          {
-            "fieldPath": "issued",
-            "columnName": "issued",
-            "affinity": "INTEGER",
-            "notNull": true
           }
         ],
         "primaryKey": {
@@ -168,24 +168,6 @@
             "createSql": "CREATE INDEX IF NOT EXISTS `index_passes_bib` ON `${TABLE_NAME}` (`bib`)"
           }
         ]
-      },
-      {
-        "tableName": "attributed_chips",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`chip` TEXT NOT NULL, PRIMARY KEY(`chip`))",
-        "fields": [
-          {
-            "fieldPath": "chip",
-            "columnName": "chip",
-            "affinity": "TEXT",
-            "notNull": true
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": false,
-          "columnNames": [
-            "chip"
-          ]
-        }
       },
       {
         "tableName": "pending_breaks",
@@ -226,7 +208,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '719b053fcee963e3ef73ce8dba914ef8')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1a3df92f9522ee7f829b8df7712a6ba6')"
     ]
   }
 }

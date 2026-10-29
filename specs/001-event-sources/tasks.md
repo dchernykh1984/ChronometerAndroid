@@ -9,8 +9,9 @@ each commit: `./gradlew ktlintCheck detekt lintDebug testDebugUnitTest koverVeri
 - [ ] T001 `CutoffRepository.recordAt(number, timeStr, event)` and `afterChange(stamp)` shared with
   `record()`; unit tests that a cutoff at a given time is stored, snapshotted and queued.
   -- `refactor(cutoffs): record a cutoff at a given time through the same durable path`
-- [ ] T002 Room v3: `chip_reads`, `passes`, `attributed_chips`, `pending_breaks`, `ChipDao`, `PassDao`, `BeamDao`,
-  `MIGRATION_2_3`, exported schema 3; `MigrationTest` 2 -> 3 keeps every cutoff.
+- [ ] T002 Room v3: `chip_reads` (each with its bib), `passes`, `pending_breaks`, `ChipDao`,
+  `PassDao`, `BeamDao`, `MIGRATION_2_3`, exported schema 3; `MigrationTest` 2 -> 3 keeps every
+  cutoff.
   -- `feat(db): store chip reads, passes and pending beam breaks`
 
 ## Phase 2: sources (US1, US5)
@@ -55,7 +56,7 @@ each commit: `./gradlew ktlintCheck detekt lintDebug testDebugUnitTest koverVeri
 
 ## Phase 5: new competition and documentation
 
-- [ ] T012 "New competition" clears pending breaks, chip reads, passes and attributed chips, and
+- [ ] T012 "New competition" clears pending breaks, chip reads and passes, and
   moves `start.txt` and the raw files to `backup/`. Unit tests.
   -- `feat(cutoffs): start a new competition without the last one's chips and breaks`
 - [ ] T013 README (features, using the app, data files), `docs/server-protocol.md` (the download),

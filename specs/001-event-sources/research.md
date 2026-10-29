@@ -31,8 +31,8 @@
 
 ## 4. The pass rule and the shared vectors
 
-- **Decision**: per bib, passes `[first, last, issued]`; a read at `t` joins every pass with
-  `first - dead < t < last + dead`, merging them, else starts one; a never-issued pass gets a cutoff
+- **Decision**: per bib, passes `[first, last]`; a read at `t` joins every pass with
+  `first - dead < t < last + dead`, merging them, else starts one, and a new pass gets a cutoff
   at its first read. Times are the milliseconds of the formatted `D H:M:S.mmm` time.
   `chip-pass-vectors.json` is copied from ChronometerPython's `specs/001-event-sources/contracts/`
   into the unit-test resources and every case runs here.
@@ -65,7 +65,7 @@
 
 ## 8. New competition
 
-- **Decision**: clear the pending breaks, chip reads, passes and attributed chips with the cutoffs;
+- **Decision**: clear the pending breaks, chip reads and passes with the cutoffs;
   move `start.txt`, `chip_reads.txt` and `beam_breaks.txt` to `backup/<name>-<millis>.txt`.
 - **Rationale**: spec FR-016; the token is cleared too, so the referee downloads the new event's
   start protocol anyway, and a map from another event cannot bind chips silently.
