@@ -107,6 +107,22 @@ class CutoffRepositoryTest {
         }
 
     @Test
+    fun aCutoffStoredBeforeItsSnapshotFailsStaysStoredAndSaysSo() =
+        runTest {
+            configure(sendEnabled = false)
+            val brokenAfterInsert =
+                object : CutoffDao by db.cutoffDao() {
+                    override suspend fun getAll(): List<CutoffEntity> = error("disk I/O error")
+                }
+            CutoffRepository(RuntimeEnvironment.getApplication(), db, store, BackupWriter(), dao = brokenAfterInsert)
+                .apply {
+                    record("15", CutoffEvent.NEXT_LAP)
+                    assertTrue(backupFailed.value)
+                }
+            assertEquals(listOf("15"), db.cutoffDao().getAll().map { it.number })
+        }
+
+    @Test
     fun recordIgnoresABlankNumber() =
         runTest {
             configure(sendEnabled = false)
