@@ -67,9 +67,11 @@ class BeamRepository(
     }
 
     /**
-     * Give [number] to the break [id] the Cutoff button showed: a cutoff at the break's time,
-     * made on the durable path. False when that break waits no more, or the number is blank.
-     * A break stored while the tap waited for the lock is not taken: the button did not show it.
+     * Give [number] to the break [id] the Cutoff button showed -- or, when an earlier tap took
+     * it as this one waited, the next waiting after it, as two quick taps mean two riders -- a
+     * cutoff at the break's time, made on the durable path. False when none waits from it on,
+     * or the number is blank. A tap that saw no break never comes here: a break stored while
+     * it waited for the lock is the next rider's.
      */
     suspend fun assign(
         id: Long,
@@ -86,7 +88,7 @@ class BeamRepository(
             // become a cutoff.
             val cutoff =
                 db.withTransaction {
-                    dao.breakById(id)?.let { shown ->
+                    dao.oldestBreakFrom(id)?.let { shown ->
                         dao.deleteBreak(shown.id)
                         db.cutoffDao().insert(
                             CutoffEntity(number = trimmed, timeStr = shown.timeStr, event = event, createdAt = now()),

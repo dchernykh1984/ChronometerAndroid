@@ -83,6 +83,28 @@ class BeamRepositoryTest {
         }
 
     @Test
+    fun aSecondQuickTapTakesTheBreakAfterTheOneTheFirstTook() =
+        runTest {
+            val beam = beam()
+            beam.add(listOf(BeamBreak(1, T0), BeamBreak(2, T0 + 400)))
+            // Both taps saw break 1: the list had not caught up with the first yet.
+            val shown =
+                beam.pending
+                    .first()
+                    .first()
+                    .id
+            assertTrue(beam.assign(shown, "12", CutoffEvent.FINISH))
+            assertTrue(beam.assign(shown, "13", CutoffEvent.FINISH))
+            assertEquals(
+                listOf("12" to time(T0), "13" to time(T0 + 400)),
+                db.cutoffDao().getAll().map {
+                    it.number to
+                        it.timeStr
+                },
+            )
+        }
+
+    @Test
     fun nothingIsAssignedWithoutABreakOrWithABlankNumber() =
         runTest {
             val beam = beam()
