@@ -3,6 +3,7 @@ package com.dchernykh.chronometer.source
 import androidx.annotation.VisibleForTesting
 import com.dchernykh.chronometer.chips.ChipMap
 import com.dchernykh.chronometer.data.SettingsStore
+import com.dchernykh.chronometer.data.chosenDevice
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -152,14 +153,7 @@ class SourceController(
     }
 
     /** The device the settings choose; null by hand. */
-    private fun chosenDevice(): DeviceId? {
-        val settings = settingsStore.load()
-        return when (settings.cutoffSource) {
-            SourceKind.HAND -> null
-            SourceKind.BEAM -> settings.beamDevice
-            SourceKind.CHIPS -> settings.chipsDevice
-        }
-    }
+    private fun chosenDevice(): DeviceId? = settingsStore.load().chosenDevice
 
     fun stop() {
         job?.cancel()
