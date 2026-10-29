@@ -34,8 +34,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
-private const val MS_PER_SECOND = 1_000L
 private const val TAG = "ChipRepository"
 
 // SQLite's oldest limit on the values of one statement is 999.
@@ -212,7 +212,7 @@ class ChipRepository(
         val dao = db.chipDao()
         val bound = dao.waitingChips().filter { it in map.bibOf }
         val reads = bound.chunked(CHIPS_A_QUERY).flatMap { dao.waitingReadsOf(it) }
-        val deadMs = settings.deadTimeS * MS_PER_SECOND
+        val deadMs = TimeUnit.SECONDS.toMillis(settings.deadTimeS.toLong())
         val book = PassBook(db.passDao(), deadMs)
         val made = mutableListOf<ChipReadEntity>()
         for ((bib, ofBib) in reads.groupBy { map.bibOf.getValue(it.chip) }) {
@@ -272,7 +272,7 @@ class ChipRepository(
         settings: Settings,
     ): Long? {
         db.chipDao().insertReads(rows)
-        val book = PassBook(db.passDao(), settings.deadTimeS * MS_PER_SECOND)
+        val book = PassBook(db.passDao(), TimeUnit.SECONDS.toMillis(settings.deadTimeS.toLong()))
         var last: Long? = null
         for (row in rows) {
             val bib = row.bib ?: continue
