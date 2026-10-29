@@ -150,7 +150,7 @@ class ChronometerViewModel(
     /** Reset cutoffs/results/token/point for a new competition, keeping backups. */
     fun startNewCompetition(onDone: (Boolean) -> Unit) {
         viewModelScope.launch {
-            val success = repository.startNewCompetition()
+            val success = repository.startNewCompetition(onCleared = chips::forgetMap)
             if (success) {
                 settingsState.value = app.settingsStore.load()
             }

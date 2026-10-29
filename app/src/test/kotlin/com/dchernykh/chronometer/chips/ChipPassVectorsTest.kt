@@ -78,7 +78,7 @@ class ChipPassVectorsTest {
                     db,
                     store,
                     BackupWriter(),
-                    CutoffRepository(context, db.cutoffDao(), store, BackupWriter()),
+                    CutoffRepository(context, db, store, BackupWriter()),
                 )
             val waiting = mutableListOf<SourceEvent.ChipRead>()
             for (event in events) {

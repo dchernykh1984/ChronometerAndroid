@@ -29,7 +29,7 @@ class ChronometerApp : Application() {
     val uploadClient = UploadClient()
     val backupWriter = BackupWriter()
 
-    val cutoffRepository by lazy { CutoffRepository(this, database.cutoffDao(), settingsStore, backupWriter) }
+    val cutoffRepository by lazy { CutoffRepository(this, database, settingsStore, backupWriter) }
 
     val chipRepository by lazy { ChipRepository(database, settingsStore, backupWriter, cutoffRepository) }
 

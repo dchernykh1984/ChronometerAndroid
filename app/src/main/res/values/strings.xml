@@ -27,8 +27,8 @@
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
     <string name="new_competition">New competition</string>
-    <string name="new_competition_confirm">The cutoff list and upload token will be cleared and the point number reset to 0. Backup files are kept.</string>
-    <string name="new_competition_failed">Could not reset results.txt. Check file access and try again.</string>
+    <string name="new_competition_confirm">The cutoff list, the beam breaks waiting, the chip reads and the upload token will be cleared and the point number reset to 0. start.txt, chip_reads.txt and beam_breaks.txt move to backup/. Backup files are kept.</string>
+    <string name="new_competition_failed">Could not move the competition files to backup/ or reset results.txt. Check file access and try again.</string>
     <string name="data_folder_size">Data folder size: %1$s</string>
     <string name="confirm">Confirm</string>
     <string name="cancel">Cancel</string>

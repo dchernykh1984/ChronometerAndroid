@@ -54,6 +54,25 @@ class BackupWriter {
             true
         }.getOrDefault(false)
 
+    /**
+     * Move the files [names] in the data folder into `backup/<name>-<stamp>.txt` under free
+     * names; a missing one is skipped. False at the first that cannot be moved; those moved
+     * before it stay in `backup/`, where nothing is lost.
+     */
+    fun moveAside(
+        folderPath: String,
+        names: List<String>,
+        stamp: Long,
+    ): Boolean =
+        runCatching {
+            val folder = File(folderPath)
+            val backupDir = File(folder, "backup")
+            names.map { File(folder, it) }.filter { it.isFile }.all { file ->
+                backupDir.mkdirs()
+                file.renameTo(freeBackupFile(backupDir, "${file.nameWithoutExtension}-$stamp"))
+            }
+        }.getOrDefault(false)
+
     private fun freeBackupFile(
         backupDir: File,
         name: String,

@@ -62,7 +62,7 @@ class UploadIntegrationTest {
         server = MockWebServer()
         server.start()
         folder = File(app.cacheDir, "upload-${System.nanoTime()}")
-        repository = CutoffRepository(app, app.database.cutoffDao(), app.settingsStore, app.backupWriter)
+        repository = CutoffRepository(app, app.database, app.settingsStore, app.backupWriter)
     }
 
     @After

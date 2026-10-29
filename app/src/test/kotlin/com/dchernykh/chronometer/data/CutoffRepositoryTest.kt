@@ -13,6 +13,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -35,7 +36,7 @@ class CutoffRepositoryTest {
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
         store = SettingsStore(context)
         folder = File(context.cacheDir, "backup-${System.nanoTime()}")
-        repository = CutoffRepository(context, db.cutoffDao(), store, BackupWriter())
+        repository = CutoffRepository(context, db, store, BackupWriter())
     }
 
     @After
@@ -276,7 +277,13 @@ class CutoffRepositoryTest {
                 }
             configure(sendEnabled = true)
             val deleting =
-                CutoffRepository(RuntimeEnvironment.getApplication(), failingAfterDelete, store, BackupWriter())
+                CutoffRepository(
+                    RuntimeEnvironment.getApplication(),
+                    db,
+                    store,
+                    BackupWriter(),
+                    dao = failingAfterDelete,
+                )
 
             assertTrue(deleting.deleteCutoff(row.id))
 
@@ -302,7 +309,7 @@ class CutoffRepositoryTest {
             val reopenedStore = SettingsStore(context)
             assertTrue(reopenedStore.allowsEmptySnapshot())
             configure(sendEnabled = true)
-            CutoffRepository(context, db.cutoffDao(), reopenedStore, BackupWriter()).uploadPendingCutoffs()
+            CutoffRepository(context, db, reopenedStore, BackupWriter()).uploadPendingCutoffs()
             assertTrue(uploadWork().isNotEmpty())
         }
 
@@ -347,7 +354,8 @@ class CutoffRepositoryTest {
                     }
                 }
             configure(sendEnabled = true)
-            val deleting = CutoffRepository(RuntimeEnvironment.getApplication(), pausedDao, store, BackupWriter())
+            val deleting =
+                CutoffRepository(RuntimeEnvironment.getApplication(), db, store, BackupWriter(), dao = pausedDao)
             val task = launch { deleting.deleteCutoff(row.id) }
             deleted.await()
             task.cancel()
@@ -378,7 +386,8 @@ class CutoffRepositoryTest {
                         return dao.deleteById(id)
                     }
                 }
-            val deleting = CutoffRepository(RuntimeEnvironment.getApplication(), pausedDao, store, BackupWriter())
+            val deleting =
+                CutoffRepository(RuntimeEnvironment.getApplication(), db, store, BackupWriter(), dao = pausedDao)
             val delete = async { deleting.deleteCutoff(row.id) }
             deletingRow.await()
             val record = async { repository.record("22", CutoffEvent.FINISH) }
@@ -453,6 +462,55 @@ class CutoffRepositoryTest {
             assertEquals(backupCount, File(folder, "backup").listFiles()?.size ?: 0)
             assertEquals("", store.load().token)
             assertEquals(0, store.load().pointNumber)
+        }
+
+    @Test
+    fun aNewCompetitionClearsWhatTheSourcesLeftAndMovesTheirFilesToBackup() =
+        runTest {
+            configure(sendEnabled = false)
+            val names = listOf("start.txt", "chip_reads.txt", "beam_breaks.txt")
+            folder.mkdirs()
+            names.forEach { File(folder, it).writeText("$it#\n") }
+            db.beamDao().insertBreak(PendingBreakEntity(seq = 1, timeStr = "t"))
+            db.chipDao().insertReads(listOf(ChipReadEntity(chip = "A1", timeStr = "t", timeMs = 1)))
+            db.passDao().insertPass(PassEntity(bib = "15", firstMs = 1, lastMs = 1))
+            var cleared = 0
+
+            assertTrue(repository.startNewCompetition { cleared++ })
+
+            assertEquals(1, cleared)
+            assertNull(db.beamDao().oldestBreak())
+            assertTrue(db.chipDao().waitingChips().isEmpty())
+            assertTrue(db.passDao().passesOf("15").isEmpty())
+            for (name in names) {
+                assertFalse(name, File(folder, name).exists())
+                val kept =
+                    File(folder, "backup").listFiles().orEmpty().filter {
+                        it.name.startsWith(
+                            name.substringBefore('.') + "-",
+                        )
+                    }
+                assertEquals(listOf("$name#\n"), kept.map { it.readText() })
+            }
+        }
+
+    @Test
+    fun aNewCompetitionWhoseFilesCannotMoveChangesNothing() =
+        runTest {
+            configure(sendEnabled = false)
+            repository.record("1", CutoffEvent.NEXT_LAP)
+            File(folder, "start.txt").writeText("15#\n")
+            File(folder, "backup").deleteRecursively()
+            File(folder, "backup").writeText("not a folder")
+            var cleared = false
+
+            assertFalse(repository.startNewCompetition { cleared = true })
+
+            assertFalse(cleared)
+            assertEquals(1, db.cutoffDao().getAll().size)
+            assertTrue(File(folder, "start.txt").exists())
+            assertTrue(File(folder, "results.txt").readText().contains("1#"))
+            assertTrue(repository.backupFailed.value)
         }
 
     @Test

@@ -39,7 +39,7 @@ class BeamRepositoryTest {
         store = SettingsStore(context)
         folder = File(context.cacheDir, "beam-${System.nanoTime()}")
         store.save(store.load().copy(folderPath = folder.path))
-        cutoffs = CutoffRepository(context, db.cutoffDao(), store, BackupWriter())
+        cutoffs = CutoffRepository(context, db, store, BackupWriter())
     }
 
     @After
