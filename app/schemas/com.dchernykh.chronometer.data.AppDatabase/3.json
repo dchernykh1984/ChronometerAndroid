@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 3,
-    "identityHash": "1a3df92f9522ee7f829b8df7712a6ba6",
+    "identityHash": "7c7e4f8ca8cae814801e52f7fcfc5e4b",
     "entities": [
       {
         "tableName": "cutoffs",
@@ -111,14 +111,15 @@
         },
         "indices": [
           {
-            "name": "index_chip_reads_bib_chip",
+            "name": "index_chip_reads_bib_chip_timeMs",
             "unique": false,
             "columnNames": [
               "bib",
-              "chip"
+              "chip",
+              "timeMs"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_chip_reads_bib_chip` ON `${TABLE_NAME}` (`bib`, `chip`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_chip_reads_bib_chip_timeMs` ON `${TABLE_NAME}` (`bib`, `chip`, `timeMs`)"
           }
         ]
       },
@@ -208,7 +209,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1a3df92f9522ee7f829b8df7712a6ba6')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7c7e4f8ca8cae814801e52f7fcfc5e4b')"
     ]
   }
 }

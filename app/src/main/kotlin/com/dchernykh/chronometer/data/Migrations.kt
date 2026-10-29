@@ -43,7 +43,8 @@ val MIGRATION_2_3 =
                     "`reader` TEXT NOT NULL, `rssi` REAL, `bib` TEXT)",
             )
             db.execSQL(
-                "CREATE INDEX IF NOT EXISTS `index_chip_reads_bib_chip` ON `chip_reads` (`bib`, `chip`)",
+                "CREATE INDEX IF NOT EXISTS `index_chip_reads_bib_chip_timeMs` " +
+                    "ON `chip_reads` (`bib`, `chip`, `timeMs`)",
             )
             db.execSQL(
                 "CREATE TABLE IF NOT EXISTS `passes` (" +

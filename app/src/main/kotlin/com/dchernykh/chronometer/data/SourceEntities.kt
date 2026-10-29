@@ -6,9 +6,10 @@ import androidx.room.PrimaryKey
 
 /**
  * One chip read as its device reported it, kept in arrival order (spec FR-007), with the
- * bib whose passes hold it.
+ * bib whose passes hold it. The index covers the waiting reads' queries: the unknown chips
+ * are grouped from it alone, however many reads a stray chip has.
  */
-@Entity(tableName = "chip_reads", indices = [Index("bib", "chip")])
+@Entity(tableName = "chip_reads", indices = [Index("bib", "chip", "timeMs")])
 data class ChipReadEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     /** Normalised: upper case, ASCII letters and digits only. */
