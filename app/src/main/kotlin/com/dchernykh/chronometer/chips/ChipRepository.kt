@@ -176,7 +176,12 @@ class ChipRepository(
                         }
                     if (written) {
                         reloadUnderLock()
-                        Download.Done(lines.size, protocolState.value?.map ?: ChipMap())
+                        // The file just written, read back: any other map in use is not its.
+                        when (val read = protocolState.value) {
+                            is StartProtocol.Loaded -> Download.Done(lines.size, read.map)
+                            is StartProtocol.Unreadable -> Download.Failed(DownloadProblem.UNUSABLE, read.reason)
+                            else -> Download.Failed(DownloadProblem.FILE)
+                        }
                     } else {
                         Download.Failed(DownloadProblem.FILE)
                     }
