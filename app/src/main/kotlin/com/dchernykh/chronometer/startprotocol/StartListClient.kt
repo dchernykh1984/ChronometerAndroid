@@ -32,6 +32,9 @@ enum class DownloadProblem {
 
     /** Downloaded and written, but its map could not be used; the detail says why. */
     UNUSABLE,
+
+    /** A new competition started while it downloaded: the list is the last one's. */
+    STALE,
     EMPTY,
     FILE,
 }

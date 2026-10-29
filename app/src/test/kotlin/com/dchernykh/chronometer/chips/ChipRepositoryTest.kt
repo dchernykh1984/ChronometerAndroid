@@ -349,6 +349,27 @@ class ChipRepositoryTest {
         }
 
     @Test
+    fun aListFetchedBeforeANewCompetitionIsNotWrittenAfterIt() =
+        runTest {
+            val server = MockWebServer()
+            try {
+                server.enqueue(answer(line(15, "A1")).setBodyDelay(500, java.util.concurrent.TimeUnit.MILLISECONDS))
+                startTxt("Z1")
+                site(server)
+                val cutoffs = cutoffs()
+                val chips = ChipRepository(db, store, BackupWriter(), cutoffs, now = { 1_234L })
+                val download = CoroutineScope(Dispatchers.Default).async { chips.download() }
+                withContext(Dispatchers.Default) { withTimeout(10_000) { server.takeRequest() } }
+                assertTrue(cutoffs.startNewCompetition())
+                val result = withContext(Dispatchers.Default) { withTimeout(10_000) { download.await() } }
+                assertEquals(Download.Failed(DownloadProblem.STALE), result)
+                assertFalse(File(folder, "start.txt").exists())
+            } finally {
+                server.shutdown()
+            }
+        }
+
+    @Test
     fun aSecondDownloadKeepsEveryEarlierStartTxt() =
         runTest {
             val server = MockWebServer()
