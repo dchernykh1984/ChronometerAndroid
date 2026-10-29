@@ -5,6 +5,29 @@
 Accepted. The Android app mirrors the upload contract used by
 `WindowsChronometerPython`.
 
+## Start list download
+
+"Download start protocol" in the settings, and nothing else, asks the site for
+the start list, with the request FinishProtocolGenerator and the desktop
+chronometer make:
+
+`GET <siteUrl>/api/v1/start-list/?competition_token=<token>`
+
+The answer is a JSON object whose `devices` list holds objects whose `items` are
+start protocol lines, as each StartProtocolMaker device uploaded them:
+
+```json
+{"devices": [{"device_id": "maker-uuid", "items": ["15#Rider#M40#3#1#1990#T#C##0 00:00:00.000#r1#E200A1,E200A2#"]}]}
+```
+
+The lines of every device are taken in the order the site returns them, and a
+blank line is no rider. The answer is refused when it is not such an object,
+when `devices` is not a list, or when a line is anything but text on one line;
+a list with no lines is refused as "no start list yet". A refused answer, an
+HTTP error or no connection changes nothing. Otherwise the previous `start.txt`
+is kept as `backup/start-<millis>.txt`, the new one replaces it in one step and
+the chip map is rebuilt from it.
+
 ## Endpoints
 
 - Finish point (`pointNumber == 0`):

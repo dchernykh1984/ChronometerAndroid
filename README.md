@@ -25,6 +25,22 @@ connectivity returns.
 - **Timing mode**: a foreground service with an ongoing notification keeps the
   app alive during a long race; while it is on, the screen stays awake and the
   app suggests enabling Do Not Disturb.
+- **Cutoff sources**: by hand (the default), a light beam or timing chips, each
+  with its device. This release runs the test beam and the test chips; the USB
+  and Bluetooth beams and the LLRP (Impinj, Zebra), RaceResult and R2000 readers
+  are listed as "not available yet". A source runs while timing mode is on,
+  starts again after a growing pause (1 s up to 30 s) when it fails, and shows
+  its state on the main screen. Recording by hand works in every mode.
+- **Light beam**: every break waits on the main screen, oldest first. Type the
+  rider's number and tap **Cutoff**: the oldest break gets it, at the break's
+  time, which the button shows ("Cutoff 10:00:00.123"). A false break is
+  discarded after a confirmation; DSQ always takes the time of the tap.
+- **Timing chips**: `start.txt` in the data folder maps chips to bibs (field 11
+  of the StartProtocolMaker start protocol; a relay's riders bind to bib + k).
+  A bib's reads less than the dead time apart (5 s by default, 1-120 s) are one
+  pass, and each pass makes one cutoff at its first read; a cutoff the referee
+  deleted or edited is never made again. Chips the map does not hold are listed
+  until a map binds them, and then their earlier reads become cutoffs.
 - UI localized in **English, Russian and Kazakh** (switchable in settings,
   defaults to the system language); light / dark / system theme; and a "New
   competition" reset. Settings, cutoffs and in-progress input survive minimize
@@ -152,6 +168,17 @@ the app alive and the screen awake for the race) and reminds you to turn on Do
 Not Disturb; **Finish timing mode** stops it. Type a number and tap **Cutoff**
 (or press Enter); the small button records a **DSQ**.
 
+**Cutoff source** in the settings picks by hand, the light beam or chips and
+the device; a test device marks its cutoffs as test data on the main screen.
+With chips, the settings also hold the dead time and **Download start
+protocol**: while there is a network, it saves the settings, fetches the start
+list StartProtocolMaker uploaded to the site and replaces `start.txt` with it
+(see [docs/server-protocol.md](docs/server-protocol.md)). Nothing else asks the
+site for it; in the forest the file already there is used. To use a
+`start.txt` copied by hand, tap the chips line on the main screen and
+**Reload start protocol**; the chips screen also lists the chips on two bibs
+and the unknown chips.
+
 ### Permissions
 
 - **All-files access** (`MANAGE_EXTERNAL_STORAGE` on API 30+, or
@@ -168,7 +195,15 @@ In the configured folder (default `/sdcard/android_chronometer`):
 
 - `results.txt` - the current list of cutoffs, one `number#time#event#` per line;
 - `backup/<id>.txt` - one immutable snapshot per press; edits and deletions add
-  `backup/<id>-N.txt` snapshots without overwriting earlier ones.
+  `backup/<id>-N.txt` snapshots without overwriting earlier ones;
+- `start.txt` - the start protocol the chip map is read from;
+  `backup/start-<millis>.txt` keeps the one each download replaced;
+- `chip_reads.txt` - every chip read, known or not, as
+  `chip#time#device time#antenna#signal#reader#`;
+- `beam_breaks.txt` - every beam break, discarded or not, as
+  `sequence#time#device time#`.
+
+The raw files use the desktop chronometer's formats, so its tools read them.
 
 To remove a cutoff, choose **Edit**, then **Delete**, and confirm its saved number
 and time. If the backup before deletion fails, the cutoff stays. If the updated
@@ -176,9 +211,12 @@ snapshot fails, the original backup remains available and the app shows a warnin
 Deleting the final cutoff also sends an empty snapshot to clear this device's
 stream on the site, including when uploads are enabled later.
 
-"New competition" clears the cutoff list, the upload token and the point number
-but **keeps the backups**; settings show the data folder's size so you can clean
-old backups up manually.
+"New competition" clears the cutoff list, the beam breaks waiting, the chip reads
+and passes, the upload token and the point number, and moves `start.txt`,
+`chip_reads.txt` and `beam_breaks.txt` into `backup/<name>-<millis>.txt`, so the
+next competition starts without the last one's chip map. It **keeps the
+backups**; settings show the data folder's size so you can clean old backups up
+manually.
 
 ## Continuous integration and releases
 
