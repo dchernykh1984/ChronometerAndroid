@@ -32,6 +32,8 @@ import com.dchernykh.chronometer.data.CutoffEvent
 import com.dchernykh.chronometer.data.SettingsStore
 import com.dchernykh.chronometer.data.ThemeMode
 import com.dchernykh.chronometer.service.RaceService
+import com.dchernykh.chronometer.source.DeviceId
+import com.dchernykh.chronometer.source.SourceKind
 import com.dchernykh.chronometer.util.LocaleContext
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -149,6 +151,10 @@ class MainFlowTest {
                 finishMode = false,
                 themeMode = ThemeMode.SYSTEM,
                 language = AppLanguage.EN,
+                cutoffSource = SourceKind.HAND,
+                beamDevice = DeviceId.TEST_BEAM,
+                chipsDevice = DeviceId.TEST_CHIPS,
+                deadTimeS = 5,
             ),
         )
     }
@@ -378,6 +384,21 @@ class MainFlowTest {
         waitUntilSelected("themeDark")
         composeRule.onNodeWithTag("themeDark").performScrollTo().assertIsSelected()
         assertEquals(ThemeMode.DARK, SettingsStore(appContext()).load().themeMode)
+    }
+
+    @Test
+    fun theCutoffSourceItsDeviceAndTheDeadTimeAreChosenInTheSettings() {
+        openSettings()
+        selectRadio("sourceChips")
+        composeRule.onNodeWithTag("deviceLLRP").performScrollTo().assertIsNotEnabled()
+        composeRule.onNodeWithTag("deviceTEST_CHIPS").performScrollTo().assertIsSelected()
+        replaceSettingsText("deadTimeField", "8")
+        saveSettings()
+
+        val saved = SettingsStore(appContext()).load()
+        assertEquals(SourceKind.CHIPS, saved.cutoffSource)
+        assertEquals(DeviceId.TEST_CHIPS, saved.chipsDevice)
+        assertEquals(8, saved.deadTimeS)
     }
 
     @Test

@@ -1,6 +1,8 @@
 package com.dchernykh.chronometer.data
 
 import android.content.Context
+import com.dchernykh.chronometer.source.DeviceId
+import com.dchernykh.chronometer.source.SourceKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -156,5 +158,51 @@ class SettingsStoreTest {
 
         assertEquals(beforeReset, store.clientRevision())
         assertEquals(beforeReset + 1, store.nextClientRevision())
+    }
+
+    @Test
+    fun theCutoffSourceIsByHandWithTheTestDevicesAnd5SecondsByDefault() {
+        val loaded = store.load()
+        assertEquals(SourceKind.HAND, loaded.cutoffSource)
+        assertEquals(DeviceId.TEST_BEAM, loaded.beamDevice)
+        assertEquals(DeviceId.TEST_CHIPS, loaded.chipsDevice)
+        assertEquals(5, loaded.deadTimeS)
+    }
+
+    @Test
+    fun theCutoffSourceItsDevicesAndTheDeadTimeSurviveARestartAndANewCompetition() {
+        store.save(
+            store.load().copy(
+                cutoffSource = SourceKind.CHIPS,
+                beamDevice = DeviceId.USB_BEAM,
+                chipsDevice = DeviceId.LLRP,
+                deadTimeS = 8,
+            ),
+        )
+        store.resetForNewCompetition()
+        val loaded = SettingsStore(RuntimeEnvironment.getApplication()).load()
+        assertEquals(SourceKind.CHIPS, loaded.cutoffSource)
+        assertEquals(DeviceId.USB_BEAM, loaded.beamDevice)
+        assertEquals(DeviceId.LLRP, loaded.chipsDevice)
+        assertEquals(8, loaded.deadTimeS)
+    }
+
+    @Test
+    fun aDeadTimeOutOfRangeIsKeptWithin1To120Seconds() {
+        store.save(store.load().copy(deadTimeS = 0))
+        assertEquals(1, store.load().deadTimeS)
+        store.save(store.load().copy(deadTimeS = 500))
+        assertEquals(120, store.load().deadTimeS)
+    }
+
+    @Test
+    fun aStoredDeviceOfTheWrongKindFallsBackToTheTestDevice() {
+        RuntimeEnvironment
+            .getApplication()
+            .getSharedPreferences("chronometer_settings", Context.MODE_PRIVATE)
+            .edit()
+            .putString("beam_device", "LLRP")
+            .commit()
+        assertEquals(DeviceId.TEST_BEAM, store.load().beamDevice)
     }
 }

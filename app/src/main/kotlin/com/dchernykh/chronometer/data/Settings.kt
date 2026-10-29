@@ -1,5 +1,8 @@
 package com.dchernykh.chronometer.data
 
+import com.dchernykh.chronometer.source.DeviceId
+import com.dchernykh.chronometer.source.SourceKind
+
 /** UI language; SYSTEM follows the device locale, others force that language. */
 enum class AppLanguage(
     val tag: String,
@@ -48,7 +51,16 @@ data class Settings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     /** UI language selection (default follows the system). */
     val language: AppLanguage = AppLanguage.SYSTEM,
+    /** Where cutoffs come from besides the hand: nothing more, a beam or chips. */
+    val cutoffSource: SourceKind = SourceKind.HAND,
+    val beamDevice: DeviceId = DeviceId.TEST_BEAM,
+    val chipsDevice: DeviceId = DeviceId.TEST_CHIPS,
+    /** Chip reads of one bib closer than this are one pass (spec FR-010). */
+    val deadTimeS: Int = DEFAULT_DEAD_TIME_S,
 )
+
+const val DEFAULT_DEAD_TIME_S = 5
+val DEAD_TIME_RANGE_S = 1..120
 
 private val ALLOWED_UPLOAD_SCHEMES = setOf("http", "https")
 

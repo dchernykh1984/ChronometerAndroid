@@ -60,4 +60,18 @@
     <string name="timing_done_title">Хронометраж аяқталды</string>
     <string name="timing_done_message">Егер «Мазаламау» режимін қосқан болсаңыз, оны енді өшіруге болады. Жарыс хронометражы үшін рахмет!</string>
     <string name="dialog_ok">Жарайды</string>
+    <string name="cutoff_source">Белгілеу көзі</string>
+    <string name="source_hand">Қолмен</string>
+    <string name="source_beam">Жарық сәулесі</string>
+    <string name="source_chips">Чиптер</string>
+    <string name="source_device">Құрылғы</string>
+    <string name="device_test_beam">Сынақ сәулесі</string>
+    <string name="device_usb_beam">USB сәулесі</string>
+    <string name="device_ble_beam">Bluetooth сәулесі</string>
+    <string name="device_test_chips">Сынақ чиптері</string>
+    <string name="device_llrp">LLRP оқу құрылғысы (Impinj, Zebra)</string>
+    <string name="device_raceresult">RaceResult декодері</string>
+    <string name="device_r2000">R2000 оқу құрылғысы</string>
+    <string name="device_not_available">%1$s (әзірге қолжетімсіз)</string>
+    <string name="dead_time">Өлі уақыт, с: бір нөмірдің одан жақын оқулары - бір өту</string>
 </resources>
