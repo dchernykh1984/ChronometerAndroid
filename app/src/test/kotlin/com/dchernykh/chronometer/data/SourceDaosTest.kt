@@ -71,11 +71,12 @@ class SourceDaosTest {
         runTest {
             val first = beam.insertBreak(PendingBreakEntity(seq = 1, timeStr = "a"))
             beam.insertBreak(PendingBreakEntity(seq = 2, timeStr = "b"))
-            assertEquals(1L, beam.breakById(first)?.seq)
+            assertEquals(1L, beam.oldestBreakFrom(first)?.seq)
             assertEquals(1, beam.deleteBreak(first))
+            assertEquals(2L, beam.oldestBreakFrom(first)?.seq)
             assertEquals(listOf(2L), beam.observeBreaks().first().map { it.seq })
             beam.clearBreaks()
-            assertNull(beam.breakById(first))
+            assertNull(beam.oldestBreakFrom(first))
         }
 
     @Test
