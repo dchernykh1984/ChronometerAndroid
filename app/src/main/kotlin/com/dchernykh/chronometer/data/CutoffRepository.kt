@@ -1,6 +1,7 @@
 package com.dchernykh.chronometer.data
 
 import android.content.Context
+import androidx.room.withTransaction
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
@@ -8,6 +9,8 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.dchernykh.chronometer.io.BackupWriter
+import com.dchernykh.chronometer.io.RawFiles
+import com.dchernykh.chronometer.startprotocol.StartProtocolFile
 import com.dchernykh.chronometer.util.TimeFormatter
 import com.dchernykh.chronometer.work.UploadWorker
 import kotlinx.coroutines.Dispatchers
@@ -23,9 +26,10 @@ import kotlinx.coroutines.withContext
 /** Orchestrates the durable-first recording sequence for each cutoff. */
 class CutoffRepository(
     private val context: Context,
-    private val dao: CutoffDao,
+    private val db: AppDatabase,
     private val settingsStore: SettingsStore,
     private val backupWriter: BackupWriter,
+    private val dao: CutoffDao = db.cutoffDao(),
 ) {
     val cutoffs: Flow<List<CutoffEntity>> = dao.observeNewestFirst()
 
@@ -188,23 +192,36 @@ class CutoffRepository(
         }
 
     /**
-     * Start a new competition: empty `results.txt`, clear cutoffs, drop the token and
-     * reset the point number; the revision counter keeps counting. Backups on disk
-     * are preserved.
+     * Start a new competition (spec FR-016): `start.txt` and the raw device files move into
+     * `backup/`, `results.txt` is emptied, the cutoffs and what the sources left -- pending
+     * beam breaks, chip reads, passes -- are cleared in one transaction, the token dropped and
+     * the point number reset; the revision counter keeps counting. Backups on disk are
+     * preserved. [onCleared] runs under the same lock, so no source event is applied with the
+     * last competition's chip map.
      *
-     * The file reset happens first. If it fails, the existing Room/settings state is
-     * kept intact so the referee does not lose the current competition.
+     * The files go first. If one cannot be moved or reset, the existing Room/settings state
+     * is kept intact so the referee does not lose the current competition.
      */
-    suspend fun startNewCompetition(): Boolean =
+    suspend fun startNewCompetition(onCleared: () -> Unit = {}): Boolean =
         mutationMutex.withLock {
             val folder = settingsStore.load().folderPath
-            val resetOk = withContext(Dispatchers.IO) { backupWriter.resetResults(folder) }
-            if (!resetOk) {
+            val filesOk =
+                withContext(Dispatchers.IO) {
+                    backupWriter.moveAside(folder, SET_ASIDE, System.currentTimeMillis()) &&
+                        backupWriter.resetResults(folder)
+                }
+            if (!filesOk) {
                 backupFailedState.value = true
                 return@withLock false
             }
-            dao.deleteAll()
+            db.withTransaction {
+                dao.deleteAll()
+                db.beamDao().clearBreaks()
+                db.chipDao().clearReads()
+                db.passDao().clearPasses()
+            }
             settingsStore.resetForNewCompetition()
+            onCleared()
             backupFailedState.value = false
             true
         }
@@ -231,5 +248,8 @@ class CutoffRepository(
         internal val mutationMutex = Mutex()
 
         private const val UPLOAD_WORK = "chronometer_upload"
+
+        /** One competition's files, moved into backup/ by a new competition. */
+        private val SET_ASIDE = listOf(StartProtocolFile.NAME, RawFiles.CHIP_READS, RawFiles.BEAM_BREAKS)
     }
 }

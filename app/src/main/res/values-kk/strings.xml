@@ -27,8 +27,8 @@
     <string name="theme_light">Ашық</string>
     <string name="theme_dark">Күңгірт</string>
     <string name="new_competition">Жаңа жарыс</string>
-    <string name="new_competition_confirm">Белгілер тізімі мен жіберу токені тазаланады, нүкте нөмірі 0-ге қайтарылады. Сақтық көшірме файлдары сақталады.</string>
-    <string name="new_competition_failed">results.txt файлын тазалау мүмкін болмады. Файлдарға рұқсатты тексеріп, қайталаңыз.</string>
+    <string name="new_competition_confirm">Белгілер тізімі, күтудегі сәуле іске қосылулары, чип оқулары мен жіберу токені тазаланады, нүкте нөмірі 0-ге қайтарылады. start.txt, chip_reads.txt және beam_breaks.txt backup/ қалтасына көшеді. Сақтық көшірме файлдары сақталады.</string>
+    <string name="new_competition_failed">Жарыс файлдарын backup/ қалтасына көшіру не results.txt файлын тазалау мүмкін болмады. Файлдарға рұқсатты тексеріп, қайталаңыз.</string>
     <string name="data_folder_size">Деректер қалтасының өлшемі: %1$s</string>
     <string name="confirm">Растау</string>
     <string name="cancel">Болдырмау</string>

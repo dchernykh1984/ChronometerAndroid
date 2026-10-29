@@ -79,6 +79,11 @@ class ChipRepository(
             waiting.filter { it.chip !in map.bibOf && it.chip !in map.conflicts }
         }
 
+    /** No map until `start.txt` is read again: a new competition moved it aside (FR-016). */
+    fun forgetMap() {
+        protocolState.value = StartProtocol.Missing
+    }
+
     /** Read `start.txt` if it has not been read yet: at start-up, never from the site. */
     suspend fun ensureMap() {
         if (protocolState.value == null) {
@@ -162,23 +167,6 @@ class ChipRepository(
             .sortedBy { it.timeMs }
             .map { db.cutoffDao().insert(cutoffOf(checkNotNull(it.bib), it.timeStr, settings.finishMode)) }
             .lastOrNull()
-    }
-
-    /** Reads sorted by time, joined wherever less than the dead time apart. */
-    private fun groups(
-        reads: List<ChipReadEntity>,
-        deadMs: Long,
-    ): List<List<ChipReadEntity>> {
-        val groups = mutableListOf<MutableList<ChipReadEntity>>()
-        for (read in reads) {
-            val last = groups.lastOrNull()
-            if (last != null && read.timeMs < last.last().timeMs + deadMs) {
-                last += read
-            } else {
-                groups += mutableListOf(read)
-            }
-        }
-        return groups
     }
 
     /**
@@ -283,4 +271,21 @@ class ChipRepository(
         }
         return false
     }
+}
+
+/** Reads sorted by time, joined wherever less than the dead time apart. */
+private fun groups(
+    reads: List<ChipReadEntity>,
+    deadMs: Long,
+): List<List<ChipReadEntity>> {
+    val groups = mutableListOf<MutableList<ChipReadEntity>>()
+    for (read in reads) {
+        val last = groups.lastOrNull()
+        if (last != null && read.timeMs < last.last().timeMs + deadMs) {
+            last += read
+        } else {
+            groups += mutableListOf(read)
+        }
+    }
+    return groups
 }

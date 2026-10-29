@@ -53,8 +53,7 @@ class ChipRepositoryTest {
         db.close()
     }
 
-    private fun cutoffs(database: AppDatabase = db) =
-        CutoffRepository(context, database.cutoffDao(), store, BackupWriter())
+    private fun cutoffs(database: AppDatabase = db) = CutoffRepository(context, database, store, BackupWriter())
 
     private fun chips(database: AppDatabase = db) = ChipRepository(database, store, BackupWriter(), cutoffs(database))
 
@@ -326,6 +325,20 @@ class ChipRepositoryTest {
             assertEquals(Download.Failed(DownloadProblem.NO_SITE), chips().download())
             store.save(store.load().copy(siteUrl = "https://site", token = " "))
             assertEquals(Download.Failed(DownloadProblem.NO_SITE), chips().download())
+        }
+
+    @Test
+    fun aForgottenMapBindsNoReadUntilStartTxtIsReadAgain() =
+        runTest {
+            startTxt("A1")
+            val chips = chips()
+            chips.ensureMap()
+            chips.forgetMap()
+            assertEquals(StartProtocol.Missing, chips.protocol.value)
+            chips.apply(listOf(read("A1", 0)))
+            assertEquals(emptyList<Pair<String, String>>(), made())
+            chips.reloadMap()
+            assertEquals(listOf("15" to time(0)), made())
         }
 
     @Test
