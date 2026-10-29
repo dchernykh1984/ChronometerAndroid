@@ -151,6 +151,37 @@ class SourceControllerTest {
         }
 
     @Test
+    fun eventsTakenBeforeANewCompetitionAreDroppedNotStoredInIt() =
+        runTest {
+            choose(SourceKind.BEAM)
+            val release = CompletableDeferred<Unit>()
+            val later = SourceEvent.BeamBreak(9, 1_761_725_400_009)
+            val source =
+                CutoffSource {
+                    flow {
+                        emit(breaks[0])
+                        delay(1)
+                        emit(breaks[1])
+                        emit(breaks[2])
+                        delay(10)
+                        emit(later)
+                        awaitCancellation()
+                    }
+                }
+            val controller = slowController(source, release)
+            controller.start(backgroundScope)
+            runCurrent()
+            advanceTimeBy(2)
+            runCurrent()
+            // Break 1 is in the sink already; 2 and 3 wait.
+            controller.discardTaken()
+            release.complete(Unit)
+            advanceTimeBy(20)
+            runCurrent()
+            assertEquals(listOf(breaks[0], later), taken.flatten())
+        }
+
+    @Test
     fun aRestartStoresTheEarlierRunsEventsFirst() =
         runTest {
             choose(SourceKind.BEAM)
