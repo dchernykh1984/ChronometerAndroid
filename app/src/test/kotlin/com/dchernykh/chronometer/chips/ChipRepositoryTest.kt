@@ -310,7 +310,10 @@ class ChipRepositoryTest {
                 chips.ensureMap()
                 val before = chips.protocol.value
                 val problems = List(3) { (chips.download() as Download.Failed).problem }
-                assertEquals(listOf(DownloadProblem.HTTP, DownloadProblem.EMPTY, DownloadProblem.INVALID), problems)
+                assertEquals(
+                    listOf(DownloadProblem.HTTP, DownloadProblem.EMPTY, DownloadProblem.NOT_A_START_LIST),
+                    problems,
+                )
                 assertEquals(listOf(line(15, "A1")), File(folder, "start.txt").readLines())
                 assertFalse(File(folder, "backup").exists())
                 assertEquals(before, chips.protocol.value)

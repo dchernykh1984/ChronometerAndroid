@@ -109,9 +109,12 @@
     <string name="download_no_site">сайт мекенжайы (http://…) мен токенді көрсетіңіз</string>
     <string name="download_network">сайтпен байланыс жоқ (%1$s)</string>
     <string name="download_http">сайт жауап берді: %1$s</string>
-    <string name="download_invalid">сайттың жауабы старт хаттамасы емес (%1$s)</string>
+    <string name="download_invalid">сайттың жауабы JSON емес (%1$s)</string>
     <string name="download_empty">сайтта бұл жарыстың старт хаттамасы әлі жоқ</string>
     <string name="download_file">start.txt деректер қалтасына жазылмады</string>
     <string name="source_error_not_stored">Оқиғалар сақталмады, қайталау: %1$s</string>
     <string name="chips_open">Толығырақ</string>
+    <string name="source_error_ended">Құрылғы тоқтады: оның оқиғалары аяқталды</string>
+    <string name="download_not_a_start_list">сайттың жауабы старт хаттамасы емес</string>
+    <string name="download_bad_line">сайт жауабындағы жол бір жолдық мәтін емес</string>
 </resources>
