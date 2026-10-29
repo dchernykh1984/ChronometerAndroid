@@ -188,11 +188,12 @@ class SettingsStoreTest {
     }
 
     @Test
-    fun aDeadTimeOutOfRangeIsKeptWithin1To120Seconds() {
+    fun aDeadTimeOutOfRangeLeavesTheStoredOne() {
+        store.save(store.load().copy(deadTimeS = 8))
         store.save(store.load().copy(deadTimeS = 0))
-        assertEquals(1, store.load().deadTimeS)
+        assertEquals(8, store.load().deadTimeS)
         store.save(store.load().copy(deadTimeS = 500))
-        assertEquals(120, store.load().deadTimeS)
+        assertEquals(8, store.load().deadTimeS)
     }
 
     @Test

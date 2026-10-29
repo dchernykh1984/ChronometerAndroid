@@ -52,6 +52,7 @@ import com.dchernykh.chronometer.data.DEAD_TIME_RANGE_S
 import com.dchernykh.chronometer.data.Settings
 import com.dchernykh.chronometer.data.ThemeMode
 import com.dchernykh.chronometer.data.isUploadConfigured
+import com.dchernykh.chronometer.source.SourceKind
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -436,7 +437,9 @@ private fun saveApplyingLanguage(
 }
 
 /**
- * Settings that may be stored: uploads either off or fully set, and a dead time in its range
- * -- a cleared field must not quietly become 1 s, which would split one rider into passes.
+ * Settings that may be stored: uploads either off or fully set and, with chips, where its
+ * field shows, a dead time in its range -- a cleared field must not quietly become 1 s.
+ * Hidden, an unfit one is not stored: the store keeps the dead time it has.
  */
-private fun Settings.canBeSaved(): Boolean = !(sendEnabled && !isUploadConfigured) && deadTimeS in DEAD_TIME_RANGE_S
+private fun Settings.canBeSaved(): Boolean =
+    !(sendEnabled && !isUploadConfigured) && (cutoffSource != SourceKind.CHIPS || deadTimeS in DEAD_TIME_RANGE_S)
