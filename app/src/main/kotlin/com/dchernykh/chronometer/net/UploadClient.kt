@@ -101,19 +101,6 @@ class UploadClient {
             ""
         }
 
-    private fun diagnostic(
-        message: String,
-        token: String,
-    ): String {
-        val redacted =
-            if (token.isEmpty()) {
-                message
-            } else {
-                message.replace(jsonString(token).removeSurrounding("\""), "[redacted]").replace(token, "[redacted]")
-            }
-        return redacted.replace(WHITESPACE, " ").trim().take(MAX_ERROR_CHARS)
-    }
-
     private fun open(endpoint: String): HttpURLConnection =
         (URL(endpoint).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
@@ -124,7 +111,7 @@ class UploadClient {
         }
 
     companion object {
-        private const val TIMEOUT_MS = 10_000
+        internal const val TIMEOUT_MS = 10_000
         private const val MAX_ERROR_INPUT_CHARS = 2_048
         private const val MAX_ERROR_CHARS = 300
         private val WHITESPACE = Regex("[\\s\\p{Cc}]+")
@@ -171,6 +158,20 @@ class UploadClient {
                 }
                 append('}')
             }
+        }
+
+        /**
+         * A system message fit to show the referee: the token masked -- as typed, as JSON
+         * escapes it and as [alsoAs] (URL-encoded, say) -- on one line, and not too long.
+         */
+        internal fun diagnostic(
+            message: String,
+            token: String,
+            vararg alsoAs: String,
+        ): String {
+            val forms = listOf(jsonString(token).removeSurrounding("\""), token, *alsoAs).filter(String::isNotEmpty)
+            val redacted = forms.fold(message) { text, form -> text.replace(form, "[redacted]") }
+            return redacted.replace(WHITESPACE, " ").trim().take(MAX_ERROR_CHARS)
         }
 
         private fun jsonString(value: String): String =

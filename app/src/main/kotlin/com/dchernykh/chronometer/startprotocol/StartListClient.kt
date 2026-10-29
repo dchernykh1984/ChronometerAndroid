@@ -2,6 +2,8 @@ package com.dchernykh.chronometer.startprotocol
 
 import com.dchernykh.chronometer.chips.ChipMap
 import com.dchernykh.chronometer.io.RawFiles
+import com.dchernykh.chronometer.net.UploadClient
+import com.dchernykh.chronometer.net.UploadClient.Companion.diagnostic
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -12,9 +14,6 @@ import java.net.URL
 import java.net.URLEncoder
 import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
-
-// The upload client's timeouts.
-private const val TIMEOUT_MS = 10_000
 
 /** Why a download changed nothing; the screen says it in the referee's language. */
 enum class DownloadProblem {
@@ -75,14 +74,14 @@ class StartListClient {
             } catch (e: IOException) {
                 throw StartListException(
                     DownloadProblem.NETWORK,
-                    redacted("${e.javaClass.simpleName}: ${e.message}", token),
+                    diagnostic("${e.javaClass.simpleName}: ${e.message}", token, encoded),
                     e,
                 )
             } catch (e: IllegalArgumentException) {
                 // URL takes some invalid ports the connection then refuses.
                 throw StartListException(
                     DownloadProblem.NETWORK,
-                    redacted("${e.javaClass.simpleName}: ${e.message}", token),
+                    diagnostic("${e.javaClass.simpleName}: ${e.message}", token, encoded),
                     e,
                 )
             }
@@ -92,8 +91,8 @@ class StartListClient {
     private fun get(url: String): String {
         val connection = URL(url).openConnection() as HttpURLConnection
         try {
-            connection.connectTimeout = TIMEOUT_MS
-            connection.readTimeout = TIMEOUT_MS
+            connection.connectTimeout = UploadClient.TIMEOUT_MS
+            connection.readTimeout = UploadClient.TIMEOUT_MS
             val code = connection.responseCode
             if (code !in HttpURLConnection.HTTP_OK until HttpURLConnection.HTTP_MULT_CHOICE) {
                 throw StartListException(
@@ -114,11 +113,6 @@ class StartListClient {
             connection.disconnect()
         }
     }
-
-    private fun redacted(
-        message: String,
-        token: String,
-    ) = if (token.isEmpty()) message else message.replace(token, "[redacted]")
 
     internal companion object {
         /**

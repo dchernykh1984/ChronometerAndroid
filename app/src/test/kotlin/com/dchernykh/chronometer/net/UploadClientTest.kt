@@ -160,4 +160,19 @@ class UploadClientTest {
             server.shutdown()
         }
     }
+
+    @Test
+    fun aDiagnosticMasksTheTokenInEveryFormOnOneShortLine() {
+        val token = "a+b/c="
+        val encoded = java.net.URLEncoder.encode(token, "UTF-8")
+        val shown =
+            UploadClient.diagnostic(
+                "refused\n  /x?competition_token=$encoded and $token " + "x".repeat(400),
+                token,
+                encoded,
+            )
+        assertFalse(shown, shown.contains(encoded) || shown.contains(token) || shown.contains("\n"))
+        assertTrue(shown.startsWith("refused /x?competition_token=[redacted] and [redacted]"))
+        assertEquals(300, shown.length)
+    }
 }
