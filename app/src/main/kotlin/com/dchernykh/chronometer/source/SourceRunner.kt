@@ -99,7 +99,7 @@ class SourceRunner(
                 statusState.update {
                     it.copy(
                         state = SourceState.Restarting((pause / MS_PER_SECOND).toInt()),
-                        lastError = it.lastError.takeIf { failure == null } ?: failure,
+                        lastError = failure ?: it.lastError,
                     )
                 }
                 delay(pause)
