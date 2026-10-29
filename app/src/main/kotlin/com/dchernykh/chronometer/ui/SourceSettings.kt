@@ -18,6 +18,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.dchernykh.chronometer.R
+import com.dchernykh.chronometer.data.DEAD_TIME_RANGE_S
 import com.dchernykh.chronometer.data.Settings
 import com.dchernykh.chronometer.source.DeviceId
 import com.dchernykh.chronometer.source.SourceKind
@@ -86,7 +87,7 @@ internal fun CutoffSourceSection(
                     settings.copy(deadTimeS = typed.filter(Char::isDigit).take(DEAD_TIME_DIGITS).toIntOrNull() ?: 0),
                 )
             },
-            label = { Text(stringResource(R.string.dead_time)) },
+            label = { Text(stringResource(R.string.dead_time, DEAD_TIME_RANGE_S.first, DEAD_TIME_RANGE_S.last)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth().testTag("deadTimeField"),

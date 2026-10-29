@@ -73,7 +73,7 @@
     <string name="device_raceresult">RaceResult декодері</string>
     <string name="device_r2000">R2000 оқу құрылғысы</string>
     <string name="device_not_available">%1$s (әзірге қолжетімсіз)</string>
-    <string name="dead_time">Өлі уақыт, с: бір нөмірдің одан жақын оқулары - бір өту</string>
+    <string name="dead_time">Өлі уақыт, с (%1$d-%2$d): бір нөмірдің одан жақын оқулары - бір өту</string>
     <string name="source_line_stopped">%1$s: тоқтатылды</string>
     <string name="source_line_running">%1$s: жұмыс істеп тұр</string>
     <string name="source_line_restarting">%1$s: %2$d с кейін қайта қосылады</string>

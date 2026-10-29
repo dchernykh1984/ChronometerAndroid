@@ -73,7 +73,7 @@
     <string name="device_raceresult">RaceResult decoder</string>
     <string name="device_r2000">R2000 reader</string>
     <string name="device_not_available">%1$s (not available yet)</string>
-    <string name="dead_time">Dead time, s: reads of one bib closer than this are one pass</string>
+    <string name="dead_time">Dead time, s (%1$d-%2$d): reads of one bib closer than this are one pass</string>
     <string name="source_line_stopped">%1$s: stopped</string>
     <string name="source_line_running">%1$s: running</string>
     <string name="source_line_restarting">%1$s: starting again in %2$d s</string>

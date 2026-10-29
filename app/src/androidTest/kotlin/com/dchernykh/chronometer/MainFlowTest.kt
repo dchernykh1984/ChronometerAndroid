@@ -427,6 +427,7 @@ class MainFlowTest {
         selectRadio("sourceChips")
         composeRule.onNodeWithTag("deviceLLRP").performScrollTo().assertIsNotEnabled()
         composeRule.onNodeWithTag("deviceTEST_CHIPS").performScrollTo().assertIsSelected()
+        waitForText(localizedString(AppLanguage.EN, R.string.dead_time, 1, 120))
         replaceSettingsText("deadTimeField", "8")
         saveSettings()
 
