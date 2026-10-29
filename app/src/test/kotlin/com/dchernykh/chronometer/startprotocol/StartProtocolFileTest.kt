@@ -35,6 +35,14 @@ class StartProtocolFileTest {
     }
 
     @Test
+    fun aByteOrderMarkIsNoPartOfTheFirstBib() {
+        val bom = byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte())
+        assertEquals(listOf("15#A#", "16#B#"), StartProtocolFile.lines(bom + "15#A#\n16#B#\n".toByteArray()))
+        // A first line in cp1251 loses it too.
+        assertEquals(listOf("15#$IVANOV#"), StartProtocolFile.lines(bom + "15#$IVANOV#\n".toByteArray(cp1251)))
+    }
+
+    @Test
     fun aByteNeitherUtf8NorCp1251IsReadAsLatin1() {
         assertEquals(listOf("x\u0098"), StartProtocolFile.lines(byteArrayOf('x'.code.toByte(), 0x98.toByte())))
     }

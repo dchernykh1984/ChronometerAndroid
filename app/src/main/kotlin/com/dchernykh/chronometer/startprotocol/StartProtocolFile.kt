@@ -12,6 +12,7 @@ object StartProtocolFile {
     const val NAME = "start.txt"
 
     private val ENCODINGS = listOf(Charsets.UTF_8, Charset.forName("windows-1251"))
+    private val UTF8_BOM = byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte())
 
     /**
      * Its non-blank lines, or null when there is no such file. Throws an IOException when
@@ -36,8 +37,17 @@ object StartProtocolFile {
      */
     internal fun lines(bytes: ByteArray): List<String> {
         val raw = mutableListOf<ByteArray>()
-        var start = 0
-        for (i in 0..bytes.size) {
+        // A byte order mark (Notepad's "UTF-8 with BOM") is no part of the first rider's bib,
+        // however that line decodes: it goes before any decoding.
+        var start =
+            if (bytes.size >= UTF8_BOM.size &&
+                UTF8_BOM.indices.all { bytes[it] == UTF8_BOM[it] }
+            ) {
+                UTF8_BOM.size
+            } else {
+                0
+            }
+        for (i in start..bytes.size) {
             if (i == bytes.size || bytes[i] == '\n'.code.toByte()) {
                 raw += bytes.copyOfRange(start, i)
                 start = i + 1
