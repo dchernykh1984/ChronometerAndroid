@@ -60,6 +60,10 @@ class SourceController(
     private var scope: CoroutineScope? = null
     private var job: Job? = null
     private var events: Channel<SourceEvent>? = null
+
+    // App-wide, not a run's: a consumer of a run before a restart that still cannot store
+    // shows on the run after it.
+    private val storeError = MutableStateFlow<SourceError?>(null)
     private var consumer: Job? = null
 
     val status: StateFlow<SourceStatus> = statusState.asStateFlow()
@@ -83,7 +87,6 @@ class SourceController(
         val runner = SourceRunner(source, now)
         // Unlimited: the source never waits for Room, whatever a burst of reads holds.
         val channel = Channel<SourceEvent>(Channel.UNLIMITED)
-        val storeError = MutableStateFlow<SourceError?>(null)
         events = channel
         val previous = consumer
         // After the run before it has stored everything it took, so events keep their order.
@@ -95,7 +98,7 @@ class SourceController(
                     while (batch.size < BATCH) {
                         batch += channel.tryReceive().getOrNull() ?: break
                     }
-                    store(batch, storeError)
+                    store(batch)
                 }
             }
         job =
@@ -121,20 +124,17 @@ class SourceController(
      * 30 s, newer events waiting behind it: nothing is dropped, and the app keeps running.
      */
     @Suppress("TooGenericExceptionCaught") // whatever storing throws, the batch is kept
-    private suspend fun store(
-        batch: List<SourceEvent>,
-        error: MutableStateFlow<SourceError?>,
-    ) {
+    private suspend fun store(batch: List<SourceEvent>) {
         var pause: Long? = null
         while (true) {
             try {
                 sink(batch)
-                error.value = null
+                storeError.value = null
                 return
             } catch (cancel: CancellationException) {
                 throw cancel
             } catch (failure: Exception) {
-                error.value = SourceError.NotStored(failure.message ?: failure.javaClass.simpleName)
+                storeError.value = SourceError.NotStored(failure.message ?: failure.javaClass.simpleName)
                 pause = nextPause(pause, 0)
                 delay(pause)
             }

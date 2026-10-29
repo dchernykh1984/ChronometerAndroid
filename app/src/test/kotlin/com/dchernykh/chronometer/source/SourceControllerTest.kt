@@ -238,6 +238,23 @@ class SourceControllerTest {
     }
 
     @Test
+    fun aStoreStillFailingFromTheRunBeforeARestartShowsOnTheRunAfterIt() =
+        runTest {
+            choose(SourceKind.BEAM)
+            val controller =
+                SourceController(store, { testScheduler.currentTime }, storeScope = backgroundScope) {
+                    error("database or disk is full")
+                }.apply { sourceFor = { endless } }
+            controller.start(backgroundScope)
+            runCurrent()
+            choose(SourceKind.CHIPS)
+            controller.restart()
+            runCurrent()
+            assertEquals(DeviceId.TEST_CHIPS, controller.device.value)
+            assertEquals(SourceError.NotStored("database or disk is full"), controller.status.value.lastError)
+        }
+
+    @Test
     fun aRestartRunsTheSourceTheSettingsNowChoose() =
         runTest {
             choose(SourceKind.BEAM)
