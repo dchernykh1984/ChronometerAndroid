@@ -163,6 +163,38 @@ class SourceControllerTest {
         }
 
     @Test
+    fun anEventTheDeviceDidNotTimeIsTimedAsItArrives() =
+        runTest {
+            choose(SourceKind.CHIPS)
+            val base = 1_767_261_600_000L
+            val controller =
+                SourceController(
+                    store,
+                    { testScheduler.currentTime },
+                    wallClock = { base + testScheduler.currentTime },
+                    storeScope = backgroundScope,
+                ) { batch ->
+                    delay(5_000) // a slow store: the time must not be taken now
+                    taken += batch
+                }.apply {
+                    sourceFor = {
+                        CutoffSource {
+                            flow {
+                                delay(1_000)
+                                emit(SourceEvent.ChipRead("A1"))
+                                emit(SourceEvent.ChipRead("B1", timeMs = base))
+                                awaitCancellation()
+                            }
+                        }
+                    }
+                }
+            controller.start(backgroundScope)
+            advanceTimeBy(7_000)
+            runCurrent()
+            assertEquals(listOf(base + 1_000, base), taken.flatten().map { (it as SourceEvent.ChipRead).timeMs })
+        }
+
+    @Test
     fun aRestartRunsTheSourceTheSettingsNowChoose() =
         runTest {
             choose(SourceKind.BEAM)

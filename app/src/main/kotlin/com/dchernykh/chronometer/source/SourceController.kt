@@ -40,6 +40,8 @@ class SourceController(
     private val now: () -> Long,
     /** The chip map in use, for the test chips. */
     chipMap: () -> ChipMap = { ChipMap() },
+    /** The phone's clock: an event its device did not time is timed by it as it arrives. */
+    private val wallClock: () -> Long = System::currentTimeMillis,
     /** Where events are stored: it outlives a stop, so what arrived is stored all the same. */
     private val storeScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
     private val sink: suspend (List<SourceEvent>) -> Unit,
@@ -96,7 +98,7 @@ class SourceController(
                         if (error == null) status else status.copy(lastError = error)
                     }.collect { statusState.value = it }
                 }
-                runner.run { channel.send(it) }
+                runner.run { channel.send(it.timedOnArrival(wallClock())) }
             }
     }
 
@@ -158,3 +160,14 @@ class SourceController(
         statusState.value = SourceStatus()
     }
 }
+
+/**
+ * A read or a break its device did not time, timed now (spec FR-006): as it arrives, not
+ * when it is stored, which a burst or a store tried again can put seconds later.
+ */
+private fun SourceEvent.timedOnArrival(nowMs: Long): SourceEvent =
+    when (this) {
+        is SourceEvent.ChipRead -> if (timeMs == null) copy(timeMs = nowMs) else this
+        is SourceEvent.BeamBreak -> if (timeMs == null) copy(timeMs = nowMs) else this
+        else -> this
+    }
