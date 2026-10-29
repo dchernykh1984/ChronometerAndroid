@@ -324,6 +324,10 @@ class SourceControllerTest {
             runCurrent()
             assertEquals(listOf(breaks[1]), taken.flatten())
             assertEquals(SourceError.Dropped(1, "constraint failed"), controller.status.value.lastError)
+            // The drop is said until a new competition.
+            controller.startOver()
+            runCurrent()
+            assertNull(controller.status.value.lastError)
         }
 
     @Test

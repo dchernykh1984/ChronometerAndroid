@@ -171,6 +171,11 @@ class SourceController(
         storeError.value = SourceError.Dropped(events.size, why)
     }
 
+    /** A new competition: what the last one could not store is no longer said. */
+    fun startOver() {
+        storeError.value = null
+    }
+
     /**
      * Start again if it is running and the settings now choose another device; a save that
      * changed anything else leaves a running device alone, mid-race.
