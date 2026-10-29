@@ -139,6 +139,8 @@ class SourceRunner(
                     throw GaveUp(event.message)
                 }
             }
+            // A device's word on its connection: nothing to store, so it is not handed on.
+            event is SourceEvent.Status -> Unit
             else -> onEvent(event)
         }
     }

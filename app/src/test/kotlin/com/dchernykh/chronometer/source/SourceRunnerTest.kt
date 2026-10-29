@@ -66,6 +66,7 @@ class SourceRunnerTest {
                         emit(SourceEvent.BeamBreak(2, 5))
                         emit(SourceEvent.ChipRead(" "))
                         emit(SourceEvent.Error("antenna 2 lost"))
+                        emit(SourceEvent.Status("connected"))
                         emit(good.copy(seq = 3))
                         awaitCancellation()
                     }
