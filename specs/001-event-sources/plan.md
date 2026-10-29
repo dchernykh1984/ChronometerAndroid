@@ -112,10 +112,14 @@ tests cover.
 
 ## Design notes
 
-- **Pipeline**: `SourceRunner` sends events into a channel; one consumer coroutine in the
-  controller drains up to 200 waiting events and hands chip reads to `ChipRepository.apply()` and
-  beam breaks to `BeamRepository.add()`, both under `CutoffRepository.mutationMutex` so they never
-  interleave with a hand cutoff, an edit or a deletion.
+- **Pipeline**: `SourceRunner` sends events into a channel, an event its device did not time
+  timed as it arrives; one consumer coroutine drains up to 200 waiting events and hands chip
+  reads to `ChipRepository.apply()` and beam breaks to `BeamRepository.add()`, both under
+  `CutoffRepository.mutationMutex` so they never interleave with a hand cutoff, an edit or a
+  deletion. The consumer runs in the controller's own scope: what a source sent is stored after
+  a stop too, and a restart's consumer starts after the one before. A batch that cannot be
+  stored is tried again after a pause growing from 1 s to 30 s and shown as the last error.
+  Saving the settings restarts a running source only when they choose another device.
 - **`CutoffRepository`**: `record()` keeps its behaviour; the part after the Room insert (revision,
   snapshot, upload) becomes `afterChange(stamp)`, used by hand cutoffs, chip cutoffs and assigned
   breaks. A batch of source events calls it once, so a mass finish writes one `results.txt` and one
