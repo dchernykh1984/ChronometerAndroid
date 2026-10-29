@@ -242,6 +242,8 @@ fun SettingsScreen(
                 Text(stringResource(R.string.finish_mode))
             }
 
+            CutoffSourceSection(settings) { settings = it }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -385,7 +387,7 @@ private fun formatBytes(bytes: Long): String =
     }
 
 @Composable
-private fun ChoiceChip(
+internal fun ChoiceChip(
     @StringRes labelRes: Int,
     tag: String,
     selected: Boolean,

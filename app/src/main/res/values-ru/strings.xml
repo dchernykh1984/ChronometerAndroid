@@ -60,4 +60,18 @@
     <string name="timing_done_title">Хронометраж завершён</string>
     <string name="timing_done_message">Если вы включали режим «Не беспокоить», теперь его можно выключить. Спасибо за проведённый хронометраж гонки!</string>
     <string name="dialog_ok">ОК</string>
+    <string name="cutoff_source">Источник отсечек</string>
+    <string name="source_hand">Вручную</string>
+    <string name="source_beam">Световой луч</string>
+    <string name="source_chips">Чипы</string>
+    <string name="source_device">Устройство</string>
+    <string name="device_test_beam">Тестовый луч</string>
+    <string name="device_usb_beam">Луч по USB</string>
+    <string name="device_ble_beam">Луч по Bluetooth</string>
+    <string name="device_test_chips">Тестовые чипы</string>
+    <string name="device_llrp">Считыватель LLRP (Impinj, Zebra)</string>
+    <string name="device_raceresult">Декодер RaceResult</string>
+    <string name="device_r2000">Считыватель R2000</string>
+    <string name="device_not_available">%1$s (пока недоступно)</string>
+    <string name="dead_time">Мёртвое время, с: чтения одного номера ближе него - один проход</string>
 </resources>

@@ -60,4 +60,18 @@
     <string name="timing_done_title">Timing finished</string>
     <string name="timing_done_message">If you turned on Do Not Disturb, you can turn it off now. Thank you for timing the race!</string>
     <string name="dialog_ok">OK</string>
+    <string name="cutoff_source">Cutoff source</string>
+    <string name="source_hand">By hand</string>
+    <string name="source_beam">Light beam</string>
+    <string name="source_chips">Timing chips</string>
+    <string name="source_device">Device</string>
+    <string name="device_test_beam">Test beam</string>
+    <string name="device_usb_beam">USB beam</string>
+    <string name="device_ble_beam">Bluetooth beam</string>
+    <string name="device_test_chips">Test chips</string>
+    <string name="device_llrp">LLRP reader (Impinj, Zebra)</string>
+    <string name="device_raceresult">RaceResult decoder</string>
+    <string name="device_r2000">R2000 reader</string>
+    <string name="device_not_available">%1$s (not available yet)</string>
+    <string name="dead_time">Dead time, s: reads of one bib closer than this are one pass</string>
 </resources>

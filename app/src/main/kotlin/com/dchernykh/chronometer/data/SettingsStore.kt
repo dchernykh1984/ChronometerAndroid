@@ -3,6 +3,8 @@ package com.dchernykh.chronometer.data
 import android.content.Context
 import android.os.Environment
 import androidx.core.content.edit
+import com.dchernykh.chronometer.source.DeviceId
+import com.dchernykh.chronometer.source.SourceKind
 import java.io.File
 import java.util.UUID
 
@@ -42,6 +44,10 @@ class SettingsStore(
             finishMode = prefs.getBoolean(KEY_FINISH, false),
             themeMode = readThemeMode(),
             language = AppLanguage.fromName(prefs.getString(KEY_LANG, null)),
+            cutoffSource = SourceKind.fromName(prefs.getString(KEY_SOURCE, null)),
+            beamDevice = DeviceId.fromName(prefs.getString(KEY_BEAM_DEVICE, null), SourceKind.BEAM),
+            chipsDevice = DeviceId.fromName(prefs.getString(KEY_CHIPS_DEVICE, null), SourceKind.CHIPS),
+            deadTimeS = prefs.getInt(KEY_DEAD_TIME, DEFAULT_DEAD_TIME_S).coerceIn(DEAD_TIME_RANGE_S),
         )
     }
 
@@ -57,6 +63,10 @@ class SettingsStore(
             putBoolean(KEY_FINISH, settings.finishMode)
             putString(KEY_THEME, settings.themeMode.name)
             putString(KEY_LANG, settings.language.name)
+            putString(KEY_SOURCE, settings.cutoffSource.name)
+            putString(KEY_BEAM_DEVICE, settings.beamDevice.name)
+            putString(KEY_CHIPS_DEVICE, settings.chipsDevice.name)
+            putInt(KEY_DEAD_TIME, settings.deadTimeS.coerceIn(DEAD_TIME_RANGE_S))
         }
     }
 
@@ -124,6 +134,10 @@ class SettingsStore(
         const val KEY_FINISH = "finish_mode"
         const val KEY_THEME = "theme_mode"
         const val KEY_LANG = "language"
+        const val KEY_SOURCE = "cutoff_source"
+        const val KEY_BEAM_DEVICE = "beam_device"
+        const val KEY_CHIPS_DEVICE = "chips_device"
+        const val KEY_DEAD_TIME = "dead_time_s"
         const val KEY_REV = "client_revision"
         const val KEY_EMPTY_SNAPSHOT = "allow_empty_snapshot"
     }
