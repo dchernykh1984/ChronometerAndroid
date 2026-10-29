@@ -45,6 +45,12 @@ sealed interface SourceError {
     data class NotStored(
         val message: String,
     ) : SourceError
+
+    /** Events tried for minutes and dropped, so the ones behind them could be stored. */
+    data class Dropped(
+        val events: Int,
+        val message: String,
+    ) : SourceError
 }
 
 data class SourceStatus(

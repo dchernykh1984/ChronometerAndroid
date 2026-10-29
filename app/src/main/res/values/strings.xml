@@ -121,4 +121,5 @@
     <string name="chips_no_start_protocol_kept">No start.txt in the data folder: the map read before is still used</string>
     <string name="download_unusable">start.txt was downloaded, but its map could not be used: %1$s</string>
     <string name="download_stale">a new competition started while it downloaded</string>
+    <string name="source_error_dropped">Events not stored, %1$d dropped after minutes of tries: %2$s</string>
 </resources>

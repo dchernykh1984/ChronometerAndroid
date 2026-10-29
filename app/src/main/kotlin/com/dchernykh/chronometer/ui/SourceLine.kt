@@ -72,6 +72,7 @@ private fun errorText(error: SourceError): String =
         is SourceError.Failed -> stringResource(R.string.source_error_failed, error.message)
         SourceError.Ended -> stringResource(R.string.source_error_ended)
         is SourceError.NotStored -> stringResource(R.string.source_error_not_stored, error.message)
+        is SourceError.Dropped -> stringResource(R.string.source_error_dropped, error.events, error.message)
         is SourceError.Invalid ->
             stringResource(
                 when (error.problem) {

@@ -298,6 +298,31 @@ class SourceControllerTest {
         }
 
     @Test
+    fun aBatchFailingForMinutesIsDroppedSoTheOnesBehindItAreStored() =
+        runTest {
+            choose(SourceKind.BEAM)
+            val source =
+                CutoffSource {
+                    flow {
+                        emit(breaks[0])
+                        delay(1)
+                        emit(breaks[1])
+                        awaitCancellation()
+                    }
+                }
+            val controller =
+                SourceController(store, { testScheduler.currentTime }, storeScope = backgroundScope) { batch, _ ->
+                    check(breaks[0] !in batch) { "constraint failed" }
+                    taken += batch
+                }.apply { sourceFor = { source } }
+            controller.start(backgroundScope)
+            advanceTimeBy(10 * 60_000L)
+            runCurrent()
+            assertEquals(listOf(breaks[1]), taken.flatten())
+            assertEquals(SourceError.Dropped(1, "constraint failed"), controller.status.value.lastError)
+        }
+
+    @Test
     fun aStoreErrorGoesWithTheCompetitionItFailedFor() =
         runTest {
             choose(SourceKind.BEAM)

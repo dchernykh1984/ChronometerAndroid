@@ -121,4 +121,5 @@
     <string name="chips_no_start_protocol_kept">В папке данных нет start.txt: используется карта, прочитанная до этого</string>
     <string name="download_unusable">start.txt загружен, но его карту не удалось применить: %1$s</string>
     <string name="download_stale">пока шла загрузка, началось новое соревнование</string>
+    <string name="source_error_dropped">События не сохранены, %1$d отброшено после нескольких минут попыток: %2$s</string>
 </resources>
