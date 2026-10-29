@@ -162,16 +162,7 @@ class CutoffRepository(
                 // Persist intent before the delete so a restart can still send an empty list.
                 settingsStore.allowEmptySnapshot()
                 dao.deleteById(id)
-                settingsStore.nextClientRevision()
-                val after = dao.getAll().map { it.toItem() }
-                val backupOk =
-                    withContext(Dispatchers.IO) {
-                        backupWriter.writeSnapshot(settings.folderPath, after, id)
-                    }
-                backupFailedState.value = !backupOk
-                if (settings.isUploadReady) {
-                    enqueueUpload()
-                }
+                afterChange(id)
                 true
             }
         }
