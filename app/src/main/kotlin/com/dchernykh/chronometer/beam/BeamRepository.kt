@@ -39,7 +39,7 @@ class BeamRepository(
     /** Oldest first. */
     val pending: Flow<List<PendingBreakEntity>> = dao.observeBreaks()
 
-    /** True after the raw beam file could not be written; the breaks are in Room. */
+    /** True once the raw beam file missed lines, until a new competition; the breaks are in Room. */
     val rawFailed: StateFlow<Boolean> = rawFailedState.asStateFlow()
 
     /** Breaks taken in the competition [takenIn]: dropped once a new one has started. */
@@ -69,7 +69,8 @@ class BeamRepository(
                 withContext(Dispatchers.IO) {
                     backupWriter.appendRaw(settingsStore.load().folderPath, RawFiles.BEAM_BREAKS, lines)
                 }
-            rawFailedState.value = !written
+            // The file only grows: lines it missed stay missing, and so does the warning.
+            rawFailedState.value = rawFailedState.value || !written
         }
     }
 

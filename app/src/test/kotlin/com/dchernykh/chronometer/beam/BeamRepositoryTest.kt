@@ -114,6 +114,9 @@ class BeamRepositoryTest {
             assertTrue(beam.rawFailed.value)
             assertEquals(1, beam.pending.first().size)
             store.save(store.load().copy(folderPath = folder.path))
+            // A later line written does not fill the gap: the warning stays.
+            beam.add(listOf(BeamBreak(2, T0 + 1)))
+            assertTrue(beam.rawFailed.value)
             assertTrue(cutoffs.startNewCompetition())
             assertFalse(beam.rawFailed.value)
         }
