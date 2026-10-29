@@ -82,10 +82,12 @@ class BackupWriter {
         return moved.takeIf { allMoved }
     }
 
-    /** Files [moveAside] moved, back where they were. */
-    fun putBack(moved: List<Pair<File, File>>) {
-        moved.asReversed().forEach { (from, to) -> to.renameTo(from) }
-    }
+    /**
+     * Files [moveAside] moved, back where they were; false when one cannot be: it is still in
+     * `backup/`, where nothing is lost.
+     */
+    fun putBack(moved: List<Pair<File, File>>): Boolean =
+        moved.asReversed().map { (from, to) -> to.renameTo(from) }.all { it }
 
     private fun freeBackupFile(
         backupDir: File,

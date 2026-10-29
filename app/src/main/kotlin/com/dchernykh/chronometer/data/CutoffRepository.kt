@@ -213,7 +213,7 @@ class CutoffRepository(
                     withContext(Dispatchers.IO) {
                         backupWriter.moveAside(folder, SET_ASIDE, System.currentTimeMillis())?.takeIf { moved ->
                             // The competition stays as it was: its files go back too.
-                            backupWriter.resetResults(folder).also { if (!it) backupWriter.putBack(moved) }
+                            backupWriter.resetResults(folder).also { if (!it) backupWriter.putBackSaying(moved) }
                         }
                     }
                 val started = moved != null && clearTables(folder, moved)
@@ -247,7 +247,7 @@ class CutoffRepository(
         } catch (failure: Exception) {
             Log.w(TAG, "new competition kept: its rows could not be cleared", failure)
             withContext(Dispatchers.IO) {
-                backupWriter.putBack(moved)
+                backupWriter.putBackSaying(moved)
                 runCatching {
                     backupWriter.writeSnapshot(
                         folder,
@@ -299,9 +299,17 @@ class CutoffRepository(
         internal val mutationMutex = Mutex()
 
         private const val UPLOAD_WORK = "chronometer_upload"
-        private const val TAG = "CutoffRepository"
 
         /** One competition's files, moved into backup/ by a new competition. */
         private val SET_ASIDE = listOf(StartProtocolFile.NAME, RawFiles.CHIP_READS, RawFiles.BEAM_BREAKS)
+    }
+}
+
+private const val TAG = "CutoffRepository"
+
+/** [moved] back where it was; one that cannot go back stays in `backup/`, and is logged. */
+private fun BackupWriter.putBackSaying(moved: List<Pair<File, File>>) {
+    if (!putBack(moved)) {
+        Log.w(TAG, "a file moved aside for a new competition could not go back: $moved")
     }
 }
