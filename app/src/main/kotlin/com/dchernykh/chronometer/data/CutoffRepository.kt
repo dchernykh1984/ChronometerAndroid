@@ -1,6 +1,7 @@
 package com.dchernykh.chronometer.data
 
 import android.content.Context
+import android.util.Log
 import androidx.room.withTransaction
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
@@ -86,7 +87,7 @@ class CutoffRepository(
      * The change is in Room already: what fails from here is a file or an upload, shown as the
      * file warning, and never undoes the change -- nor makes a source store its batch twice.
      */
-    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    @Suppress("TooGenericExceptionCaught")
     internal suspend fun afterChange(stamp: Long) {
         try {
             settingsStore.nextClientRevision()
@@ -103,6 +104,8 @@ class CutoffRepository(
         } catch (cancel: CancellationException) {
             throw cancel
         } catch (failure: Exception) {
+            // Shown as the file warning; the log says what it was.
+            Log.w(TAG, "files or upload after change $stamp", failure)
             backupFailedState.value = true
         }
     }
@@ -253,6 +256,7 @@ class CutoffRepository(
         internal val mutationMutex = Mutex()
 
         private const val UPLOAD_WORK = "chronometer_upload"
+        private const val TAG = "CutoffRepository"
 
         /** One competition's files, moved into backup/ by a new competition. */
         private val SET_ASIDE = listOf(StartProtocolFile.NAME, RawFiles.CHIP_READS, RawFiles.BEAM_BREAKS)
