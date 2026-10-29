@@ -59,7 +59,6 @@ class SourceController(
     private val deviceState = MutableStateFlow<DeviceId?>(null)
     private var scope: CoroutineScope? = null
     private var job: Job? = null
-    private var events: Channel<SourceEvent>? = null
 
     // App-wide, not a run's: a consumer of a run before a restart that still cannot store
     // shows on the run after it.
@@ -87,7 +86,6 @@ class SourceController(
         val runner = SourceRunner(source, now)
         // Unlimited: the source never waits for Room, whatever a burst of reads holds.
         val channel = Channel<SourceEvent>(Channel.UNLIMITED)
-        events = channel
         val previous = consumer
         // After the run before it has stored everything it took, so events keep their order.
         consumer =
@@ -116,6 +114,8 @@ class SourceController(
                 }
                 runner.run { channel.send(it.timedOnArrival(wallClock())) }
             }
+        // Closed once the run has ended, so an event it was handing on as it stopped is kept.
+        job?.invokeOnCompletion { channel.close() }
     }
 
     /**
@@ -158,9 +158,8 @@ class SourceController(
     fun stop() {
         job?.cancel()
         job = null
-        // What the source sent is stored all the same: the consumer ends once it has it all.
-        events?.close()
-        events = null
+        // What the source sent is stored all the same: its channel closes as the run ends,
+        // and the consumer ends once it has it all.
         scope = null
         deviceState.value = null
         synchronized(statusLock) {
