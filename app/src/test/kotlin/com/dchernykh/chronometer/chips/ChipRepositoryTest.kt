@@ -114,7 +114,7 @@ class ChipRepositoryTest {
         runTest {
             val chips = chips()
             chips.reloadMap()
-            assertEquals(StartProtocol.Missing, chips.protocol.value)
+            assertEquals(StartProtocol.Missing(), chips.protocol.value)
             assertTrue(
                 chips.protocol.value!!
                     .map.bibOf
@@ -135,6 +135,19 @@ class ChipRepositoryTest {
             }
             assertTrue(read.toString(), read is StartProtocol.Unreadable)
             assertTrue(read!!.map.bibOf.isEmpty())
+        }
+
+    @Test
+    fun aStartTxtGoneAMomentOnAReloadLeavesTheMapReadBeforeInUse() =
+        runTest {
+            startTxt("A1")
+            val chips = chips()
+            chips.reloadMap()
+            File(folder, "start.txt").delete()
+            chips.reloadMap()
+            assertTrue(chips.protocol.value is StartProtocol.Missing)
+            chips.apply(listOf(read("A1", 0)))
+            assertEquals(listOf("15" to time(0)), made())
         }
 
     @Test
@@ -439,7 +452,7 @@ class ChipRepositoryTest {
             val chips = ChipRepository(db, store, BackupWriter(), cutoffs)
             chips.ensureMap()
             assertTrue(cutoffs.startNewCompetition())
-            assertEquals(StartProtocol.Missing, chips.protocol.value)
+            assertEquals(StartProtocol.Missing(), chips.protocol.value)
             startTxt("A1")
             chips.apply(listOf(read("A1", 0)))
             assertEquals(emptyList<Pair<String, String>>(), made())
