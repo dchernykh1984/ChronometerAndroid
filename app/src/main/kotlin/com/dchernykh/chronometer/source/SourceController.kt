@@ -48,8 +48,11 @@ class SourceController(
     private val competition: () -> Long = { 0L },
     /** Where events are stored: it outlives a stop, so what arrived is stored all the same. */
     private val storeScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-    /** Stores events taken in the competition given. */
-    private val sink: suspend (List<SourceEvent>, Long) -> Unit,
+    /**
+     * Stores events taken in the competition given; the last argument is true on a batch's
+     * first try only, so its raw lines are written once, before anything can fail.
+     */
+    private val sink: suspend (List<SourceEvent>, Long, Boolean) -> Unit,
 ) {
     /** The source behind a device; the app gives the test chips its chip map. */
     var sourceFor: (DeviceId) -> CutoffSource? = { builtInSource(it) { ChipMap() } }
@@ -125,7 +128,9 @@ class SourceController(
     /**
      * Hand [batch] on until it is stored. A failure -- a full disk, say -- shows as the
      * source's last error and the batch is tried again after a pause growing from 1 s to
-     * 30 s, newer events waiting behind it: nothing is dropped, and the app keeps running.
+     * 30 s, newer events waiting behind it, and the app keeps running. One failing the same
+     * way for about 3 minutes is dropped from Room's side so the events behind it are stored;
+     * its raw lines, written on the first try, keep what the device reported.
      */
     private suspend fun store(batch: List<Taken>) {
         // One competition and one kind of event a call: a retry repeats only what failed, so a
@@ -150,7 +155,7 @@ class SourceController(
                 return
             }
             try {
-                sink(events, takenIn)
+                sink(events, takenIn, tried == 0)
                 // A drop stays said until a new competition: what it lost is lost.
                 storeError.update { it as? SourceError.Dropped }
                 return

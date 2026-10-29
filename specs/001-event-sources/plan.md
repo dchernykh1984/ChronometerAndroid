@@ -45,7 +45,7 @@ hand recording; detekt and ktlint as configured
 | Principle | How the plan meets it |
 | --- | --- |
 | I. Cutoffs only | Sources make `number#time#event#` lines; no laps or protocol. |
-| II. Durable first | Reads, passes, pending breaks and cutoffs commit to Room in one transaction before files and upload; deletions keep their backups as today. |
+| II. Durable first | Reads, passes, pending breaks and cutoffs commit to Room in one transaction before the snapshot and the upload; a cutoff exists only once Room has it. The raw device lines, the device's own record, are written first and once a batch, as on the desktop; deletions keep their backups as today. |
 | III. Offline first | The start protocol is downloaded only by its button; uploads unchanged. |
 | IV. Nothing stops the referee | Sources run in the service's scope off the main thread; failures restart with backoff and show on screen; Cutoff by hand never waits for a source. |
 | V. Formats are a shared contract | `results.txt` unchanged; field 11 read by index; raw files and events as ChronometerPython documents. |

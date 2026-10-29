@@ -32,7 +32,7 @@ class SourceControllerTest {
     private val breaks = (1L..3L).map { SourceEvent.BeamBreak(it, 1_761_725_400_000 + it) }
 
     private fun TestScope.controller(source: CutoffSource?) =
-        SourceController(store, { testScheduler.currentTime }, storeScope = backgroundScope) { batch, _ ->
+        SourceController(store, { testScheduler.currentTime }, storeScope = backgroundScope) { batch, _, _ ->
             taken +=
                 batch
         }.apply { sourceFor = { source } }
@@ -96,7 +96,7 @@ class SourceControllerTest {
             choose(SourceKind.BEAM)
             var failures = 2
             val controller =
-                SourceController(store, { testScheduler.currentTime }, storeScope = backgroundScope) { batch, _ ->
+                SourceController(store, { testScheduler.currentTime }, storeScope = backgroundScope) { batch, _, _ ->
                     check(failures-- <= 0) { "database or disk is full" }
                     taken += batch
                 }.apply { sourceFor = { endless } }
@@ -139,6 +139,7 @@ class SourceControllerTest {
         storeScope = backgroundScope,
     ) {
         batch,
+        _,
         _,
         ->
         release.await()
@@ -223,7 +224,7 @@ class SourceControllerTest {
                     { testScheduler.currentTime },
                     wallClock = { base + testScheduler.currentTime },
                     storeScope = backgroundScope,
-                ) { batch, _ ->
+                ) { batch, _, _ ->
                     delay(5_000) // a slow store: the time must not be taken now
                     taken += batch
                 }.apply {
@@ -251,7 +252,7 @@ class SourceControllerTest {
         val stored = Collections.synchronizedList(mutableListOf<SourceEvent>())
         val threads = Collections.synchronizedSet(mutableSetOf<Thread>())
         val controller =
-            SourceController(store, System::currentTimeMillis) { batch, _ ->
+            SourceController(store, System::currentTimeMillis) { batch, _, _ ->
                 threads += Thread.currentThread()
                 stored += batch
             }.apply {
@@ -285,7 +286,7 @@ class SourceControllerTest {
         runTest {
             choose(SourceKind.BEAM)
             val controller =
-                SourceController(store, { testScheduler.currentTime }, storeScope = backgroundScope) { _, _ ->
+                SourceController(store, { testScheduler.currentTime }, storeScope = backgroundScope) { _, _, _ ->
                     error("database or disk is full")
                 }.apply { sourceFor = { endless } }
             controller.start(backgroundScope)
@@ -311,7 +312,7 @@ class SourceControllerTest {
                     }
                 }
             val controller =
-                SourceController(store, { testScheduler.currentTime }, storeScope = backgroundScope) { batch, _ ->
+                SourceController(store, { testScheduler.currentTime }, storeScope = backgroundScope) { batch, _, _ ->
                     check(breaks[0] !in batch) { "constraint failed" }
                     taken += batch
                 }.apply { sourceFor = { source } }
@@ -341,7 +342,7 @@ class SourceControllerTest {
                     { testScheduler.currentTime },
                     competition = { competition },
                     storeScope = backgroundScope,
-                ) { _, _ -> error("database or disk is full") }.apply { sourceFor = { endless } }
+                ) { _, _, _ -> error("database or disk is full") }.apply { sourceFor = { endless } }
             controller.start(backgroundScope)
             runCurrent()
             assertEquals(SourceError.NotStored("database or disk is full"), controller.status.value.lastError)
@@ -352,13 +353,30 @@ class SourceControllerTest {
         }
 
     @Test
+    fun onlyABatchsFirstTryWritesItsRawLines() =
+        runTest {
+            choose(SourceKind.BEAM)
+            val tries = mutableListOf<Boolean>()
+            var failures = 2
+            val controller =
+                SourceController(store, { testScheduler.currentTime }, storeScope = backgroundScope) { _, _, firstTry ->
+                    tries += firstTry
+                    check(failures-- <= 0) { "database is locked" }
+                }.apply { sourceFor = { endless } }
+            controller.start(backgroundScope)
+            advanceTimeBy(5_000)
+            runCurrent()
+            assertEquals(listOf(true, false, false), tries)
+        }
+
+    @Test
     fun aRetryRepeatsOnlyTheKindOfEventsThatFailed() =
         runTest {
             choose(SourceKind.BEAM)
             val read = SourceEvent.ChipRead("A1", 1_761_725_400_100)
             var readFailures = 1
             val controller =
-                SourceController(store, { testScheduler.currentTime }, storeScope = backgroundScope) { batch, _ ->
+                SourceController(store, { testScheduler.currentTime }, storeScope = backgroundScope) { batch, _, _ ->
                     if (batch.any { it is SourceEvent.ChipRead }) {
                         check(readFailures-- <= 0) { "database is locked" }
                     }

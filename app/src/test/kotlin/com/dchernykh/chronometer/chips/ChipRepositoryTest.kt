@@ -202,6 +202,15 @@ class ChipRepositoryTest {
         }
 
     @Test
+    fun aRetriedBatchStoresItsReadsWithoutWritingTheirRawLinesAgain() =
+        runTest {
+            startTxt("A1")
+            chips().apply(listOf(read("A1", 0)), rawToo = false)
+            assertEquals(listOf("15" to time(0)), made())
+            assertFalse(File(folder, "chip_reads.txt").exists())
+        }
+
+    @Test
     fun readsOfUnknownChipsAreKeptAndTimeNothing() =
         runTest {
             startTxt("A1", "B1,X9", "X9")

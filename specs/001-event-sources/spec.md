@@ -263,11 +263,12 @@ the dead time and download a start protocol: the cutoff does not come back.
   cutoff. A reported time before 2000 (a device clock never set) or from 2100 on makes the event
   invalid, as the desktop protocol decides: it is not used, and it becomes the source's last error
   on screen.
-- **FR-007**: Every chip read is stored in Room before anything else, then appended to
-  `chip_reads.txt` in the data folder as `chip#time#device time#antenna#signal#reader#`, with a
-  field left empty when the device did not give it -- the format of the desktop chronometer's raw
-  reads file. A raw-file write that fails shows the file warning the app shows today; the read
-  still counts.
+- **FR-007**: Every chip read is appended to `chip_reads.txt` in the data folder as
+  `chip#time#device time#antenna#signal#reader#`, with a field left empty when the device did not
+  give it -- the format of the desktop chronometer's raw reads file -- and stored in Room. The raw
+  line comes first and once, as the desktop writes it, so a read Room cannot take is still in the
+  file; a cutoff exists only once Room has it. A raw-file write that fails shows the file warning
+  the app shows today; the read still counts.
 - **FR-008**: The chip map is built from field 0 (bib) and field 11 (chip ids) of `start.txt`.
   Field 11 is split on commas and semicolons; each id there, and each id a source reports, is
   compared upper case with everything but ASCII letters and digits dropped, as StartProtocolMaker
@@ -300,8 +301,8 @@ the dead time and download a start protocol: the cutoff does not come back.
   to another keeps its past cutoffs on the old bib.
 - **FR-012**: A cutoff made from chips or a beam break goes through the same durable path as a hand
   cutoff: Room first, then `results.txt` and a backup snapshot, then the upload when uploads are on.
-- **FR-013**: Every beam break is stored in Room as pending, then appended to `beam_breaks.txt` in
-  the data folder as `sequence#time#device time#`. While breaks are pending, Cutoff gives the typed
+- **FR-013**: Every beam break is appended to `beam_breaks.txt` in the data folder as
+  `sequence#time#device time#`, first and once, then stored in Room as pending. While breaks are pending, Cutoff gives the typed
   number to the oldest one, at its time, with the event of the finish-mode setting, and the button
   shows that time. A pending break can be discarded after a confirmation; it stays in the raw file.
   DSQ always takes the time of the tap.
