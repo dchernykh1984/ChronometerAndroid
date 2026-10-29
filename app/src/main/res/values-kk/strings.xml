@@ -60,7 +60,7 @@
     <string name="timing_done_title">Хронометраж аяқталды</string>
     <string name="timing_done_message">Егер «Мазаламау» режимін қосқан болсаңыз, оны енді өшіруге болады. Жарыс хронометражы үшін рахмет!</string>
     <string name="dialog_ok">Жарайды</string>
-    <string name="cutoff_source">Белгілеу көзі</string>
+    <string name="cutoff_source">Белгілер көзі</string>
     <string name="source_hand">Қолмен</string>
     <string name="source_beam">Жарық сәулесі</string>
     <string name="source_chips">Чиптер</string>
@@ -83,14 +83,14 @@
     <string name="source_error_no_chip">Чип нөмірі жоқ оқу есепке алынбады</string>
     <string name="source_error_time">Құрылғы сағаты бапталмаған оқиға есепке алынбады</string>
     <string name="source_invalid_events">Есепке алынбаған оқиғалар: %1$d</string>
-    <string name="source_test_warning">СЫНАҚ ҚҰРЫЛҒЫСЫ: оның белгілеулері - сынақ деректері</string>
+    <string name="source_test_warning">СЫНАҚ ҚҰРЫЛҒЫСЫ: оның белгілері - сынақ деректері</string>
     <string name="cutoff_at">Белгілеу %1$s</string>
     <string name="pending_breaks_title">Сәуле іске қосылулары нөмір күтуде</string>
     <string name="discard_break_title">Сәуленің бұл іске қосылуын тастау керек пе?</string>
     <string name="discard_break_message">%1$s кезіндегі іске қосылу кезектен шығады; beam_breaks.txt оны сақтайды.</string>
     <string name="chips_map_summary">Старт хаттамасы: нөмірлер %1$d, чиптер %2$d, екі нөмірдегі чиптер %3$d</string>
-    <string name="chips_no_start_protocol">Деректер қалтасында start.txt жоқ: оқулар сақталады, белгілеулер жасалмайды</string>
-    <string name="chips_start_protocol_unreadable">start.txt оқылмайды (%1$s): оқулар сақталады, белгілеулер жасалмайды</string>
+    <string name="chips_no_start_protocol">Деректер қалтасында start.txt жоқ: оқулар сақталады, белгілер жасалмайды</string>
+    <string name="chips_start_protocol_unreadable">start.txt оқылмайды (%1$s): оқулар сақталады, белгілер жасалмайды</string>
     <string name="chips_title">Чиптер</string>
     <string name="chips_unbound_lines">Чипсіз жолдар: %1$d</string>
     <string name="chips_conflicts_title">Екі нөмірдегі чиптер, қолданылмайды:</string>
