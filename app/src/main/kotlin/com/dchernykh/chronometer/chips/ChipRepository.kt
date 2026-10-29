@@ -135,10 +135,10 @@ class ChipRepository(
                         ?: StartProtocol.Missing(before)
                 } catch (e: IOException) {
                     // A file being copied in, a storage hiccup: the map read before still binds.
-                    StartProtocol.Unreadable(
-                        e.message ?: e.javaClass.simpleName,
-                        before,
-                    )
+                    StartProtocol.Unreadable(e.message ?: e.javaClass.simpleName, before)
+                } catch (e: SecurityException) {
+                    // No permission to read it: unreadable too, not a failure of every batch.
+                    StartProtocol.Unreadable(e.message ?: e.javaClass.simpleName, before)
                 }
             }
         val lastCutoff = db.withTransaction { timeWaitingReads(protocol.map, settings) }
