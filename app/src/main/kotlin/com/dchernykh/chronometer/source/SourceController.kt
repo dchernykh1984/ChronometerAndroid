@@ -1,6 +1,7 @@
 package com.dchernykh.chronometer.source
 
 import androidx.annotation.VisibleForTesting
+import com.dchernykh.chronometer.chips.ChipMap
 import com.dchernykh.chronometer.data.SettingsStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -14,9 +15,13 @@ import kotlinx.coroutines.launch
 private const val BATCH = 200
 
 /** The source behind each device; null while a device is not available. */
-fun builtInSource(device: DeviceId): CutoffSource? =
+fun builtInSource(
+    device: DeviceId,
+    chipMap: () -> ChipMap,
+): CutoffSource? =
     when (device) {
         DeviceId.TEST_BEAM -> TestBeamSource()
+        DeviceId.TEST_CHIPS -> TestChipsSource(chipMap)
         else -> null
     }
 
@@ -28,10 +33,12 @@ fun builtInSource(device: DeviceId): CutoffSource? =
 class SourceController(
     private val settingsStore: SettingsStore,
     private val now: () -> Long,
+    /** The chip map in use, for the test chips. */
+    chipMap: () -> ChipMap = { ChipMap() },
     private val sink: suspend (List<SourceEvent>) -> Unit,
 ) {
     @VisibleForTesting
-    var sourceFor: (DeviceId) -> CutoffSource? = ::builtInSource
+    var sourceFor: (DeviceId) -> CutoffSource? = { builtInSource(it, chipMap) }
 
     private val statusState = MutableStateFlow(SourceStatus())
     private val deviceState = MutableStateFlow<DeviceId?>(null)

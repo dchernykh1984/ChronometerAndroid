@@ -26,5 +26,6 @@ class SourceEventTest {
     @Test
     fun aReadWithoutAChipIdIsNot() {
         assertEquals(EventProblem.NO_CHIP, SourceEvent.ChipRead("  ", now).problem())
+        assertEquals(EventProblem.NO_CHIP, SourceEvent.ChipRead("--- .", now).problem())
     }
 }

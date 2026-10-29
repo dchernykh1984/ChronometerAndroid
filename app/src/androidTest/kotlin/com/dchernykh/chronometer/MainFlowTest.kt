@@ -37,7 +37,6 @@ import com.dchernykh.chronometer.source.DeviceId
 import com.dchernykh.chronometer.source.SourceEvent
 import com.dchernykh.chronometer.source.SourceKind
 import com.dchernykh.chronometer.source.SourceState
-import com.dchernykh.chronometer.source.builtInSource
 import com.dchernykh.chronometer.ui.timeOfDay
 import com.dchernykh.chronometer.util.LocaleContext
 import com.dchernykh.chronometer.util.TimeFormatter
@@ -507,6 +506,7 @@ class MainFlowTest {
     @Test
     fun aHandCutoffRecordsWhileAFailingSourceRestarts() {
         val controller = (appContext() as ChronometerApp).sourceController
+        val builtIn = controller.sourceFor
         controller.sourceFor = { CutoffSource { flow { error("no beam") } } }
         openSettings()
         selectRadio("sourceBeam")
@@ -524,13 +524,14 @@ class MainFlowTest {
             composeRule.onNodeWithTag("sourceLine").assertExists()
         } finally {
             RaceService.stop(appContext())
-            controller.sourceFor = ::builtInSource
+            controller.sourceFor = builtIn
         }
     }
 
     @Test
     fun aBeamBreakWaitsForTheNumberAndTheCutoffTakesItsTime() {
         val controller = (appContext() as ChronometerApp).sourceController
+        val builtIn = controller.sourceFor
         val breakMs = System.currentTimeMillis() - BREAK_AGO_MS
         val breakTime = TimeFormatter.currentTimeString(breakMs)
         controller.sourceFor = {
@@ -562,7 +563,7 @@ class MainFlowTest {
             composeRule.onNodeWithText(localizedString(AppLanguage.EN, R.string.cutoff)).assertExists()
         } finally {
             RaceService.stop(appContext())
-            controller.sourceFor = ::builtInSource
+            controller.sourceFor = builtIn
         }
     }
 

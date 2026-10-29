@@ -41,13 +41,14 @@ each commit: `./gradlew ktlintCheck detekt lintDebug testDebugUnitTest koverVeri
 - [ ] T008 [US3] `ChipMap` from `start.txt` (`StartProtocolFile.read`), read at start-up and on
   Reload; conflicts, lines that bind nothing; chips line on the main screen; `ChipsScreen` with
   conflicts and Reload; strings. Unit tests. -- `feat(chips): map chips to bibs from start.txt`
-- [ ] T009 [US2, US6] `PassTracker`, `ChipRepository.apply()` (reads, passes, cutoffs in one
+- [ ] T009 [US2, US6] `ChipRepository.apply()` with the pass rule (reads, passes, cutoffs in one
   transaction; raw `chip_reads.txt` after), dead time, `TestChipsSource`; every case of
-  `chip-pass-vectors.json`; restart within the dead time makes no second cutoff; a deleted chip
-  cutoff stays deleted; a burst of 10,000 reads is stored in order with none lost (SC-006).
+  `chip-pass-vectors.json` without a map change, one read at a time and in batches; restart
+  within the dead time makes no second cutoff; a deleted chip cutoff stays deleted; a burst of
+  10,000 reads is stored in order with none lost (SC-006).
   -- `feat(chips): turn chip reads into cutoffs with a dead time`
 - [ ] T010 [US3] Unknown chips in `ChipsScreen`; on a new map, reads of newly known chips become
-  cutoffs in time order. Unit tests from the vectors, instrumented test of the list.
+  cutoffs in time order. The vectors with a map change, instrumented test of the list.
   -- `feat(chips): list unknown chips and time them once the map knows them`
 - [ ] T011 [US3] `StartListClient` and "Download start protocol": backup, atomic replace, map
   rebuilt, retro cutoffs, summary; failures change nothing. MockWebServer tests, including that

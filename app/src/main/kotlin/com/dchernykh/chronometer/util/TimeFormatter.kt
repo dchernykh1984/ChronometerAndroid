@@ -38,11 +38,24 @@ object TimeFormatter {
      * minutes and seconds 0-59) with exactly three millisecond digits. Used to
      * validate a manually edited cutoff time before it is saved.
      */
-    fun isValidTimeString(value: String): Boolean {
-        val match = TIME_PATTERN.matchEntire(value) ?: return false
-        val hours = match.groupValues[2].toInt()
-        val minutes = match.groupValues[3].toInt()
-        val seconds = match.groupValues[4].toInt()
-        return hours in 0..23 && minutes in 0..59 && seconds in 0..59
+    fun isValidTimeString(value: String): Boolean = partsOf(value) != null
+
+    /**
+     * The milliseconds a "D H:M:S.mmm" string stands for, on the scale [currentTimeString]
+     * writes, so two times compare as the strings would; null when it is not a valid one.
+     */
+    fun millisOf(value: String): Long? {
+        val parts = partsOf(value) ?: return null
+        val days = parts[0].toLongOrNull()?.takeIf { it < Long.MAX_VALUE / MS_PER_DAY } ?: return null
+        return days * MS_PER_DAY + parts[1].toLong() * MS_PER_HOUR + parts[2].toLong() * MS_PER_MINUTE +
+            parts[3].toLong() * MS_PER_SECOND + parts[4].toLong()
+    }
+
+    private fun partsOf(value: String): List<String>? {
+        val parts = TIME_PATTERN.matchEntire(value)?.groupValues?.drop(1) ?: return null
+        val hours = parts[1].toInt()
+        val minutes = parts[2].toInt()
+        val seconds = parts[3].toInt()
+        return parts.takeIf { hours in 0..23 && minutes in 0..59 && seconds in 0..59 }
     }
 }

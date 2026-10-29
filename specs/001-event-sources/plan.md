@@ -88,8 +88,8 @@ app/src/main/kotlin/com/dchernykh/chronometer/
     SourceController.kt     app-wide: which source runs, its state, the event pipeline
   chips/
     ChipMap.kt              start.txt -> chip map, conflicts
-    PassTracker.kt          the pass rule (pure)
-    ChipRepository.kt       batch -> transaction -> cutoffs; retro on a new map; unknown chips
+    ChipRepository.kt       the pass rule: batch -> transaction -> cutoffs; retro on a new map;
+                            unknown chips
   beam/
     BeamRepository.kt       pending queue, assign oldest, discard
   startprotocol/
