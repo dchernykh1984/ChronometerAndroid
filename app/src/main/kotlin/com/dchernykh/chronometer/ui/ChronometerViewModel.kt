@@ -164,6 +164,8 @@ class ChronometerViewModel(
             val success = repository.startNewCompetition()
             if (success) {
                 settingsState.value = app.settingsStore.load()
+                // Its start.txt went to backup/: the last download's line says nothing true now.
+                downloadState.value = null
             }
             onDone(success)
         }
