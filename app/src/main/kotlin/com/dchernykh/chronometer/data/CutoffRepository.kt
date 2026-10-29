@@ -116,7 +116,7 @@ class CutoffRepository(
             throw cancel
         } catch (failure: Exception) {
             // Shown as the file warning; the log says what it was.
-            Log.w(TAG, "files or upload after change $stamp", failure)
+            Log.w(TAG, "files after change $stamp", failure)
             backupFailedState.value = true
         }
     }
@@ -274,15 +274,24 @@ class CutoffRepository(
             backupWriter.folderSizeBytes(settingsStore.load().folderPath)
         }
 
+    /**
+     * An upload that cannot be queued is no file problem, so it is no file warning: it is
+     * logged, and the next change or settings save queues it again.
+     */
+    @Suppress("TooGenericExceptionCaught")
     private fun enqueueUpload() {
         val request =
             OneTimeWorkRequestBuilder<UploadWorker>()
                 .setConstraints(
                     Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build(),
                 ).build()
-        WorkManager
-            .getInstance(context)
-            .enqueueUniqueWork(UPLOAD_WORK, ExistingWorkPolicy.REPLACE, request)
+        try {
+            WorkManager
+                .getInstance(context)
+                .enqueueUniqueWork(UPLOAD_WORK, ExistingWorkPolicy.REPLACE, request)
+        } catch (failure: Exception) {
+            Log.w(TAG, "upload not queued", failure)
+        }
     }
 
     companion object {
