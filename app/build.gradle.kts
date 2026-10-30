@@ -167,7 +167,7 @@ dependencies {
     constraints {
         // Robolectric's provider is test-only, never shipped. Keep it patched for
         // GHSA-9pwp-9qqc-pr26 / GHSA-qp49-qgx5-5m26 and earlier advisories.
-        testImplementation("org.bouncycastle:bcprov-jdk18on:1.85") {
+        testImplementation("org.bouncycastle:bcprov-jdk18on:1.86") {
             because("Fix known vulnerabilities in Robolectric's test-only provider")
         }
     }
