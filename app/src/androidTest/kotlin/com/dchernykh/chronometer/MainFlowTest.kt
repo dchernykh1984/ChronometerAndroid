@@ -277,6 +277,7 @@ class MainFlowTest {
     @Test
     fun aCutoffIsTimedAtTheTapThoughItIsStoredLater() {
         val app = appContext() as ChronometerApp
+        val number = "70777"
         val holding = CountDownLatch(1)
         val release = CountDownLatch(1)
         val busy =
@@ -289,18 +290,18 @@ class MainFlowTest {
                 )
             }
         assertTrue(holding.await(AWAIT_MS, TimeUnit.MILLISECONDS))
-        typePendingNumber("70777")
+        typePendingNumber(number)
         val before = System.currentTimeMillis()
         // A press clears the field at once; one dropped is pressed again.
         composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
-            if (numberFieldText() == "70777") composeRule.onNodeWithTag("cutoffButton").performClick()
+            if (numberFieldText() == number) composeRule.onNodeWithTag("cutoffButton").performClick()
             numberFieldText() == ""
         }
         val tapped = System.currentTimeMillis()
         Thread.sleep(STORE_LATE_MS)
         release.countDown()
         busy.join(AWAIT_MS)
-        waitForText("70777")
+        waitForText(number)
         val stored =
             runBlocking {
                 app.database
