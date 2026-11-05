@@ -288,7 +288,11 @@ class MainFlowTest {
         )
         val tap =
             tapWhileTheStoreWaits("70778") {
-                runBlocking { app.database.beamDao().clearBreaks() } // gone before the store looks
+                // The referee's Discard, while the store waits: gone before the store looks.
+                runBlocking {
+                    val shown = checkNotNull(app.database.beamDao().oldestBreakFrom(0))
+                    app.beamRepository.discard(shown.id)
+                }
             }
         assertTimedAtTheTap("70778", tap)
     }
