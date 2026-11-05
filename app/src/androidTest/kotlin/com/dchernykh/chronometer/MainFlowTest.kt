@@ -354,10 +354,11 @@ class MainFlowTest {
         number: String,
         tap: LongRange,
     ) {
-        // A dropped press the field's clearing passed off as taken stores nothing: said as
-        // such, not left to a bare timeout.
-        runCatching { waitForText(number) }
-            .onFailure { throw AssertionError("no cutoff $number shown: its press was dropped", it) }
+        // No cutoff after the hold: a dropped press the field's clearing passed off as taken,
+        // or a store that failed or never went on. Said as such, not left to a bare timeout.
+        runCatching { waitForText(number) }.onFailure {
+            throw AssertionError("no cutoff $number shown: its press was dropped, or its store failed", it)
+        }
         val all = runBlocking { (appContext() as ChronometerApp).database.cutoffDao().getAll() }
         assertEquals("the cutoffs stored", listOf(number), all.map { it.number }) // one tap, one cutoff
         val stored = all.single()
