@@ -290,18 +290,24 @@ class MainFlowTest {
                     },
                 )
             }
-        assertTrue(holding.await(AWAIT_MS, TimeUnit.MILLISECONDS))
-        typePendingNumber(number)
-        val before = System.currentTimeMillis()
-        // A press clears the field at once; one dropped is pressed again.
-        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
-            if (numberFieldText() == number) composeRule.onNodeWithTag("cutoffButton").performClick()
-            numberFieldText() == ""
-        }
-        val tapped = System.currentTimeMillis()
-        Thread.sleep(STORE_LATE_MS)
-        release.countDown()
-        busy.join(AWAIT_MS)
+        val (before, tapped) =
+            try {
+                assertTrue(holding.await(AWAIT_MS, TimeUnit.MILLISECONDS))
+                typePendingNumber(number)
+                val beforeTap = System.currentTimeMillis()
+                // A press clears the field at once; one dropped is pressed again.
+                composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+                    if (numberFieldText() == number) composeRule.onNodeWithTag("cutoffButton").performClick()
+                    numberFieldText() == ""
+                }
+                val tapSeen = System.currentTimeMillis()
+                Thread.sleep(STORE_LATE_MS)
+                beforeTap to tapSeen
+            } finally {
+                // Let go whatever the test met: a failure must not hold up the next test.
+                release.countDown()
+                busy.join(AWAIT_MS)
+            }
         waitForText(number)
         val stored =
             runBlocking {
