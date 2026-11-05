@@ -272,8 +272,9 @@ class MainFlowTest {
         composeRule.onNodeWithText("70123").assertExists()
     }
 
-    // The tap's moment is the cutoff's time: a store that waits, Room busy with another
-    // write, delays the row and never its time.
+    // The tap's moment is the cutoff's time: a store that waits delays the row, never its
+    // time. A transaction held open on another thread holds Room's one writer connection,
+    // so the store's insert waits for it, though the hold itself writes nothing.
     @Test
     fun aCutoffIsTimedAtTheTapThoughItIsStoredLater() {
         val app = appContext() as ChronometerApp
