@@ -295,9 +295,14 @@ class MainFlowTest {
                 assertTrue(holding.await(AWAIT_MS, TimeUnit.MILLISECONDS))
                 typePendingNumber(number)
                 val beforeTap = System.currentTimeMillis()
-                // A press clears the field at once; one dropped is pressed again.
+                // A press clears the field at once; one dropped is pressed again, and a number
+                // the keyboard changed meanwhile is typed again, as recordAndAwait does.
                 composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
-                    if (numberFieldText() == number) composeRule.onNodeWithTag("cutoffButton").performClick()
+                    when (numberFieldText()) {
+                        number -> composeRule.onNodeWithTag("cutoffButton").performClick()
+                        "" -> Unit
+                        else -> composeRule.onNodeWithTag("numberField").performTextReplacement(number)
+                    }
                     numberFieldText() == ""
                 }
                 val tapSeen = System.currentTimeMillis()
