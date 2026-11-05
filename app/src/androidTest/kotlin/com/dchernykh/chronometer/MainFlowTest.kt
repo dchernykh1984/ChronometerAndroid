@@ -56,6 +56,9 @@ import org.junit.runner.RunWith
 import java.io.File
 import java.net.InetAddress
 import java.net.ServerSocket
+import java.util.TimeZone
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 
@@ -267,6 +270,47 @@ class MainFlowTest {
     fun recordingCutoffShowsItInLog() {
         recordAndAwait("cutoffButton", "70123")
         composeRule.onNodeWithText("70123").assertExists()
+    }
+
+    // The tap's moment is the cutoff's time: a store that waits, Room busy with another
+    // write, delays the row and never its time.
+    @Test
+    fun aCutoffIsTimedAtTheTapThoughItIsStoredLater() {
+        val app = appContext() as ChronometerApp
+        val holding = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val busy =
+            thread(name = "busy-database", isDaemon = true) {
+                app.database.runInTransaction(
+                    Runnable {
+                        holding.countDown()
+                        release.await(AWAIT_MS, TimeUnit.MILLISECONDS)
+                    },
+                )
+            }
+        assertTrue(holding.await(AWAIT_MS, TimeUnit.MILLISECONDS))
+        typePendingNumber("70777")
+        val before = System.currentTimeMillis()
+        // A press clears the field at once; one dropped is pressed again.
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            if (numberFieldText() == "70777") composeRule.onNodeWithTag("cutoffButton").performClick()
+            numberFieldText() == ""
+        }
+        val tapped = System.currentTimeMillis()
+        Thread.sleep(STORE_LATE_MS)
+        release.countDown()
+        busy.join(AWAIT_MS)
+        waitForText("70777")
+        val stored =
+            runBlocking {
+                app.database
+                    .cutoffDao()
+                    .getAll()
+                    .single()
+            }
+        val at = checkNotNull(TimeFormatter.millisOf(stored.timeStr)) - TimeZone.getDefault().rawOffset
+        val between = "${TimeFormatter.currentTimeString(before)} and ${TimeFormatter.currentTimeString(tapped)}"
+        assertTrue("timed ${stored.timeStr}, tapped between $between", at in before..tapped)
     }
 
     @Test
@@ -1022,6 +1066,9 @@ class MainFlowTest {
 
         /** A break this long ago has a time no tap during the test can have. */
         const val BREAK_AGO_MS = 60_000L
+
+        /** How long a store is held up after its tap: far more than a tap takes. */
+        const val STORE_LATE_MS = 1_500L
 
         // Enough rows to make the log scrollable on either profile.
         const val LOG_FILL = 12
