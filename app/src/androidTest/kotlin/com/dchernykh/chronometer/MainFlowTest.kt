@@ -56,7 +56,6 @@ import org.junit.runner.RunWith
 import java.io.File
 import java.net.InetAddress
 import java.net.ServerSocket
-import java.util.TimeZone
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
@@ -325,9 +324,12 @@ class MainFlowTest {
                     .getAll()
                     .single()
             }
-        val at = checkNotNull(TimeFormatter.millisOf(stored.timeStr)) - TimeZone.getDefault().rawOffset
-        val between = "${TimeFormatter.currentTimeString(before)} and ${TimeFormatter.currentTimeString(tapped)}"
-        assertTrue("timed ${stored.timeStr}, tapped between $between", at in before..tapped)
+        // On the line's own scale, as the formatter writes the tap's moment.
+        val from = TimeFormatter.currentTimeString(before)
+        val to = TimeFormatter.currentTimeString(tapped)
+        val tap = checkNotNull(TimeFormatter.millisOf(from))..checkNotNull(TimeFormatter.millisOf(to))
+        val at = checkNotNull(TimeFormatter.millisOf(stored.timeStr))
+        assertTrue("timed ${stored.timeStr}, tapped between $from and $to", at in tap)
     }
 
     @Test
