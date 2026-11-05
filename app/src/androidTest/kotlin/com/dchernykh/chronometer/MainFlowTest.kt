@@ -360,7 +360,10 @@ class MainFlowTest {
         val stored = all.single()
         val at = checkNotNull(TimeFormatter.millisOf(stored.timeStr))
         val between = "${TimeFormatter.localTimeString(tap.first)} and ${TimeFormatter.localTimeString(tap.last)}"
-        assertTrue("timed ${stored.timeStr}, tapped between $between", at in tap)
+        // A few tens of ms each side, for a clock corrected meanwhile: a time read once the
+        // store goes on comes STORE_LATE_MS after the tap, far outside them.
+        val within = tap.first - CLOCK_SLACK_MS..tap.last + CLOCK_SLACK_MS
+        assertTrue("timed ${stored.timeStr}, tapped between $between", at in within)
     }
 
     @Test
@@ -1122,6 +1125,9 @@ class MainFlowTest {
          * a time read once the store goes on comes out this much after the tap was seen.
          */
         const val STORE_LATE_MS = 500L
+
+        /** Allowed around a tap's moments for the wall clock set meanwhile: far less than [STORE_LATE_MS]. */
+        const val CLOCK_SLACK_MS = 50L
 
         // Enough rows to make the log scrollable on either profile.
         const val LOG_FILL = 12
