@@ -310,6 +310,7 @@ class MainFlowTest {
         val holding = CountDownLatch(1)
         val release = CountDownLatch(1)
         val failed = AtomicReference<Throwable>()
+        typePendingNumber(number) // before the hold: only the tap and its store are held
         val busy =
             thread(name = "busy-database", isDaemon = true) {
                 // Caught here: thrown on this thread, it would end the whole instrumented run.
@@ -317,7 +318,7 @@ class MainFlowTest {
                     app.database.runInTransaction(
                         Runnable {
                             holding.countDown()
-                            release.await(AWAIT_MS, TimeUnit.MILLISECONDS)
+                            release.await() // however long the tap takes: the finally lets go
                             inTheHold()
                         },
                     )
@@ -326,7 +327,6 @@ class MainFlowTest {
         val tap =
             try {
                 assertTrue("the hold never began: ${failed.get()}", holding.await(AWAIT_MS, TimeUnit.MILLISECONDS))
-                typePendingNumber(number)
                 val before = TimeFormatter.currentTimeString()
                 // A press clears the field at once; one dropped is pressed again, and a number the
                 // keyboard changed meanwhile is typed again, as recordAndAwait does.
