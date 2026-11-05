@@ -49,6 +49,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -295,6 +296,9 @@ class MainFlowTest {
                 }
             }
         assertTimedAtTheTap("70778", tap)
+        // And the break stays gone, in Room and on the button: no later tap is timed at it.
+        assertNull(runBlocking { app.database.beamDao().oldestBreakFrom(0) })
+        waitUntilGone("pendingBreaks")
     }
 
     /**
