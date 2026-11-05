@@ -48,6 +48,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -351,6 +352,8 @@ class MainFlowTest {
                 busy.join(AWAIT_MS)
             }
         failed.get()?.let { throw AssertionError("the hold failed", it) }
+        // Here, not in a later step that would wait for the writer the hold still has.
+        assertFalse("the hold never ended", busy.isAlive)
         return tap
     }
 
