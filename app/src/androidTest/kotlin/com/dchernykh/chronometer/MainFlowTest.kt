@@ -300,17 +300,17 @@ class MainFlowTest {
     /**
      * Tap Cutoff for [number] while this test holds [CutoffRepository.mutationMutex], which a
      * source batch or a beam assignment holds in a race, so the tap's store waits for it; then
-     * [inTheHold] runs, and the store goes on once the test lets go. The tap's moments as the
-     * formatter writes them: just before it, and once it was seen.
+     * [inTheHold] runs, and the store goes on once the test lets go. The tap's moments on the
+     * line's own scale, as the formatter writes them: just before it, and once it was seen.
      */
     private fun tapWhileTheStoreWaits(
         number: String,
         inTheHold: () -> Unit = {},
-    ): Pair<String, String> {
+    ): LongRange {
         typePendingNumber(number) // before the hold: only the tap and its store are held
         runBlocking { CutoffRepository.mutationMutex.lock() }
         try {
-            val before = TimeFormatter.currentTimeString()
+            val before = lineNow()
             // A press clears the field at once; one dropped is pressed again. A number the
             // keyboard changed or cleared is typed again, as recordAndAwait does, but only
             // before a press: that press may have taken, and typing and pressing again would be
@@ -325,24 +325,27 @@ class MainFlowTest {
                 }
                 pressed && numberFieldText() == ""
             }
-            val seen = TimeFormatter.currentTimeString()
+            val seen = lineNow()
             Thread.sleep(STORE_LATE_MS)
             // In Room, not on screen, which may lag: nothing stored yet, or the store was never
             // held up and the test would prove nothing.
             val stored = runBlocking { (appContext() as ChronometerApp).database.cutoffDao().getAll() }
             assertTrue("stored while the store was held", stored.isEmpty())
             inTheHold()
-            return before to seen
+            return before..seen
         } finally {
             // Let go whatever the test met: a failure must not hold up the next test.
             CutoffRepository.mutationMutex.unlock()
         }
     }
 
-    /** The one cutoff stored is [number]'s, timed between the two moments of [tap]. */
+    /** Now on the line's own scale, as the formatter writes a tap's moment. */
+    private fun lineNow(): Long = checkNotNull(TimeFormatter.millisOf(TimeFormatter.currentTimeString()))
+
+    /** The one cutoff stored is [number]'s, timed within the moments of [tap]. */
     private fun assertTimedAtTheTap(
         number: String,
-        tap: Pair<String, String>,
+        tap: LongRange,
     ) {
         waitForText(number)
         val app = appContext() as ChronometerApp
@@ -354,11 +357,9 @@ class MainFlowTest {
             }
         assertEquals("the cutoffs stored", listOf(number), all.map { it.number }) // one tap, one cutoff
         val stored = all.single()
-        val (from, to) = tap
-        // On the line's own scale, as the formatter writes the tap's moment.
-        val range = checkNotNull(TimeFormatter.millisOf(from))..checkNotNull(TimeFormatter.millisOf(to))
         val at = checkNotNull(TimeFormatter.millisOf(stored.timeStr))
-        assertTrue("timed ${stored.timeStr}, tapped between $from and $to", at in range)
+        val between = "${TimeFormatter.localTimeString(tap.first)} and ${TimeFormatter.localTimeString(tap.last)}"
+        assertTrue("timed ${stored.timeStr}, tapped between $between", at in tap)
     }
 
     @Test
