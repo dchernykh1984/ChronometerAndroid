@@ -347,7 +347,10 @@ class MainFlowTest {
         number: String,
         tap: LongRange,
     ) {
-        waitForText(number)
+        // A dropped press the field's clearing passed off as taken stores nothing: said as
+        // such, not left to a bare timeout.
+        runCatching { waitForText(number) }
+            .onFailure { throw AssertionError("no cutoff $number shown: its press was dropped", it) }
         val app = appContext() as ChronometerApp
         val all =
             runBlocking {
