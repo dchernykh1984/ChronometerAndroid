@@ -329,13 +329,17 @@ class MainFlowTest {
             try {
                 assertTrue("the hold never began: ${failed.get()}", holding.await(AWAIT_MS, TimeUnit.MILLISECONDS))
                 val before = TimeFormatter.currentTimeString()
-                // A press clears the field at once; one dropped is pressed again, and a number the
-                // keyboard changed meanwhile is typed again, as recordAndAwait does.
+                // A press clears the field at once; one dropped is pressed again. A number the
+                // keyboard changed is typed again, as recordAndAwait does, but only before a press:
+                // that press may have taken, and typing and pressing again would be another cutoff.
+                var pressed = false
                 composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
-                    when (numberFieldText()) {
-                        number -> composeRule.onNodeWithTag("cutoffButton").performClick()
-                        "" -> Unit
-                        else -> composeRule.onNodeWithTag("numberField").performTextReplacement(number)
+                    val text = numberFieldText()
+                    if (text == number) {
+                        composeRule.onNodeWithTag("cutoffButton").performClick()
+                        pressed = true
+                    } else if (text != "" && !pressed) {
+                        composeRule.onNodeWithTag("numberField").performTextReplacement(number)
                     }
                     numberFieldText() == ""
                 }
@@ -364,18 +368,18 @@ class MainFlowTest {
     ) {
         waitForText(number)
         val app = appContext() as ChronometerApp
-        val stored =
+        val all =
             runBlocking {
                 app.database
                     .cutoffDao()
                     .getAll()
-                    .single()
             }
+        assertEquals("the cutoffs stored", listOf(number), all.map { it.number }) // one tap, one cutoff
+        val stored = all.single()
         val (from, to) = tap
         // On the line's own scale, as the formatter writes the tap's moment.
         val range = checkNotNull(TimeFormatter.millisOf(from))..checkNotNull(TimeFormatter.millisOf(to))
         val at = checkNotNull(TimeFormatter.millisOf(stored.timeStr))
-        assertEquals(number, stored.number)
         assertTrue("timed ${stored.timeStr}, tapped between $from and $to", at in range)
     }
 
