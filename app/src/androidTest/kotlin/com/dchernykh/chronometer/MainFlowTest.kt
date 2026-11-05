@@ -47,6 +47,7 @@ import com.dchernykh.chronometer.util.TimeFormatter
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -306,13 +307,15 @@ class MainFlowTest {
      * source batch or a beam assignment holds in a race, so the tap's store waits for it; then
      * [inTheHold] runs, and the store goes on once the test lets go. The tap's moments on the
      * line's own scale, as the formatter writes them: just before it, and once it was seen.
+     * [inTheHold] must not take the lock itself: it is not reentrant.
      */
     private fun tapWhileTheStoreWaits(
         number: String,
         inTheHold: () -> Unit = {},
     ): LongRange {
         typePendingNumber(number) // before the hold: only the tap and its store are held
-        runBlocking { CutoffRepository.mutationMutex.lock() }
+        // Within a time: a lock some app work never lets go fails the test, not the whole run.
+        runBlocking { withTimeout(AWAIT_MS) { CutoffRepository.mutationMutex.lock() } }
         try {
             val before = lineNow()
             // A press clears the field at once; one dropped is pressed again. A number the
