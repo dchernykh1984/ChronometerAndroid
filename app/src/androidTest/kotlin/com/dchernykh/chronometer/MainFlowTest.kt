@@ -355,13 +355,7 @@ class MainFlowTest {
         // such, not left to a bare timeout.
         runCatching { waitForText(number) }
             .onFailure { throw AssertionError("no cutoff $number shown: its press was dropped", it) }
-        val app = appContext() as ChronometerApp
-        val all =
-            runBlocking {
-                app.database
-                    .cutoffDao()
-                    .getAll()
-            }
+        val all = runBlocking { (appContext() as ChronometerApp).database.cutoffDao().getAll() }
         assertEquals("the cutoffs stored", listOf(number), all.map { it.number }) // one tap, one cutoff
         val stored = all.single()
         val at = checkNotNull(TimeFormatter.millisOf(stored.timeStr))
