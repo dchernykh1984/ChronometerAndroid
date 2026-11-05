@@ -307,6 +307,10 @@ class MainFlowTest {
                 }
                 val tapSeen = System.currentTimeMillis()
                 Thread.sleep(STORE_LATE_MS)
+                // The field is empty: a row is all that could show the number. None yet, or
+                // the store was never held up and the test would prove nothing.
+                val shown = composeRule.onAllNodesWithText(number).fetchSemanticsNodes()
+                assertTrue("stored while the database was held", shown.isEmpty())
                 beforeTap to tapSeen
             } finally {
                 // Let go whatever the test met: a failure must not hold up the next test.
