@@ -1111,8 +1111,11 @@ class MainFlowTest {
         /** A break this long ago has a time no tap during the test can have. */
         const val BREAK_AGO_MS = 60_000L
 
-        /** How long a store is held up after its tap: far more than a tap takes. */
-        const val STORE_LATE_MS = 1_500L
+        /**
+         * How long a store is held up after its tap: an unheld one is in Room well before, and
+         * a time read once the store goes on comes out this much after the tap was seen.
+         */
+        const val STORE_LATE_MS = 500L
 
         // Enough rows to make the log scrollable on either profile.
         const val LOG_FILL = 12
