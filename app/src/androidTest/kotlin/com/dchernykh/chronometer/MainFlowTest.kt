@@ -308,18 +308,18 @@ class MainFlowTest {
         try {
             val before = TimeFormatter.currentTimeString()
             // A press clears the field at once; one dropped is pressed again. A number the
-            // keyboard changed is typed again, as recordAndAwait does, but only before a press:
-            // that press may have taken, and typing and pressing again would be another cutoff.
+            // keyboard changed or cleared is typed again, as recordAndAwait does, but only
+            // before a press: that press may have taken, and typing and pressing again would be
+            // another cutoff. An empty field is a press taken only once there was a press.
             var pressed = false
             composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
-                val text = numberFieldText()
-                if (text == number) {
+                if (numberFieldText() == number) {
                     composeRule.onNodeWithTag("cutoffButton").performClick()
                     pressed = true
-                } else if (text != "" && !pressed) {
+                } else if (!pressed) {
                     composeRule.onNodeWithTag("numberField").performTextReplacement(number)
                 }
-                numberFieldText() == ""
+                pressed && numberFieldText() == ""
             }
             val seen = TimeFormatter.currentTimeString()
             Thread.sleep(STORE_LATE_MS)
