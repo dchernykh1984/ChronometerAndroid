@@ -309,42 +309,49 @@ class MainFlowTest {
         val app = appContext() as ChronometerApp
         val holding = CountDownLatch(1)
         val release = CountDownLatch(1)
+        val failed = AtomicReference<Throwable>()
         val busy =
             thread(name = "busy-database", isDaemon = true) {
-                app.database.runInTransaction(
-                    Runnable {
-                        holding.countDown()
-                        release.await(AWAIT_MS, TimeUnit.MILLISECONDS)
-                        inTheHold()
-                    },
-                )
+                // Caught here: thrown on this thread, it would end the whole instrumented run.
+                runCatching {
+                    app.database.runInTransaction(
+                        Runnable {
+                            holding.countDown()
+                            release.await(AWAIT_MS, TimeUnit.MILLISECONDS)
+                            inTheHold()
+                        },
+                    )
+                }.onFailure(failed::set)
             }
-        try {
-            assertTrue(holding.await(AWAIT_MS, TimeUnit.MILLISECONDS))
-            typePendingNumber(number)
-            val before = TimeFormatter.currentTimeString()
-            // A press clears the field at once; one dropped is pressed again, and a number the
-            // keyboard changed meanwhile is typed again, as recordAndAwait does.
-            composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
-                when (numberFieldText()) {
-                    number -> composeRule.onNodeWithTag("cutoffButton").performClick()
-                    "" -> Unit
-                    else -> composeRule.onNodeWithTag("numberField").performTextReplacement(number)
+        val tap =
+            try {
+                assertTrue("the hold never began: ${failed.get()}", holding.await(AWAIT_MS, TimeUnit.MILLISECONDS))
+                typePendingNumber(number)
+                val before = TimeFormatter.currentTimeString()
+                // A press clears the field at once; one dropped is pressed again, and a number the
+                // keyboard changed meanwhile is typed again, as recordAndAwait does.
+                composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+                    when (numberFieldText()) {
+                        number -> composeRule.onNodeWithTag("cutoffButton").performClick()
+                        "" -> Unit
+                        else -> composeRule.onNodeWithTag("numberField").performTextReplacement(number)
+                    }
+                    numberFieldText() == ""
                 }
-                numberFieldText() == ""
+                val seen = TimeFormatter.currentTimeString()
+                Thread.sleep(STORE_LATE_MS)
+                // The field is empty: a row is all that could show the number. None yet, or the
+                // store was never held up and the test would prove nothing.
+                val shown = composeRule.onAllNodesWithText(number).fetchSemanticsNodes()
+                assertTrue("stored while the database was held", shown.isEmpty())
+                before to seen
+            } finally {
+                // Let go whatever the test met: a failure must not hold up the next test.
+                release.countDown()
+                busy.join(AWAIT_MS)
             }
-            val seen = TimeFormatter.currentTimeString()
-            Thread.sleep(STORE_LATE_MS)
-            // The field is empty: a row is all that could show the number. None yet, or the
-            // store was never held up and the test would prove nothing.
-            val shown = composeRule.onAllNodesWithText(number).fetchSemanticsNodes()
-            assertTrue("stored while the database was held", shown.isEmpty())
-            return before to seen
-        } finally {
-            // Let go whatever the test met: a failure must not hold up the next test.
-            release.countDown()
-            busy.join(AWAIT_MS)
-        }
+        failed.get()?.let { throw AssertionError("the hold failed", it) }
+        return tap
     }
 
     /** The one cutoff stored is [number]'s, timed between the two moments of [tap]. */
