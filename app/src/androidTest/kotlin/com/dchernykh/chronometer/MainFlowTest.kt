@@ -323,10 +323,10 @@ class MainFlowTest {
             }
             val seen = TimeFormatter.currentTimeString()
             Thread.sleep(STORE_LATE_MS)
-            // The field is empty: a row is all that could show the number. None yet, or the
-            // store was never held up and the test would prove nothing.
-            val shown = composeRule.onAllNodesWithText(number).fetchSemanticsNodes()
-            assertTrue("stored while the store was held", shown.isEmpty())
+            // In Room, not on screen, which may lag: nothing stored yet, or the store was never
+            // held up and the test would prove nothing.
+            val stored = runBlocking { (appContext() as ChronometerApp).database.cutoffDao().getAll() }
+            assertTrue("stored while the store was held", stored.isEmpty())
             inTheHold()
             return before to seen
         } finally {
