@@ -32,6 +32,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.work.WorkManager
 import com.dchernykh.chronometer.data.AppLanguage
 import com.dchernykh.chronometer.data.CutoffEvent
+import com.dchernykh.chronometer.data.CutoffRepository
 import com.dchernykh.chronometer.data.SettingsStore
 import com.dchernykh.chronometer.data.ThemeMode
 import com.dchernykh.chronometer.service.RaceService
@@ -48,7 +49,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -57,8 +57,6 @@ import org.junit.runner.RunWith
 import java.io.File
 import java.net.InetAddress
 import java.net.ServerSocket
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 
@@ -290,75 +288,51 @@ class MainFlowTest {
         )
         val tap =
             tapWhileTheStoreWaits("70778") {
-                // On the held transaction's own connection: a DAO call would wait for it.
-                app.database.openHelper.writableDatabase
-                    .execSQL("DELETE FROM pending_breaks")
+                runBlocking { app.database.beamDao().clearBreaks() } // gone before the store looks
             }
         assertTimedAtTheTap("70778", tap)
     }
 
     /**
-     * Tap Cutoff for [number] while a transaction held open on another thread holds Room's one
-     * writer connection, so the tap's store waits, though the hold itself writes nothing; then
-     * [inTheHold] runs in that transaction, and the store goes on once it ends. The tap's
-     * moments as the formatter writes them: just before it, and once it was seen.
+     * Tap Cutoff for [number] while this test holds [CutoffRepository.mutationMutex], which a
+     * source batch or a beam assignment holds in a race, so the tap's store waits for it; then
+     * [inTheHold] runs, and the store goes on once the test lets go. The tap's moments as the
+     * formatter writes them: just before it, and once it was seen.
      */
     private fun tapWhileTheStoreWaits(
         number: String,
         inTheHold: () -> Unit = {},
     ): Pair<String, String> {
-        val app = appContext() as ChronometerApp
-        val holding = CountDownLatch(1)
-        val release = CountDownLatch(1)
-        val failed = AtomicReference<Throwable>()
         typePendingNumber(number) // before the hold: only the tap and its store are held
-        val busy =
-            thread(name = "busy-database", isDaemon = true) {
-                // Caught here: thrown on this thread, it would end the whole instrumented run.
-                runCatching {
-                    app.database.runInTransaction(
-                        Runnable {
-                            holding.countDown()
-                            release.await() // however long the tap takes: the finally lets go
-                            inTheHold()
-                        },
-                    )
-                }.onFailure(failed::set)
-            }
-        val tap =
-            try {
-                assertTrue("the hold never began: ${failed.get()}", holding.await(AWAIT_MS, TimeUnit.MILLISECONDS))
-                val before = TimeFormatter.currentTimeString()
-                // A press clears the field at once; one dropped is pressed again. A number the
-                // keyboard changed is typed again, as recordAndAwait does, but only before a press:
-                // that press may have taken, and typing and pressing again would be another cutoff.
-                var pressed = false
-                composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
-                    val text = numberFieldText()
-                    if (text == number) {
-                        composeRule.onNodeWithTag("cutoffButton").performClick()
-                        pressed = true
-                    } else if (text != "" && !pressed) {
-                        composeRule.onNodeWithTag("numberField").performTextReplacement(number)
-                    }
-                    numberFieldText() == ""
+        runBlocking { CutoffRepository.mutationMutex.lock() }
+        try {
+            val before = TimeFormatter.currentTimeString()
+            // A press clears the field at once; one dropped is pressed again. A number the
+            // keyboard changed is typed again, as recordAndAwait does, but only before a press:
+            // that press may have taken, and typing and pressing again would be another cutoff.
+            var pressed = false
+            composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+                val text = numberFieldText()
+                if (text == number) {
+                    composeRule.onNodeWithTag("cutoffButton").performClick()
+                    pressed = true
+                } else if (text != "" && !pressed) {
+                    composeRule.onNodeWithTag("numberField").performTextReplacement(number)
                 }
-                val seen = TimeFormatter.currentTimeString()
-                Thread.sleep(STORE_LATE_MS)
-                // The field is empty: a row is all that could show the number. None yet, or the
-                // store was never held up and the test would prove nothing.
-                val shown = composeRule.onAllNodesWithText(number).fetchSemanticsNodes()
-                assertTrue("stored while the database was held", shown.isEmpty())
-                before to seen
-            } finally {
-                // Let go whatever the test met: a failure must not hold up the next test.
-                release.countDown()
-                busy.join(AWAIT_MS)
+                numberFieldText() == ""
             }
-        failed.get()?.let { throw AssertionError("the hold failed", it) }
-        // Here, not in a later step that would wait for the writer the hold still has.
-        assertFalse("the hold never ended", busy.isAlive)
-        return tap
+            val seen = TimeFormatter.currentTimeString()
+            Thread.sleep(STORE_LATE_MS)
+            // The field is empty: a row is all that could show the number. None yet, or the
+            // store was never held up and the test would prove nothing.
+            val shown = composeRule.onAllNodesWithText(number).fetchSemanticsNodes()
+            assertTrue("stored while the store was held", shown.isEmpty())
+            inTheHold()
+            return before to seen
+        } finally {
+            // Let go whatever the test met: a failure must not hold up the next test.
+            CutoffRepository.mutationMutex.unlock()
+        }
     }
 
     /** The one cutoff stored is [number]'s, timed between the two moments of [tap]. */
