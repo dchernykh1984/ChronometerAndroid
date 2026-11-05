@@ -271,13 +271,42 @@ class MainFlowTest {
         composeRule.onNodeWithText("70123").assertExists()
     }
 
-    // The tap's moment is the cutoff's time: a store that waits delays the row, never its
-    // time. A transaction held open on another thread holds Room's one writer connection,
-    // so the store's insert waits for it, though the hold itself writes nothing.
+    // The tap's moment is the cutoff's time: a store that waits delays the row, never its time.
     @Test
     fun aCutoffIsTimedAtTheTapThoughItIsStoredLater() {
+        assertTimedAtTheTap("70777", tapWhileTheStoreWaits("70777"))
+    }
+
+    // A break the button showed, gone before the tap's store could give it the number: the
+    // cutoff falls back to the tap's moment, not the break's and not the store's.
+    @Test
+    fun aCutoffWhoseBreakWentMeanwhileIsTimedAtTheTap() {
         val app = appContext() as ChronometerApp
-        val number = "70777"
+        val breakMs = System.currentTimeMillis() - BREAK_AGO_MS
+        runBlocking { app.beamRepository.add(listOf(SourceEvent.BeamBreak(1, breakMs))) }
+        waitForText(
+            localizedString(AppLanguage.EN, R.string.cutoff_at, timeOfDay(TimeFormatter.currentTimeString(breakMs))),
+        )
+        val tap =
+            tapWhileTheStoreWaits("70778") {
+                // On the held transaction's own connection: a DAO call would wait for it.
+                app.database.openHelper.writableDatabase
+                    .execSQL("DELETE FROM pending_breaks")
+            }
+        assertTimedAtTheTap("70778", tap)
+    }
+
+    /**
+     * Tap Cutoff for [number] while a transaction held open on another thread holds Room's one
+     * writer connection, so the tap's store waits, though the hold itself writes nothing; then
+     * [inTheHold] runs in that transaction, and the store goes on once it ends. The tap's
+     * moments as the formatter writes them: just before it, and once it was seen.
+     */
+    private fun tapWhileTheStoreWaits(
+        number: String,
+        inTheHold: () -> Unit = {},
+    ): Pair<String, String> {
+        val app = appContext() as ChronometerApp
         val holding = CountDownLatch(1)
         val release = CountDownLatch(1)
         val busy =
@@ -286,37 +315,45 @@ class MainFlowTest {
                     Runnable {
                         holding.countDown()
                         release.await(AWAIT_MS, TimeUnit.MILLISECONDS)
+                        inTheHold()
                     },
                 )
             }
-        val (before, tapped) =
-            try {
-                assertTrue(holding.await(AWAIT_MS, TimeUnit.MILLISECONDS))
-                typePendingNumber(number)
-                val beforeTap = System.currentTimeMillis()
-                // A press clears the field at once; one dropped is pressed again, and a number
-                // the keyboard changed meanwhile is typed again, as recordAndAwait does.
-                composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
-                    when (numberFieldText()) {
-                        number -> composeRule.onNodeWithTag("cutoffButton").performClick()
-                        "" -> Unit
-                        else -> composeRule.onNodeWithTag("numberField").performTextReplacement(number)
-                    }
-                    numberFieldText() == ""
+        try {
+            assertTrue(holding.await(AWAIT_MS, TimeUnit.MILLISECONDS))
+            typePendingNumber(number)
+            val before = TimeFormatter.currentTimeString()
+            // A press clears the field at once; one dropped is pressed again, and a number the
+            // keyboard changed meanwhile is typed again, as recordAndAwait does.
+            composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+                when (numberFieldText()) {
+                    number -> composeRule.onNodeWithTag("cutoffButton").performClick()
+                    "" -> Unit
+                    else -> composeRule.onNodeWithTag("numberField").performTextReplacement(number)
                 }
-                val tapSeen = System.currentTimeMillis()
-                Thread.sleep(STORE_LATE_MS)
-                // The field is empty: a row is all that could show the number. None yet, or
-                // the store was never held up and the test would prove nothing.
-                val shown = composeRule.onAllNodesWithText(number).fetchSemanticsNodes()
-                assertTrue("stored while the database was held", shown.isEmpty())
-                beforeTap to tapSeen
-            } finally {
-                // Let go whatever the test met: a failure must not hold up the next test.
-                release.countDown()
-                busy.join(AWAIT_MS)
+                numberFieldText() == ""
             }
+            val seen = TimeFormatter.currentTimeString()
+            Thread.sleep(STORE_LATE_MS)
+            // The field is empty: a row is all that could show the number. None yet, or the
+            // store was never held up and the test would prove nothing.
+            val shown = composeRule.onAllNodesWithText(number).fetchSemanticsNodes()
+            assertTrue("stored while the database was held", shown.isEmpty())
+            return before to seen
+        } finally {
+            // Let go whatever the test met: a failure must not hold up the next test.
+            release.countDown()
+            busy.join(AWAIT_MS)
+        }
+    }
+
+    /** The one cutoff stored is [number]'s, timed between the two moments of [tap]. */
+    private fun assertTimedAtTheTap(
+        number: String,
+        tap: Pair<String, String>,
+    ) {
         waitForText(number)
+        val app = appContext() as ChronometerApp
         val stored =
             runBlocking {
                 app.database
@@ -324,12 +361,12 @@ class MainFlowTest {
                     .getAll()
                     .single()
             }
+        val (from, to) = tap
         // On the line's own scale, as the formatter writes the tap's moment.
-        val from = TimeFormatter.currentTimeString(before)
-        val to = TimeFormatter.currentTimeString(tapped)
-        val tap = checkNotNull(TimeFormatter.millisOf(from))..checkNotNull(TimeFormatter.millisOf(to))
+        val range = checkNotNull(TimeFormatter.millisOf(from))..checkNotNull(TimeFormatter.millisOf(to))
         val at = checkNotNull(TimeFormatter.millisOf(stored.timeStr))
-        assertTrue("timed ${stored.timeStr}, tapped between $from and $to", at in tap)
+        assertEquals(number, stored.number)
+        assertTrue("timed ${stored.timeStr}, tapped between $from and $to", at in range)
     }
 
     @Test
