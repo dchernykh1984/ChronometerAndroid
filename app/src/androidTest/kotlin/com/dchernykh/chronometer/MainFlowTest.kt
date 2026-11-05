@@ -336,8 +336,7 @@ class MainFlowTest {
             Thread.sleep(STORE_LATE_MS)
             // In Room, not on screen, which may lag: nothing stored yet, or the store was never
             // held up and the test would prove nothing.
-            val stored = runBlocking { (appContext() as ChronometerApp).database.cutoffDao().getAll() }
-            assertTrue("stored while the store was held", stored.isEmpty())
+            assertTrue("stored while the store was held", storedCutoffs().isEmpty())
             inTheHold()
             return before..seen
         } finally {
@@ -345,6 +344,9 @@ class MainFlowTest {
             CutoffRepository.mutationMutex.unlock()
         }
     }
+
+    /** The cutoffs in Room, which the hold's check and the final one both read. */
+    private fun storedCutoffs() = runBlocking { (appContext() as ChronometerApp).database.cutoffDao().getAll() }
 
     /** Now on the line's own scale, as the formatter writes a tap's moment. */
     private fun lineNow(): Long = checkNotNull(TimeFormatter.millisOf(TimeFormatter.currentTimeString()))
@@ -359,7 +361,7 @@ class MainFlowTest {
         runCatching { waitForText(number) }.onFailure {
             throw AssertionError("no cutoff $number shown: its press was dropped, or its store failed", it)
         }
-        val all = runBlocking { (appContext() as ChronometerApp).database.cutoffDao().getAll() }
+        val all = storedCutoffs()
         assertEquals("the cutoffs stored", listOf(number), all.map { it.number }) // one tap, one cutoff
         val stored = all.single()
         val at = checkNotNull(TimeFormatter.millisOf(stored.timeStr))
