@@ -52,6 +52,12 @@ class UsbBoardPortsTest {
     }
 
     @Test
+    fun anEsp32c3OnItsOwnUsbIsABeamBoardToo() {
+        plugIn("/dev/bus/usb/001/007", ESP_VENDOR, ESP_PRODUCT, permitted = true)
+        assertTrue(UsbBoardPorts(app).find()!!.permitted)
+    }
+
+    @Test
     fun theProcessorIsKeptAwakeUntilTheUsbBeamLetsGo() {
         val awake = UsbBoardPorts(app).keepAwake()
         val lock = ShadowPowerManager.getLatestWakeLock()

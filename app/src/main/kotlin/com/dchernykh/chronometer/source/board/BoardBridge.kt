@@ -6,17 +6,23 @@ import kotlin.math.abs
 import kotlin.math.roundToLong
 
 /*
- * The beam board's lines, as the desktop connector reads them: one contract for both,
- * ChronometerPython's specs/001-event-sources/contracts/beam-board-protocol.md.
+ * The beam boards' lines, as the desktop connector reads them: one contract for both,
+ * ChronometerPython's specs/001-event-sources/contracts/beam-board-protocol.md (0.4).
  */
 
-/** The name the board's HELLO gives, and the firmware this app is built for. */
-const val BOARD_NAME = "beam-rp2040"
-const val BOARD_FIRMWARE = "0.3"
+/** The names a board's HELLO gives, and the firmware this app is built for. */
+val BOARD_NAMES = setOf("beam-rp2040", "beam-esp32c3")
+const val BOARD_FIRMWARE = "0.4"
 
-/** A PING every 2 s; one unanswered for 6 s says the board's program has stopped. */
+/** A PING every 2 s on USB, every 1 s over Bluetooth: there more trips, more short ones. */
 const val PING_EVERY_MS = 2_000L
-const val SILENT_MS = 3 * PING_EVERY_MS
+const val RADIO_PING_EVERY_MS = 1_000L
+
+/** The board's HELLO asked again: its count shows a break whose line was lost, the last say. */
+const val HELLO_EVERY_MS = 5_000L
+
+/** A PING unanswered for 6 s: the board's program has stopped. */
+const val SILENT_MS = 6_000L
 
 /** Blocked or flickering for longer than any rider takes: no break can be seen. */
 const val DARK_MS = 2_000L
@@ -24,11 +30,20 @@ const val DARK_MS = 2_000L
 /** A break waits this long for the board's clock, then takes the time its line came. */
 const val HELD_MS = 3_000L
 
+/** Over Bluetooth the clock takes [RADIO_READY] answers before it is read. */
+const val RADIO_HELD_MS = 10_000L
+
+/** A break asked for again and not come within this is said as never come. */
+const val RESENT_WITHIN_MS = 10_000L
+
 private const val LONGEST_TRIP_MS = 20.0
 private const val SAMPLES = 9
 private const val STEP_MS = 50.0
+private const val RADIO_SAMPLES = 16
+private const val RADIO_READY = 4
+private const val RADIO_STEP_MS = 100.0
 private const val HELD_MAX = 64
-private const val UNANSWERED_KEPT = 4 * SAMPLES
+private const val UNANSWERED_KEPT = 4 * RADIO_SAMPLES
 
 /** A board line as its word and the rest: ("BREAK", ["12", "812345"]). */
 fun parseLine(line: String): Pair<String, List<String>> {
@@ -36,32 +51,57 @@ fun parseLine(line: String): Pair<String, List<String>> {
     return if (words.isEmpty()) "" to emptyList() else words[0].uppercase() to words.drop(1)
 }
 
-/** The two whole numbers a BREAK or a PONG carries, else null. */
-fun twoNumbers(rest: List<String>): Pair<Long, Long>? {
-    val numbers = rest.takeIf { it.size == 2 && it.all(::isWholeNumber) }?.map(String::toLongOrNull)
-    val first = numbers?.get(0)
-    val second = numbers?.get(1)
-    return if (first != null && second != null) first to second else null
+/** The [count] whole numbers a BREAK or a PONG carries, else null. */
+fun wholeNumbers(
+    rest: List<String>,
+    count: Int,
+): List<Long>? {
+    if (!rest.all(::isWholeNumber)) return null
+    return rest.mapNotNull(String::toLongOrNull).takeIf { it.size == count && rest.size == count }
 }
 
 private fun isWholeNumber(word: String): Boolean = word.isNotEmpty() && word.all { it in '0'..'9' }
 
 /**
- * The board's microseconds onto the phone's milliseconds, from round trips whose middle is
- * taken as the moment the board answered (contract, step 3).
+ * A PING's way there and its PONG's way back, each the arriving clock less the leaving one:
+ * their difference is twice the offset, their sum the round trip with the board's wait left out.
  */
-class ClockSync {
-    private val offsets = ArrayDeque<Double>()
+private fun trip(
+    sentMs: Double,
+    gotMs: Double,
+    gotUs: Long,
+    sentUs: Long,
+): Pair<Double, Double> = (gotUs / 1_000.0 - sentMs) to (gotMs - sentUs / 1_000.0)
 
-    val read: Boolean get() = offsets.isNotEmpty()
+/** The board's microseconds onto the phone's milliseconds. */
+interface BoardClock {
+    val read: Boolean
 
     fun add(
         sentMs: Double,
         gotMs: Double,
-        boardUs: Long,
+        gotUs: Long,
+        sentUs: Long,
+    )
+
+    fun toPhoneMs(boardUs: Long): Long?
+}
+
+/** Over USB: round trips short enough that half of one each way is near the truth. */
+class ClockSync : BoardClock {
+    private val offsets = ArrayDeque<Double>()
+
+    override val read: Boolean get() = offsets.isNotEmpty()
+
+    override fun add(
+        sentMs: Double,
+        gotMs: Double,
+        gotUs: Long,
+        sentUs: Long,
     ) {
-        if (gotMs - sentMs > LONGEST_TRIP_MS) return
-        val offset = (sentMs + gotMs) / 2 - boardUs / 1_000.0
+        val (there, back) = trip(sentMs, gotMs, gotUs, sentUs)
+        if (there + back > LONGEST_TRIP_MS) return
+        val offset = (back - there) / 2
         // Round trips this short agree within half of one: one that does not saw the
         // phone's clock set anew, and the offsets before it no longer hold.
         if (offsets.isNotEmpty() && abs(offset - median()) > STEP_MS) offsets.clear()
@@ -69,12 +109,146 @@ class ClockSync {
         while (offsets.size > SAMPLES) offsets.removeFirst()
     }
 
-    fun toPhoneMs(boardUs: Long): Long? = if (offsets.isEmpty()) null else (boardUs / 1_000.0 + median()).roundToLong()
+    override fun toPhoneMs(boardUs: Long): Long? =
+        if (offsets.isEmpty()) null else (boardUs / 1_000.0 + median()).roundToLong()
 
     private fun median(): Double {
         val sorted = offsets.sorted()
         val middle = sorted.size / 2
         return if (sorted.size % 2 == 1) sorted[middle] else (sorted[middle - 1] + sorted[middle]) / 2
+    }
+}
+
+/**
+ * Over Bluetooth: a message waits for the radio's next connection event, and a trip's two
+ * ways seldom wait alike. The shortest way there and the shortest way back of the last
+ * trips are each near the radio's bare delay, so half their difference is the offset; the
+ * board's random wait before a PONG gives the way back its short ones too.
+ */
+class RadioSync : BoardClock {
+    private val trips = ArrayDeque<Pair<Double, Double>>()
+
+    override val read: Boolean get() = trips.size >= RADIO_READY
+
+    val offset: Double get() = (trips.minOf { it.second } - trips.minOf { it.first }) / 2
+
+    override fun add(
+        sentMs: Double,
+        gotMs: Double,
+        gotUs: Long,
+        sentUs: Long,
+    ) {
+        val (there, back) = trip(sentMs, gotMs, gotUs, sentUs)
+        if (read && abs((back - there) / 2 - offset) > RADIO_STEP_MS) trips.clear() // clock set anew
+        trips.addLast(there to back)
+        while (trips.size > RADIO_SAMPLES) trips.removeFirst()
+    }
+
+    override fun toPhoneMs(boardUs: Long): Long? = if (!read) null else (boardUs / 1_000.0 + offset).roundToLong()
+}
+
+/**
+ * One board's breaks by count, kept across its link going and coming back: each taken once,
+ * those missed asked for again (contract, steps 3 and 5).
+ */
+class Counts(
+    var last: Long = 0,
+) {
+    val taken = mutableMapOf<Long, Long>() // seq: board time, since its start
+    val wanted = mutableMapOf<Long, Long>() // seq: asked for at, phone ms
+    val said = mutableSetOf<Long>() // wanted ones said as never come
+
+    /** The board started again: its counts begin anew. */
+    fun restart() {
+        last = 0
+        taken.clear()
+        wanted.clear()
+        said.clear()
+    }
+}
+
+/**
+ * One link's catching up with the boards' counts (contract, steps 3 and 5): what a HELLO's
+ * count and each BREAK say against the counts taken, and the RESENDs they need ([outbox]).
+ */
+class Catchup(
+    val counts: MutableMap<String, Counts>,
+) {
+    val outbox = ArrayList<String>()
+
+    /**
+     * The count board [boardId]'s HELLO gave; true when it shows the board started again. The
+     * first HELLO: breaks before it were not this app's, but those that came on this link
+     * waiting for it ([firstHeld]) are.
+     */
+    fun hello(
+        boardId: String,
+        seq: Long,
+        firstHeld: Long?,
+        gotMs: Long,
+    ): Boolean {
+        val known = counts[boardId]
+        when {
+            known == null -> counts[boardId] = Counts(minOf(seq + 1, firstHeld ?: (seq + 1)) - 1)
+            seq > known.last -> resend(known, known.last + 1, seq, gotMs) // missed, or its line lost
+            seq < known.last -> {
+                known.restart() // it started again, and counted while no link was up
+                if (seq > 0) resend(known, 1, seq, gotMs)
+                return true
+            }
+        }
+        return false
+    }
+
+    /** Whether a BREAK is one this app has not had; a gap before it is asked for again. */
+    fun take(
+        boardId: String,
+        seq: Long,
+        boardUs: Long,
+        gotMs: Long,
+    ): Boolean {
+        // No count from a HELLO (another firmware's): from this one on.
+        val counts = this.counts.getOrPut(boardId) { Counts(seq - 1) }
+        val had = counts.taken[seq]
+        when {
+            had == boardUs -> return false // said again: had already
+            had != null -> counts.restart() // the same count, another time: it started again
+            seq < counts.last && seq !in counts.wanted -> counts.restart() // a lower count, not asked for
+        }
+        if (seq > counts.last + 1) resend(counts, counts.last + 1, seq - 1, gotMs)
+        counts.taken[seq] = boardUs
+        counts.wanted.remove(seq)
+        counts.last = maxOf(counts.last, seq)
+        return true
+    }
+
+    /**
+     * Breaks asked for again that have not come within [RESENT_WITHIN_MS]: they never came,
+     * the link down as they did. Said once; taken still, if late.
+     */
+    fun overdue(nowMs: Long): List<SourceEvent> =
+        counts.values.mapNotNull { counts ->
+            val late =
+                counts.wanted
+                    .filter { (seq, asked) -> nowMs - asked > RESENT_WITHIN_MS && seq !in counts.said }
+                    .keys
+                    .sorted()
+            if (late.isEmpty()) {
+                null
+            } else {
+                counts.said += late
+                SourceEvent.Board(BoardTrouble.BreaksMissing(late.first(), late.last()))
+            }
+        }
+
+    private fun resend(
+        counts: Counts,
+        first: Long,
+        last: Long,
+        nowMs: Long,
+    ) {
+        for (seq in first..last) counts.wanted.putIfAbsent(seq, nowMs)
+        outbox += "RESEND $first"
     }
 }
 
@@ -87,15 +261,22 @@ private data class Held(
 )
 
 /**
- * One board, from the port's opening on: what it says, as events for the source. The
- * first PING number and the last break of each board id carry over to the next opening
- * (contract, steps 3 and 4).
+ * One board, from the link's opening on: what it says, as events for the source, and the
+ * lines it is to be sent beside the PINGs ([outbox]). The first PING number and each board
+ * id's counts carry over to the next opening (contract, steps 3 to 5).
  */
 class BoardBridge(
+    val radio: Boolean = false,
     var nextPing: Long = 1,
-    val lastBreaks: MutableMap<String, Long> = mutableMapOf(),
+    val counts: MutableMap<String, Counts> = mutableMapOf(),
 ) {
-    val sync = ClockSync()
+    var sync: BoardClock = if (radio) RadioSync() else ClockSync()
+        private set
+    val pingEveryMs: Long get() = if (radio) RADIO_PING_EVERY_MS else PING_EVERY_MS
+    private val catchup = Catchup(counts)
+
+    /** RESEND lines for the board: breaks it counted while no link was up, or lost on the way. */
+    val outbox: MutableList<String> get() = catchup.outbox
 
     /** What the HELLO said, empty before it: no line counts until then. */
     var board: String = ""
@@ -127,13 +308,14 @@ class BoardBridge(
         gotMs: Long,
     ): List<SourceEvent> {
         val (word, rest) = parseLine(line)
-        val numbers = twoNumbers(rest)
+        val pair = wholeNumbers(rest, 2)
+        val pong = wholeNumbers(rest, 3)
         return when {
-            word == "HELLO" && rest.firstOrNull() == BOARD_NAME -> hello(rest)
-            word == "BREAK" && numbers != null -> takeBreak(numbers, rest[1], gotMs)
+            word == "HELLO" && rest.firstOrNull() in BOARD_NAMES -> hello(rest, gotMs)
+            word == "BREAK" && pair != null -> takeBreak(pair, rest[1], gotMs)
             board.isEmpty() -> emptyList() // left from before the HELLO, or another firmware's
-            word == "PONG" && numbers != null -> {
-                answered(numbers.first, numbers.second, gotMs)
+            word == "PONG" && pong != null -> {
+                answered(pong, gotMs)
                 release(null)
             }
             word == "STATUS" -> {
@@ -146,25 +328,36 @@ class BoardBridge(
     }
 
     /**
-     * Breaks that waited for the board's HELLO and its clock: timed by the board's clock
-     * once it is read. Given up on [HELD_MS] after the first came, at [nowMs], they take
-     * the time their lines came, and that is said; null gives none up.
+     * Breaks that waited for the board's HELLO and its clock: timed by the board's clock once
+     * it is read. Given up on after the first came, at [nowMs], they take the time their lines
+     * came, and that is said; null gives none up. And breaks asked for again that never came.
      */
     fun release(nowMs: Long?): List<SourceEvent> {
-        if (held.isEmpty() || board.isEmpty()) return emptyList()
+        val overdue = if (nowMs == null) emptyList() else catchup.overdue(nowMs)
+        if (held.isEmpty() || board.isEmpty()) return overdue
         val read = sync.read
-        if (!read && (nowMs == null || nowMs - held[0].gotMs <= HELD_MS)) return emptyList()
+        val wait = if (radio) RADIO_HELD_MS else HELD_MS
+        if (!read && (nowMs == null || nowMs - held[0].gotMs <= wait)) return overdue
         val waited = held.toList()
         held.clear()
-        val events = waited.flatMap { beam(it.seq, it.boardUs, it.text, it.gotMs) }
+        val events = overdue + waited.flatMap { beam(it.seq, it.boardUs, it.text, it.gotMs) }
         return if (read) events else events + SourceEvent.Board(BoardTrouble.ClockNotRead(waited.size))
     }
 
-    private fun hello(rest: List<String>): List<SourceEvent> {
-        board = rest.joinToString(" ")
+    private fun hello(
+        rest: List<String>,
+        gotMs: Long,
+    ): List<SourceEvent> {
+        val first = board.isEmpty() // asked again every few seconds: said once
+        board = rest.take(3).joinToString(" ")
         boardId = rest.getOrElse(2) { "" }
+        val count = rest.getOrNull(3)?.takeIf(::isWholeNumber)?.toLongOrNull()
+        if (count != null && catchup.hello(boardId, count, held.minOfOrNull(Held::seq), gotMs)) {
+            // Its clock started again with it: a link that stayed up keeps no trip of the old one.
+            sync = if (radio) RadioSync() else ClockSync()
+        }
         val runs = rest.getOrElse(1) { "?" }
-        return if (runs == BOARD_FIRMWARE) {
+        return if (runs == BOARD_FIRMWARE || !first) {
             emptyList()
         } else {
             listOf(SourceEvent.Board(BoardTrouble.OtherFirmware(runs, BOARD_FIRMWARE)))
@@ -172,14 +365,14 @@ class BoardBridge(
     }
 
     private fun takeBreak(
-        numbers: Pair<Long, Long>,
+        numbers: List<Long>,
         text: String,
         gotMs: Long,
     ): List<SourceEvent> {
-        if (board.isNotEmpty() && sync.read) return beam(numbers.first, numbers.second, text, gotMs)
+        if (board.isNotEmpty() && sync.read) return beam(numbers[0], numbers[1], text, gotMs)
         // Before the HELLO, or the clock read: a rider all the same, so it waits; one from
         // a board that never says HELLO never counts.
-        if (held.size < HELD_MAX) held += Held(numbers.first, numbers.second, text, gotMs)
+        if (held.size < HELD_MAX) held += Held(numbers[0], numbers[1], text, gotMs)
         return emptyList()
     }
 
@@ -189,26 +382,17 @@ class BoardBridge(
         text: String,
         gotMs: Long,
     ): List<SourceEvent> {
-        val beam = SourceEvent.BeamBreak(seq, sync.toPhoneMs(boardUs) ?: gotMs, text)
-        val last = lastBreaks[boardId] ?: 0L
-        lastBreaks[boardId] = seq
-        // A count that skips some: they never came, the link down as they did, though not
-        // the board's power. A count begun again is the board started again.
-        return if (last in 1 until seq - 1) {
-            listOf(beam, SourceEvent.Board(BoardTrouble.BreaksMissing(last + 1, seq - 1)))
-        } else {
-            listOf(beam)
-        }
+        if (!catchup.take(boardId, seq, boardUs, gotMs)) return emptyList()
+        return listOf(SourceEvent.BeamBreak(seq, sync.toPhoneMs(boardUs) ?: gotMs, text))
     }
 
     private fun answered(
-        n: Long,
-        boardUs: Long,
+        pong: List<Long>,
         gotMs: Long,
     ) {
-        val sent = pings.remove(n)
-        pings.keys.removeAll { it < n } // a later one answered: the board is there
-        if (sent != null) sync.add(sent.toDouble(), gotMs.toDouble(), boardUs)
+        val sent = pings.remove(pong[0])
+        pings.keys.removeAll { it < pong[0] } // a later one answered: the board is there
+        if (sent != null) sync.add(sent.toDouble(), gotMs.toDouble(), pong[1], pong[2])
     }
 
     private fun status(
@@ -224,24 +408,34 @@ class BoardBridge(
 }
 
 /**
- * The board's bytes as lines: only a line with its end counts, as one cut short when the
- * port ended may be a BREAK of half its digits.
+ * The board's bytes as lines, each with its moment: only a line with its end counts, as one
+ * cut short when the link ended may be a BREAK of half its digits. Over USB a line is timed
+ * when its end came; over Bluetooth ([firstPiece]) when its first piece did, the radio's
+ * pieces of one line coming a connection event apart.
  */
 class LineSplitter(
+    private val firstPiece: Boolean = false,
     private val longest: Int = 256,
 ) {
     private val pending = StringBuilder()
+    private var startedAt = 0L
 
-    fun feed(bytes: ByteArray): List<String> {
-        val lines = mutableListOf<String>()
+    fun feed(
+        bytes: ByteArray,
+        at: Long,
+    ): List<Pair<String, Long>> {
+        val lines = mutableListOf<Pair<String, Long>>()
         for (byte in bytes) {
             val char = (byte.toInt() and 0xFF).toChar()
             when {
                 char == '\n' -> {
-                    lines += pending.toString().trim()
+                    lines += pending.toString().trim() to (if (firstPiece) startedAt else at)
                     pending.clear()
                 }
-                pending.length < longest -> pending.append(char)
+                pending.length < longest -> {
+                    if (pending.isEmpty()) startedAt = at
+                    pending.append(char)
+                }
             }
         }
         return lines

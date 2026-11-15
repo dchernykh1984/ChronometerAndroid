@@ -16,6 +16,7 @@ import com.dchernykh.chronometer.io.BackupWriter
 import com.dchernykh.chronometer.net.UploadClient
 import com.dchernykh.chronometer.source.SourceController
 import com.dchernykh.chronometer.source.SourceEvent
+import com.dchernykh.chronometer.source.board.BlePorts
 import com.dchernykh.chronometer.source.board.UsbBoardPorts
 import com.dchernykh.chronometer.source.builtInSource
 
@@ -56,6 +57,7 @@ class ChronometerApp : Application() {
                     it,
                     chipMap = { chipRepository.protocol.value?.map ?: ChipMap() },
                     boards = { UsbBoardPorts(this@ChronometerApp) },
+                    radios = { BlePorts(this@ChronometerApp, settingsStore.load().beamBoardName) },
                 )
             }
             cutoffRepository.whenANewCompetitionStarts(::startOver)

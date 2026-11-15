@@ -22,16 +22,23 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.io.Closeable
 import java.io.IOException
 
-/** A beam board found on USB: whether the app may use it, how to ask, how to open it. */
+/**
+ * A beam board found: whether the app may use it, how to ask, how to open it, and what the
+ * screen says while it may not ([refused]).
+ */
 class FoundBoard(
     val permitted: Boolean,
     val ask: () -> Unit,
     val open: () -> BoardPort,
+    val refused: BoardTrouble = BoardTrouble.NoPermission,
 )
 
-/** Where beam boards are found: the phone's USB, a fake in tests. */
+/** Where beam boards are found: the phone's USB, its Bluetooth, a fake in tests. */
 fun interface BoardPorts {
     fun find(): FoundBoard?
+
+    /** Why [find] found none, for the screen. */
+    fun missing(): BoardTrouble = BoardTrouble.NotFound
 
     /** Keep the phone's processor awake until closed: asleep, it would read the USB no more. */
     fun keepAwake(): Closeable = Closeable {}
@@ -52,6 +59,9 @@ interface BoardPort : Closeable {
         bytes: ByteArray,
         timeoutMs: Int,
     )
+
+    /** When the bytes [read] last gave came, where the link knows it better than the reader. */
+    fun arrivedAt(): Long? = null
 }
 
 /** After a break, edges this soon are the same rider's: a bike's wheels and body. */
@@ -71,21 +81,22 @@ private const val IDLE_MS = 5L
 private val OPENING = "\nHOLDOFF $HOLD_OFF_MS\nHELLO\nSTATUS\n".toByteArray()
 
 /**
- * The USB beam (spec FR-004): the beam board on the phone's USB, each break timed by the
- * board's own clock. It looks for the board every 2 s until one is plugged in, asks once
- * for leave to use it, and opens it again once it is lost: the source never ends by
- * itself, and the screen says why no break can come meanwhile. [clock] is the phone's
+ * The beam (spec FR-004): a beam board on the phone's USB, or over Bluetooth ([radio]), each
+ * break timed by the board's own clock. It looks for the board every 2 s until one is found,
+ * asks once for leave to use it, and opens it again once it is lost: the source never ends
+ * by itself, and the screen says why no break can come meanwhile. [clock] is the phone's
  * wall clock, [monotonic] a clock no one sets, both in milliseconds.
  */
-class UsbBeamSource(
+class BoardBeamSource(
     private val ports: BoardPorts,
+    private val radio: Boolean = false,
     private val clock: () -> Long = System::currentTimeMillis,
     private val monotonic: () -> Long = SystemClock::elapsedRealtime,
     private val io: CoroutineDispatcher = Dispatchers.IO,
 ) : CutoffSource {
-    // Carried over from one opening to the next, as the contract's steps 3 and 4 have it.
+    // Carried over from one opening to the next, as the contract's steps 3 to 5 have it.
     private var nextPing = 1L
-    private val lastBreaks = mutableMapOf<String, Long>()
+    private val counts = mutableMapOf<String, Counts>()
 
     override fun events(): Flow<SourceEvent> =
         channelFlow {
@@ -107,7 +118,7 @@ class UsbBeamSource(
             when {
                 found == null -> {
                     asked = false
-                    board.say(BoardTrouble.NotFound)
+                    board.say(ports.missing())
                     delay(LOOK_AGAIN_MS)
                 }
                 !found.permitted -> {
@@ -115,7 +126,7 @@ class UsbBeamSource(
                     // over the screen would stop the hand cutoffs until it was answered.
                     if (!asked && monotonic() - started < ASK_WITHIN_MS) found.ask()
                     asked = true
-                    board.say(BoardTrouble.NoPermission)
+                    board.say(found.refused)
                     delay(ASK_AGAIN_MS)
                 }
                 else -> useBoard(found, board)
@@ -154,25 +165,32 @@ class UsbBeamSource(
         delay(LOOK_AGAIN_MS)
     }
 
-    /** One opening of the port, until it is lost: the board's lines, a PING every 2 s. */
+    /** One opening of the link, until it is lost: the board's lines, a PING now and then. */
     private suspend fun ProducerScope<SourceEvent>.session(
         port: BoardPort,
         board: Said,
     ) {
         // The board may have started again: its clock with it, so no old round trip counts.
-        val bridge = BoardBridge(nextPing, lastBreaks)
+        val bridge = BoardBridge(radio, nextPing, counts)
         try {
             coroutineScope {
                 val lines = Channel<Pair<String, Long>>(Channel.UNLIMITED)
                 launch(io) { read(port, lines) }
                 write(port, OPENING)
                 var pingAt = monotonic()
+                var helloAt = pingAt + HELLO_EVERY_MS
                 do {
                     if (monotonic() >= pingAt) {
                         write(port, "${bridge.ping(clock())}\n".toByteArray())
-                        pingAt = monotonic() + PING_EVERY_MS
+                        pingAt = monotonic() + bridge.pingEveryMs
+                    }
+                    if (monotonic() >= helloAt) { // its count: a break whose line was lost shows
+                        write(port, "HELLO\n".toByteArray())
+                        helloAt = monotonic() + HELLO_EVERY_MS
                     }
                     bridge.release(clock()).forEach { send(it) }
+                    // RESEND: breaks counted while no link was up, or lost on the way.
+                    while (bridge.outbox.isNotEmpty()) write(port, "${bridge.outbox.removeAt(0)}\n".toByteArray())
                     board.say(bridge.trouble(clock()))
                 } while (take(lines, bridge))
                 coroutineContext.cancelChildren()
@@ -199,12 +217,13 @@ class UsbBeamSource(
         port: BoardPort,
         lines: Channel<Pair<String, Long>>,
     ) {
-        val splitter = LineSplitter()
+        val splitter = LineSplitter(firstPiece = radio)
         try {
             while (true) {
                 val started = monotonic()
                 val bytes = port.read(READ_MS)
-                pass(bytes, splitter, lines, idlesAfter(bytes, monotonic() - started))
+                val at = port.arrivedAt() ?: clock()
+                pass(bytes, at, splitter, lines, idlesAfter(bytes, monotonic() - started))
             }
         } catch (cancel: CancellationException) {
             throw cancel
@@ -215,12 +234,13 @@ class UsbBeamSource(
 
     private suspend fun pass(
         bytes: ByteArray,
+        at: Long,
         splitter: LineSplitter,
         lines: Channel<Pair<String, Long>>,
         idle: Boolean,
     ) {
         when {
-            bytes.isNotEmpty() -> splitter.feed(bytes).forEach { lines.send(it to clock()) }
+            bytes.isNotEmpty() -> splitter.feed(bytes, at).forEach { lines.send(it) }
             idle -> delay(IDLE_MS)
         }
     }

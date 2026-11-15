@@ -15,8 +15,8 @@ enum class SourceKind {
 
 /**
  * The devices a source can run (spec FR-004). The test ones make events up; the USB beam
- * is the beam board on the phone's USB; the others are listed, "not available yet", and
- * never started.
+ * is a beam board on the phone's USB, the Bluetooth beam one over Bluetooth; the others
+ * are listed, "not available yet", and never started.
  */
 enum class DeviceId(
     val kind: SourceKind,
@@ -25,7 +25,7 @@ enum class DeviceId(
 ) {
     TEST_BEAM(SourceKind.BEAM, available = true, test = true),
     USB_BEAM(SourceKind.BEAM, available = true, test = false),
-    BLE_BEAM(SourceKind.BEAM, available = false, test = false),
+    BLE_BEAM(SourceKind.BEAM, available = true, test = false),
     TEST_CHIPS(SourceKind.CHIPS, available = true, test = true),
     LLRP(SourceKind.CHIPS, available = false, test = false),
     RACERESULT(SourceKind.CHIPS, available = false, test = false),

@@ -26,9 +26,9 @@ connectivity returns.
   app alive during a long race; while it is on, the screen stays awake and the
   app suggests enabling Do Not Disturb.
 - **Cutoff sources**: by hand (the default), a light beam or timing chips, each
-  with its device. This release runs the USB beam, the test beam and the test
-  chips; the Bluetooth beam and the LLRP (Impinj, Zebra), RaceResult and R2000
-  readers are listed as "not available yet". A source runs while timing mode is on,
+  with its device. This release runs the USB beam, the Bluetooth beam, the test
+  beam and the test chips; the LLRP (Impinj, Zebra), RaceResult and R2000 readers
+  are listed as "not available yet". A source runs while timing mode is on,
   starts again after a growing pause (1 s up to 30 s) when it fails, and shows
   its state on the main screen. Recording by hand works in every mode.
 - **Light beam**: every break waits on the main screen, oldest first. Type the
@@ -171,18 +171,33 @@ Not Disturb; **Finish timing mode** stops it. Type a number and tap **Cutoff**
 **Cutoff source** in the settings picks by hand, the light beam or chips and
 the device; a test device marks its cutoffs as test data on the main screen.
 
-The **USB beam** is the beam board ChronometerPython builds and flashes
-(`firmware/beam_rp2040/` there): an RP2040 that times each break of its light
-with its own clock. Plug it into the phone with a USB-C (OTG) cable. Android
+The **USB beam** is a beam board ChronometerPython builds and flashes (its
+`beam/` folder says how): an RP2040-Zero or an ESP32-C3 SuperMini that times each
+break of its light with its own clock. Plug it into the phone with a USB-C (OTG)
+cable. Android
 asks whether to open the app for it: tick "always", and the board plugged in
 again mid-race asks nothing. The main screen says what keeps a break from
 coming: no board on USB, a board that does not answer, a blocked or flickering
 beam, breaks the board counted that never came. While it runs, the USB beam
 keeps the phone's processor awake, its screen off or not, so the board's lines
 are always read: that costs battery, and a long race wants a charged phone or a
-power bank. Both apps keep to one contract
-for the board's lines, ChronometerPython's
-`specs/001-event-sources/contracts/beam-board-protocol.md`.
+power bank.
+
+The **Bluetooth beam** reads the same boards over Bluetooth Low Energy: the
+RP2040-Zero through its BT05 module, the ESP32-C3 on its own. Type the board's
+name in the settings, `beam-` and the last 4 hex digits of its id (`beam-4103`),
+or its address: the app reads that board and no other in range. No pairing is
+needed. As timing mode starts, Android asks once to let the app use Bluetooth; on
+Android 11 and earlier the phone's location has to be on as well, as Android scans
+for Bluetooth devices only then.
+The main screen says what keeps a break from coming: no board named, Bluetooth
+off, the board out of range, the link lost. A break the board saw while the link
+was down comes once it is back, with its own time. Over Bluetooth the board's
+clock is read from the shortest trip each way of its last answers, as a radio
+reply waits for the radio's next connection event.
+
+Both apps keep to one contract for the board's lines, ChronometerPython's
+`specs/001-event-sources/contracts/beam-board-protocol.md` (version 0.4).
 With chips, the settings also hold the dead time and **Download start
 protocol**: while there is a network, it saves the settings, fetches the start
 list StartProtocolMaker uploaded to the site and replaces `start.txt` with it

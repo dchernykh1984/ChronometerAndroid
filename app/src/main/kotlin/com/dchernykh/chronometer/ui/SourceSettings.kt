@@ -80,6 +80,15 @@ internal fun CutoffSourceSection(
             )
         }
     }
+    if (kind == SourceKind.BEAM && chosen == DeviceId.BLE_BEAM) {
+        OutlinedTextField(
+            value = settings.beamBoardName,
+            onValueChange = { typed -> onChange(settings.copy(beamBoardName = typed.trim())) },
+            label = { Text(stringResource(R.string.beam_board_name)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().testTag("beamBoardField"),
+        )
+    }
     if (kind == SourceKind.CHIPS) {
         OutlinedTextField(
             // Cleared, the field stays empty: a "0" before the cursor would make 3 typed read 30.

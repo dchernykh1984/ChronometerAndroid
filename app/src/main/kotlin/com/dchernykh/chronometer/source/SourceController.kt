@@ -3,8 +3,8 @@ package com.dchernykh.chronometer.source
 import com.dchernykh.chronometer.chips.ChipMap
 import com.dchernykh.chronometer.data.SettingsStore
 import com.dchernykh.chronometer.data.chosenDevice
+import com.dchernykh.chronometer.source.board.BoardBeamSource
 import com.dchernykh.chronometer.source.board.BoardPorts
-import com.dchernykh.chronometer.source.board.UsbBeamSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,10 +31,13 @@ fun builtInSource(
     chipMap: () -> ChipMap,
     /** Where beam boards are found: the phone's USB in the app. */
     boards: () -> BoardPorts? = { null },
+    /** Where the beam board named in the settings is found over Bluetooth. */
+    radios: () -> BoardPorts? = { null },
 ): CutoffSource? =
     when (device) {
         DeviceId.TEST_BEAM -> TestBeamSource()
-        DeviceId.USB_BEAM -> boards()?.let(::UsbBeamSource)
+        DeviceId.USB_BEAM -> boards()?.let { BoardBeamSource(it) }
+        DeviceId.BLE_BEAM -> radios()?.let { BoardBeamSource(it, radio = true) }
         DeviceId.TEST_CHIPS -> TestChipsSource(chipMap)
         else -> null
     }
