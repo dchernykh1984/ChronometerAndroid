@@ -29,6 +29,11 @@ sealed interface SourceError {
         val message: String,
     ) : SourceError
 
+    /** A beam board's trouble, said in the referee's language. */
+    data class Board(
+        val trouble: BoardTrouble,
+    ) : SourceError
+
     /** An event the app could not use. */
     data class Invalid(
         val problem: EventProblem,
@@ -151,7 +156,21 @@ class SourceRunner(
             }
             // A device's word on its connection: nothing to store, so it is not handed on.
             event is SourceEvent.Status -> Unit
+            event is SourceEvent.Board -> statusState.update { it.copy(lastError = board(it.lastError, event)) }
             else -> onEvent(event)
         }
+    }
+}
+
+/** The last error once a board has spoken: its trouble, or a lasting one of it ended. */
+private fun board(
+    last: SourceError?,
+    event: SourceEvent.Board,
+): SourceError? {
+    val trouble = event.trouble
+    return when {
+        trouble != null -> SourceError.Board(trouble)
+        last is SourceError.Board && last.trouble.lasting -> null
+        else -> last
     }
 }

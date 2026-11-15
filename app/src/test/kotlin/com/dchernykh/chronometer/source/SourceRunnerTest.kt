@@ -38,6 +38,43 @@ class SourceRunnerTest {
         }
 
     @Test
+    fun aBoardsLastingTroubleEndsWhenAllIsWellButANoticeStays() =
+        runTest {
+            val said = mutableListOf<SourceError?>()
+            val taken = mutableListOf<SourceEvent>()
+            lateinit var board: SourceRunner
+            board =
+                runner {
+                    flow {
+                        for (event in listOf(
+                            SourceEvent.Board(BoardTrouble.NotFound),
+                            SourceEvent.Board(null),
+                            SourceEvent.Board(BoardTrouble.BreaksMissing(6, 7)),
+                            SourceEvent.Board(null),
+                            SourceEvent.Board(BoardTrouble.Blocked),
+                        )) {
+                            emit(event)
+                            said += board.status.value.lastError
+                        }
+                        awaitCancellation()
+                    }
+                }
+            backgroundScope.launch { board.run { taken += it } }
+            runCurrent()
+            assertEquals(
+                listOf(
+                    SourceError.Board(BoardTrouble.NotFound),
+                    null, // the board found: said no more
+                    SourceError.Board(BoardTrouble.BreaksMissing(6, 7)),
+                    SourceError.Board(BoardTrouble.BreaksMissing(6, 7)), // what was lost stays said
+                    SourceError.Board(BoardTrouble.Blocked),
+                ),
+                said,
+            )
+            assertEquals(emptyList<SourceEvent>(), taken) // a board's word is nothing to store
+        }
+
+    @Test
     fun aRunOf30SecondsBringsThePauseBackTo1Second() =
         runTest {
             val starts = mutableListOf<Long>()
