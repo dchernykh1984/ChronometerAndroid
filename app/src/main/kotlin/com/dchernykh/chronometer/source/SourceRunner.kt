@@ -97,6 +97,10 @@ class SourceRunner(
 ) {
     private val statusState = MutableStateFlow(SourceStatus())
 
+    // A board's last notice -- breaks that never came, say: said again once a lasting trouble
+    // that came after it is over, so the referee still sees what was lost.
+    private var notice: SourceError.Board? = null
+
     val status: StateFlow<SourceStatus> = statusState.asStateFlow()
 
     suspend fun run(onEvent: suspend (SourceEvent) -> Unit) {
@@ -156,21 +160,28 @@ class SourceRunner(
             }
             // A device's word on its connection: nothing to store, so it is not handed on.
             event is SourceEvent.Status -> Unit
-            event is SourceEvent.Board -> statusState.update { it.copy(lastError = board(it.lastError, event)) }
+            event is SourceEvent.Board -> {
+                event.trouble?.takeUnless { it.lasting }?.let { notice = SourceError.Board(it) }
+                statusState.update { it.copy(lastError = board(it.lastError, event, notice)) }
+            }
             else -> onEvent(event)
         }
     }
 }
 
-/** The last error once a board has spoken: its trouble, or a lasting one of it ended. */
+/**
+ * The last error once a board has spoken: its trouble; or, a lasting one of it ended, the
+ * board's last notice, if any.
+ */
 private fun board(
     last: SourceError?,
     event: SourceEvent.Board,
+    notice: SourceError.Board?,
 ): SourceError? {
     val trouble = event.trouble
     return when {
         trouble != null -> SourceError.Board(trouble)
-        last is SourceError.Board && last.trouble.lasting -> null
+        last is SourceError.Board && last.trouble.lasting -> notice
         else -> last
     }
 }
