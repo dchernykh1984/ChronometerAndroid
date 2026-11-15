@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- The beam board: MicroPython on an RP2040, vendor 0x2E8A, product 0x0005. -->
+    <!-- The beam boards: MicroPython on an RP2040, vendor 0x2E8A, product 0x0005, and on
+         an ESP32-C3's own USB, vendor 0x303A, product 0x1001. -->
     <usb-device
         product-id="5"
         vendor-id="11914" />
+    <usb-device
+        product-id="4097"
+        vendor-id="12346" />
 </resources>

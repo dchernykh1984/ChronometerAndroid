@@ -19,20 +19,28 @@ import org.junit.Test
 import java.io.IOException
 
 private const val BASE_MS = 1_767_261_600_000L
-private const val HELLO = "HELLO $BOARD_NAME $BOARD_FIRMWARE e6614103"
+private const val HELLO = "HELLO beam-rp2040 $BOARD_FIRMWARE e6614103"
 
-/** A beam board running its firmware on a port: it answers as main.py does, at board time 2 s. */
+/**
+ * A beam board running its firmware on a port: it answers as beamcore.py does, at board time
+ * 2 s, keeps its breaks for RESEND, and says when each of its lines came, as a radio does.
+ */
 private class FakePort : BoardPort {
     val written = mutableListOf<String>()
     private val said = ArrayDeque<ByteArray>()
+    val kept = mutableListOf<String>()
+    var arrived: Long? = null // what arrivedAt() says, as Bluetooth's port does
     var gone = false
     var breaks: RuntimeException? = null // what the system's USB may throw instead
     var answering = true
     var closed = false
 
     fun say(line: String) {
+        if (line.startsWith("BREAK")) kept += line
         said.addLast("$line\r\n".toByteArray())
     }
+
+    override fun arrivedAt(): Long? = arrived
 
     override fun read(timeoutMs: Int): ByteArray {
         if (gone) throw IOException("the beam board was unplugged")
@@ -47,9 +55,13 @@ private class FakePort : BoardPort {
         for (line in String(bytes).split("\n").dropLast(1)) {
             written += line
             when {
-                line == "HELLO" -> say(HELLO)
+                line == "HELLO" -> say("$HELLO ${kept.lastOrNull()?.split(" ")?.get(1) ?: "0"}")
                 line == "STATUS" -> say("STATUS beam")
-                line.startsWith("PING ") && answering -> say("PONG ${line.split(" ")[1]} 2000000")
+                line.startsWith("PING ") && answering -> say("PONG ${line.split(" ")[1]} 2000000 2000000")
+                line.startsWith("RESEND ") ->
+                    kept.filter { it.split(" ")[1].toLong() >= line.split(" ")[1].toLong() }.forEach {
+                        said.addLast("$it\r\n".toByteArray())
+                    }
             }
         }
     }
@@ -63,6 +75,9 @@ private class FakePort : BoardPort {
 private class FakeUsb {
     var plugged = true
     var permitted = true
+    var missing: BoardTrouble = BoardTrouble.NotFound // why none is found, as the ports say it
+    var refused: BoardTrouble = BoardTrouble.NoPermission
+    var answering = true // the boards to come answer PING
     var asked = 0
     var openFails: String? = null
     var openThrows: Exception? = null
@@ -77,14 +92,20 @@ private class FakeUsb {
                 } else {
                     FoundBoard(
                         permitted = permitted,
+                        refused = refused,
                         ask = { asked++ },
                         open = {
                             openFails?.let { throw IOException(it) }
                             openThrows?.let { throw it }
-                            FakePort().also { ports += it }
+                            FakePort().also {
+                                it.answering = answering
+                                ports += it
+                            }
                         },
                     )
                 }
+
+            override fun missing(): BoardTrouble = missing
 
             override fun keepAwake(): java.io.Closeable {
                 awake++
@@ -94,13 +115,22 @@ private class FakeUsb {
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class UsbBeamSourceTest {
+class BoardBeamSourceTest {
     private var collecting: Job? = null
 
-    private fun TestScope.running(usb: FakeUsb): MutableList<SourceEvent> {
+    private fun TestScope.running(
+        usb: FakeUsb,
+        radio: Boolean = false,
+    ): MutableList<SourceEvent> {
         val io = StandardTestDispatcher(testScheduler)
         val source =
-            UsbBeamSource(usb.boards, { BASE_MS + testScheduler.currentTime }, { testScheduler.currentTime }, io)
+            BoardBeamSource(
+                usb.boards,
+                radio = radio,
+                clock = { BASE_MS + testScheduler.currentTime },
+                monotonic = { testScheduler.currentTime },
+                io = io,
+            )
         val events = mutableListOf<SourceEvent>()
         collecting = backgroundScope.launch(io) { source.events().toList(events) }
         runCurrent()
@@ -279,5 +309,46 @@ class UsbBeamSourceTest {
             usb.ports[0].say("STATUS beam")
             advanceTimeBy(500)
             assertEquals(listOf(BoardTrouble.Blocked, null), troubles(events))
+        }
+
+    @Test
+    fun overBluetoothTheBoardIsPingedEverySecond() =
+        runTest {
+            val usb = FakeUsb()
+            running(usb, radio = true)
+            advanceTimeBy(3_500)
+            val pings = usb.ports[0].written.filter { it.startsWith("PING") }
+            assertEquals(listOf("PING 1", "PING 2", "PING 3", "PING 4"), pings)
+        }
+
+    @Test
+    fun aBreakTheBoardSawWhileItsLineWasLostComesWhenAskedForAgain() =
+        runTest {
+            val usb = FakeUsb()
+            val events = running(usb)
+            advanceTimeBy(500)
+            val port = usb.ports[0]
+            port.say("BREAK 1 2500000")
+            advanceTimeBy(500)
+            port.kept += "BREAK 2 2600000" // said, but lost on the way
+            port.say("BREAK 3 2700000")
+            advanceTimeBy(500)
+            assertTrue("RESEND 2" in port.written)
+            val seqs = events.filterIsInstance<SourceEvent.BeamBreak>().map { it.seq }
+            assertEquals(listOf(1L, 3L, 2L), seqs)
+            assertEquals(BASE_MS + 600, events.filterIsInstance<SourceEvent.BeamBreak>().last().timeMs)
+        }
+
+    @Test
+    fun aLineIsTimedWhenItsLinkSaysItCame() =
+        runTest {
+            val usb = FakeUsb().apply { answering = false } // no clock: a break takes its line's time
+            val events = running(usb)
+            advanceTimeBy(500)
+            val port = usb.ports[0]
+            port.arrived = BASE_MS + 123
+            port.say("BREAK 1 2500000")
+            advanceTimeBy(HELD_MS + 500)
+            assertEquals(BASE_MS + 123, events.filterIsInstance<SourceEvent.BeamBreak>().single().timeMs)
         }
 }
