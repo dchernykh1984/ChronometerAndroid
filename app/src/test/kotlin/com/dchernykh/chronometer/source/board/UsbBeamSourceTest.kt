@@ -13,6 +13,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.IOException
@@ -138,6 +139,13 @@ class UsbBeamSourceTest {
             )
             assertTrue(troubles(events).isEmpty()) // nothing went wrong, nothing said
         }
+
+    @Test
+    fun aReadThatWaitedItsTimeOutReadsAgainAtOnceAndOneBackAtOnceWithNothingPauses() {
+        assertTrue(idlesAfter(ByteArray(0), 0)) // an error, or a fake: no spinning
+        assertFalse(idlesAfter(ByteArray(0), 200)) // its 200 ms waited: a PONG may come now
+        assertFalse(idlesAfter("PONG 1 5\r\n".toByteArray(), 0))
+    }
 
     @Test
     fun noBoardIsSaidOnceAndOnePluggedInIsTaken() =
