@@ -123,7 +123,7 @@
     <string name="download_stale">жүктеу кезінде жаңа жарыс басталды</string>
     <string name="source_error_dropped">Оқиғалар сақталмады, бірнеше минут әрекеттен кейін %1$d тасталды: %2$s</string>
     <string name="source_board_not_found">USB-де сәуле тақтасы жоқ: оны қосыңыз</string>
-    <string name="source_board_no_permission">Қолданбаға сәуле тақтасын пайдалануға рұқсат беріңіз: Android сұрағына жауап беріңіз</string>
+    <string name="source_board_no_permission">Android сұрағанда қолданбаға сәуле тақтасын пайдалануға рұқсат беріңіз; қайта сұрауы үшін тақтаны қайта қосыңыз</string>
     <string name="source_board_not_opened">Сәуле тақтасын ашу мүмкін болмады: %1$s</string>
     <string name="source_board_held">Сәуле тақтасын басқа қолданба пайдаланып тұр: оны жабыңыз</string>
     <string name="source_board_no_port">Сәуле тақтасында тізбекті порт жоқ: онда микробағдарлама бар ма?</string>
