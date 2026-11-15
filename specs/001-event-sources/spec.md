@@ -359,8 +359,10 @@ the dead time and download a start protocol: the cutoff does not come back.
   needed.
 - The raw files use the desktop chronometer's formats, so tools made for its files read the
   phone's as well.
-- The USB beam needs no new permission: Android asks the referee to let the app use the board,
-  and "always" keeps the answer. The timing-mode service keeps its special-use type, which
-  already keeps the app alive; a Bluetooth device will need its permissions in its own round.
+- The USB beam needs one more permission, `WAKE_LOCK`, granted at install: it keeps the
+  processor awake while it runs, so a phone with its screen off still reads the board. Android
+  asks the referee to let the app use the board, and "always" keeps the answer. The timing-mode
+  service keeps its special-use type, which already keeps the app alive; a Bluetooth device will
+  need its permissions in its own round.
 - Not in this round: real devices, replaying a raw file, a chip report on the phone, check-in at the
   start corral, chips sent by the site.
