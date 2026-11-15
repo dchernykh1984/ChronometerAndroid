@@ -90,6 +90,11 @@ private fun boardText(trouble: BoardTrouble): String =
     when (trouble) {
         BoardTrouble.NotFound -> stringResource(R.string.source_board_not_found)
         BoardTrouble.NoPermission -> stringResource(R.string.source_board_no_permission)
+        BoardTrouble.NotNamed,
+        is BoardTrouble.NotInRange,
+        BoardTrouble.BluetoothOff,
+        BoardTrouble.NoBluetoothLeave,
+        -> radioText(trouble)
         is BoardTrouble.NotOpened -> notOpenedText(trouble)
         BoardTrouble.Lost -> stringResource(R.string.source_board_lost)
         BoardTrouble.Silent -> stringResource(R.string.source_board_silent)
@@ -104,6 +109,16 @@ private fun boardText(trouble: BoardTrouble): String =
                 stringResource(R.string.source_board_breaks_missing, trouble.first, trouble.last)
             }
         is BoardTrouble.ClockNotRead -> stringResource(R.string.source_board_clock_not_read, trouble.breaks)
+    }
+
+/** The Bluetooth beam's own troubles in finding its board. */
+@Composable
+private fun radioText(trouble: BoardTrouble): String =
+    when (trouble) {
+        is BoardTrouble.NotInRange -> stringResource(R.string.source_board_not_in_range, trouble.name)
+        BoardTrouble.BluetoothOff -> stringResource(R.string.source_board_bluetooth_off)
+        BoardTrouble.NoBluetoothLeave -> stringResource(R.string.source_board_no_bluetooth_leave)
+        else -> stringResource(R.string.source_board_not_named)
     }
 
 @Composable

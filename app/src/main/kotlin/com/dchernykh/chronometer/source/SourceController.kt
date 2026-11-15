@@ -31,10 +31,13 @@ fun builtInSource(
     chipMap: () -> ChipMap,
     /** Where beam boards are found: the phone's USB in the app. */
     boards: () -> BoardPorts? = { null },
+    /** Where the beam board named in the settings is found over Bluetooth. */
+    radios: () -> BoardPorts? = { null },
 ): CutoffSource? =
     when (device) {
         DeviceId.TEST_BEAM -> TestBeamSource()
         DeviceId.USB_BEAM -> boards()?.let { BoardBeamSource(it) }
+        DeviceId.BLE_BEAM -> radios()?.let { BoardBeamSource(it, radio = true) }
         DeviceId.TEST_CHIPS -> TestChipsSource(chipMap)
         else -> null
     }

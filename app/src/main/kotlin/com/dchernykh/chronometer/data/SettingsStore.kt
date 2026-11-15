@@ -46,6 +46,7 @@ class SettingsStore(
             language = AppLanguage.fromName(prefs.getString(KEY_LANG, null)),
             cutoffSource = SourceKind.fromName(prefs.getString(KEY_SOURCE, null)),
             beamDevice = DeviceId.fromName(prefs.getString(KEY_BEAM_DEVICE, null), SourceKind.BEAM),
+            beamBoardName = prefs.getString(KEY_BEAM_BOARD, "").orEmpty(),
             chipsDevice = DeviceId.fromName(prefs.getString(KEY_CHIPS_DEVICE, null), SourceKind.CHIPS),
             deadTimeS = prefs.getInt(KEY_DEAD_TIME, DEFAULT_DEAD_TIME_S).coerceIn(DEAD_TIME_RANGE_S),
         )
@@ -65,6 +66,7 @@ class SettingsStore(
             putString(KEY_LANG, settings.language.name)
             putString(KEY_SOURCE, settings.cutoffSource.name)
             putString(KEY_BEAM_DEVICE, settings.beamDevice.name)
+            putString(KEY_BEAM_BOARD, settings.beamBoardName.trim())
             putString(KEY_CHIPS_DEVICE, settings.chipsDevice.name)
             // One out of range is no dead time: the one stored stays, never one clamped to 1 s.
             putInt(
@@ -143,6 +145,7 @@ class SettingsStore(
         const val KEY_BEAM_DEVICE = "beam_device"
         const val KEY_CHIPS_DEVICE = "chips_device"
         const val KEY_DEAD_TIME = "dead_time_s"
+        const val KEY_BEAM_BOARD = "beam_board_name"
         const val KEY_REV = "client_revision"
         const val KEY_EMPTY_SNAPSHOT = "allow_empty_snapshot"
     }

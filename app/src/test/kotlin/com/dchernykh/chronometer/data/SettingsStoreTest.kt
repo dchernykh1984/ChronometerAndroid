@@ -175,6 +175,7 @@ class SettingsStoreTest {
             store.load().copy(
                 cutoffSource = SourceKind.CHIPS,
                 beamDevice = DeviceId.USB_BEAM,
+                beamBoardName = " beam-4103 ",
                 chipsDevice = DeviceId.LLRP,
                 deadTimeS = 8,
             ),
@@ -183,6 +184,7 @@ class SettingsStoreTest {
         val loaded = SettingsStore(RuntimeEnvironment.getApplication()).load()
         assertEquals(SourceKind.CHIPS, loaded.cutoffSource)
         assertEquals(DeviceId.USB_BEAM, loaded.beamDevice)
+        assertEquals("beam-4103", loaded.beamBoardName) // kept, its spaces trimmed
         assertEquals(DeviceId.LLRP, loaded.chipsDevice)
         assertEquals(8, loaded.deadTimeS)
     }

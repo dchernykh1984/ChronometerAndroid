@@ -5,22 +5,32 @@ import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dchernykh.chronometer.data.SettingsStore
+import com.dchernykh.chronometer.source.board.BluetoothLeave
 import com.dchernykh.chronometer.ui.ChipsScreen
 import com.dchernykh.chronometer.ui.ChronometerViewModel
 import com.dchernykh.chronometer.ui.MainScreen
 import com.dchernykh.chronometer.ui.SettingsScreen
 import com.dchernykh.chronometer.ui.theme.ChronometerTheme
 import com.dchernykh.chronometer.util.LocaleContext
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    // The Bluetooth beam asks for its leave as timing mode starts; the answer is read again
+    // at the next look for the board, 1 s later.
+    private val bluetoothLeave = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {}
+
     override fun attachBaseContext(newBase: Context) {
         // Apply the stored UI language before any resources are resolved.
         val language = SettingsStore(newBase).load().language
@@ -37,6 +47,11 @@ class MainActivity : ComponentActivity() {
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         }
         setContent { AppRoot() }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                BluetoothLeave.asks.collect { bluetoothLeave.launch(BluetoothLeave.needed) }
+            }
+        }
     }
 }
 

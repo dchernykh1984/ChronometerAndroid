@@ -73,6 +73,20 @@ sealed interface BoardTrouble {
     /** No beam board on USB. */
     data object NotFound : BoardTrouble
 
+    /** The Bluetooth beam with no board named in the settings: none is read (contract, step 1). */
+    data object NotNamed : BoardTrouble
+
+    /** No board of the name in the settings in Bluetooth range. */
+    data class NotInRange(
+        val name: String,
+    ) : BoardTrouble
+
+    /** The phone's Bluetooth is off. */
+    data object BluetoothOff : BoardTrouble
+
+    /** Android waits for the referee to let the app use Bluetooth. */
+    data object NoBluetoothLeave : BoardTrouble
+
     /** Android waits for the referee to let the app use the board. */
     data object NoPermission : BoardTrouble
 
