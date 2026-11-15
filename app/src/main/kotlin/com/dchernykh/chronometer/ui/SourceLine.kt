@@ -12,6 +12,7 @@ import androidx.compose.ui.text.font.FontWeight
 import com.dchernykh.chronometer.R
 import com.dchernykh.chronometer.data.Settings
 import com.dchernykh.chronometer.data.chosenDevice
+import com.dchernykh.chronometer.source.BoardTrouble
 import com.dchernykh.chronometer.source.EventProblem
 import com.dchernykh.chronometer.source.SourceError
 import com.dchernykh.chronometer.source.SourceState
@@ -73,6 +74,7 @@ private fun errorText(error: SourceError): String =
         SourceError.Ended -> stringResource(R.string.source_error_ended)
         is SourceError.NotStored -> stringResource(R.string.source_error_not_stored, error.message)
         is SourceError.Dropped -> stringResource(R.string.source_error_dropped, error.events, error.message)
+        is SourceError.Board -> boardText(error.trouble)
         is SourceError.Invalid ->
             stringResource(
                 when (error.problem) {
@@ -80,4 +82,25 @@ private fun errorText(error: SourceError): String =
                     EventProblem.TIME_OUT_OF_RANGE -> R.string.source_error_time
                 },
             )
+    }
+
+@Composable
+private fun boardText(trouble: BoardTrouble): String =
+    when (trouble) {
+        BoardTrouble.NotFound -> stringResource(R.string.source_board_not_found)
+        BoardTrouble.NoPermission -> stringResource(R.string.source_board_no_permission)
+        is BoardTrouble.NotOpened -> stringResource(R.string.source_board_not_opened, trouble.message)
+        BoardTrouble.Lost -> stringResource(R.string.source_board_lost)
+        BoardTrouble.Silent -> stringResource(R.string.source_board_silent)
+        BoardTrouble.Blocked -> stringResource(R.string.source_board_blocked)
+        BoardTrouble.Unsteady -> stringResource(R.string.source_board_unsteady)
+        is BoardTrouble.OtherFirmware ->
+            stringResource(R.string.source_board_other_firmware, trouble.runs, trouble.wanted)
+        is BoardTrouble.BreaksMissing ->
+            if (trouble.first == trouble.last) {
+                stringResource(R.string.source_board_break_missing, trouble.first)
+            } else {
+                stringResource(R.string.source_board_breaks_missing, trouble.first, trouble.last)
+            }
+        is BoardTrouble.ClockNotRead -> stringResource(R.string.source_board_clock_not_read, trouble.breaks)
     }

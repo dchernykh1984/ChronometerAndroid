@@ -122,4 +122,15 @@
     <string name="download_unusable">start.txt жүктелді, бірақ оның картасын қолдану мүмкін болмады: %1$s</string>
     <string name="download_stale">жүктеу кезінде жаңа жарыс басталды</string>
     <string name="source_error_dropped">Оқиғалар сақталмады, бірнеше минут әрекеттен кейін %1$d тасталды: %2$s</string>
+    <string name="source_board_not_found">USB-де сәуле тақтасы жоқ: оны қосыңыз</string>
+    <string name="source_board_no_permission">Қолданбаға сәуле тақтасын пайдалануға рұқсат беріңіз: Android сұрағына жауап беріңіз</string>
+    <string name="source_board_not_opened">Сәуле тақтасын ашу мүмкін болмады: %1$s</string>
+    <string name="source_board_lost">Сәуле тақтасымен байланыс үзілді</string>
+    <string name="source_board_silent">Сәуле тақтасы жауап бермейді: оны ажыратып, қайта қосыңыз</string>
+    <string name="source_board_blocked">Сәуле жабық: жарық қайтқанша іске қосылу көрінбейді</string>
+    <string name="source_board_unsteady">Датчиктегі жарық жыпылықтайды: іске қосылу көрінбейді; лазерді қайта бағыттаңыз</string>
+    <string name="source_board_other_firmware">Сәуле тақтасында %1$s микробағдарламасы, қолданба %2$s үшін: оны қайта жазыңыз</string>
+    <string name="source_board_break_missing">Сәуленің %1$d іске қосылуы келмеді: бұл мәрені басқаша тексеріңіз</string>
+    <string name="source_board_breaks_missing">Сәуленің %1$d-%2$d іске қосылулары келмеді: бұл мәрелерді басқаша тексеріңіз</string>
+    <string name="source_board_clock_not_read">Келген уақыты бойынша белгіленген сәуле іске қосылулары, тақта сағаты оқылмады: %1$d</string>
 </resources>

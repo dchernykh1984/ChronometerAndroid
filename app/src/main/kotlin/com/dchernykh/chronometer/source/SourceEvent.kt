@@ -53,6 +53,68 @@ sealed interface SourceEvent {
         val message: String,
         val fatal: Boolean = false,
     ) : SourceEvent
+
+    /**
+     * A beam board's word on itself, for the screen to say in the referee's language: a
+     * trouble, or null once all is well again, which ends a lasting one.
+     */
+    data class Board(
+        val trouble: BoardTrouble?,
+    ) : SourceEvent
+}
+
+/**
+ * What the referee must know of a beam board (the beam board contract, step 4). A lasting
+ * one holds until the board says all is well; a notice stays until another error.
+ */
+sealed interface BoardTrouble {
+    val lasting: Boolean get() = true
+
+    /** No beam board on USB. */
+    data object NotFound : BoardTrouble
+
+    /** Android waits for the referee to let the app use the board. */
+    data object NoPermission : BoardTrouble
+
+    /** The board could not be opened, as the system words it. */
+    data class NotOpened(
+        val message: String,
+    ) : BoardTrouble
+
+    /** The board's link was lost: unplugged, or its port failed. */
+    data object Lost : BoardTrouble
+
+    /** A PING unanswered for 6 s: the board's program has stopped, its port still open. */
+    data object Silent : BoardTrouble
+
+    /** The beam blocked for longer than any rider takes: no break can be seen. */
+    data object Blocked : BoardTrouble
+
+    /** No state of the light holds: it flickers on the sensor, no break can be seen. */
+    data object Unsteady : BoardTrouble
+
+    /** The board runs another firmware than the one the app is built for. */
+    data class OtherFirmware(
+        val runs: String,
+        val wanted: String,
+    ) : BoardTrouble {
+        override val lasting: Boolean get() = false
+    }
+
+    /** Breaks the board counted that never came: its link was down as they did. */
+    data class BreaksMissing(
+        val first: Long,
+        val last: Long,
+    ) : BoardTrouble {
+        override val lasting: Boolean get() = false
+    }
+
+    /** Breaks timed by when their lines came, the board's clock not read. */
+    data class ClockNotRead(
+        val breaks: Int,
+    ) : BoardTrouble {
+        override val lasting: Boolean get() = false
+    }
 }
 
 /** The first moment an event can have: 2000-01-01, as the desktop protocol decides. */
