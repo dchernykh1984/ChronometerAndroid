@@ -9,7 +9,9 @@ import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbEndpoint
 import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
+import android.os.PowerManager
 import com.dchernykh.chronometer.source.OpenFailure
+import java.io.Closeable
 import java.io.IOException
 
 /** MicroPython on an RP2040: the beam board's USB ids (res/xml/beam_board.xml says the same). */
@@ -17,6 +19,9 @@ const val BOARD_VENDOR = 0x2E8A
 const val BOARD_PRODUCT = 0x0005
 
 private const val ASKED = "com.dchernykh.chronometer.BEAM_BOARD_ASKED"
+
+// Longer than any race day; the lock goes when the USB beam stops.
+private const val AWAKE_MS = 24 * 60 * 60 * 1_000L
 
 // CDC's SET_CONTROL_LINE_STATE, DTR and RTS on: MicroPython takes a port without DTR for
 // one no program has open.
@@ -43,6 +48,18 @@ class UsbBoardPorts(
             ask = { ask(usb, device) },
             open = { UsbBoardPort.open(usb, device) },
         )
+    }
+
+    override fun keepAwake(): Closeable {
+        val lock =
+            context
+                .getSystemService(PowerManager::class.java)
+                ?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "chronometer:usb-beam")
+                ?.apply {
+                    setReferenceCounted(false)
+                    acquire(AWAKE_MS)
+                }
+        return Closeable { lock?.takeIf { it.isHeld }?.release() }
     }
 
     // Android's question to the referee; its answer is read by hasPermission, not here.

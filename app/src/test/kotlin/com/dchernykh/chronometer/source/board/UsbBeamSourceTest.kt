@@ -4,6 +4,7 @@ import com.dchernykh.chronometer.source.BoardTrouble
 import com.dchernykh.chronometer.source.OpenFailure
 import com.dchernykh.chronometer.source.SourceEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -65,36 +66,58 @@ private class FakeUsb {
     var openFails: String? = null
     var openThrows: Exception? = null
     val ports = mutableListOf<FakePort>()
+    var awake = 0 // the processor's keep-awake locks held
 
     val boards =
-        BoardPorts {
-            if (!plugged) {
-                null
-            } else {
-                FoundBoard(
-                    permitted = permitted,
-                    ask = { asked++ },
-                    open = {
-                        openFails?.let { throw IOException(it) }
-                        openThrows?.let { throw it }
-                        FakePort().also { ports += it }
-                    },
-                )
+        object : BoardPorts {
+            override fun find(): FoundBoard? =
+                if (!plugged) {
+                    null
+                } else {
+                    FoundBoard(
+                        permitted = permitted,
+                        ask = { asked++ },
+                        open = {
+                            openFails?.let { throw IOException(it) }
+                            openThrows?.let { throw it }
+                            FakePort().also { ports += it }
+                        },
+                    )
+                }
+
+            override fun keepAwake(): java.io.Closeable {
+                awake++
+                return java.io.Closeable { awake-- }
             }
         }
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class UsbBeamSourceTest {
+    private var collecting: Job? = null
+
     private fun TestScope.running(usb: FakeUsb): MutableList<SourceEvent> {
         val io = StandardTestDispatcher(testScheduler)
         val source =
             UsbBeamSource(usb.boards, { BASE_MS + testScheduler.currentTime }, { testScheduler.currentTime }, io)
         val events = mutableListOf<SourceEvent>()
-        backgroundScope.launch(io) { source.events().toList(events) }
+        collecting = backgroundScope.launch(io) { source.events().toList(events) }
         runCurrent()
         return events
     }
+
+    @Test
+    fun theProcessorIsKeptAwakeWhileTheUsbBeamRunsAndLetSleepOnceItStops() =
+        runTest {
+            val usb = FakeUsb()
+            running(usb)
+            advanceTimeBy(500)
+            assertEquals(1, usb.awake)
+            collecting!!.cancel()
+            advanceTimeBy(500)
+            assertEquals(0, usb.awake)
+            assertTrue(usb.ports.single().closed)
+        }
 
     private fun troubles(events: List<SourceEvent>) = events.filterIsInstance<SourceEvent.Board>().map { it.trouble }
 

@@ -32,6 +32,9 @@ class FoundBoard(
 /** Where beam boards are found: the phone's USB, a fake in tests. */
 fun interface BoardPorts {
     fun find(): FoundBoard?
+
+    /** Keep the phone's processor awake until closed: asleep, it would read the USB no more. */
+    fun keepAwake(): Closeable = Closeable {}
 }
 
 /** A board that could not be opened, for a reason the screen says in the referee's language. */
@@ -83,26 +86,36 @@ class UsbBeamSource(
 
     override fun events(): Flow<SourceEvent> =
         channelFlow {
-            val board = Said(this)
-            var asked = false
-            while (true) {
-                val found = withContext(io) { ports.find() }
-                when {
-                    found == null -> {
-                        asked = false
-                        board.say(BoardTrouble.NotFound)
-                        delay(LOOK_AGAIN_MS)
-                    }
-                    !found.permitted -> {
-                        if (!asked) found.ask() // once a plugging in: its question stays on screen
-                        asked = true
-                        board.say(BoardTrouble.NoPermission)
-                        delay(ASK_AGAIN_MS)
-                    }
-                    else -> useBoard(found, board)
-                }
+            // The phone in a pocket, its screen off: the board's lines must still be read, or
+            // the board drops them once they wait half a second.
+            val awake = ports.keepAwake()
+            try {
+                watch(Said(this))
+            } finally {
+                awake.close()
             }
         }
+
+    private suspend fun ProducerScope<SourceEvent>.watch(board: Said) {
+        var asked = false
+        while (true) {
+            val found = withContext(io) { ports.find() }
+            when {
+                found == null -> {
+                    asked = false
+                    board.say(BoardTrouble.NotFound)
+                    delay(LOOK_AGAIN_MS)
+                }
+                !found.permitted -> {
+                    if (!asked) found.ask() // once a plugging in: its question stays on screen
+                    asked = true
+                    board.say(BoardTrouble.NoPermission)
+                    delay(ASK_AGAIN_MS)
+                }
+                else -> useBoard(found, board)
+            }
+        }
+    }
 
     // Whatever the system's USB throws -- a SecurityException for leave taken back, say -- is
     // the board not opened, tried again in 2 s, not the source failed and paused for longer.
