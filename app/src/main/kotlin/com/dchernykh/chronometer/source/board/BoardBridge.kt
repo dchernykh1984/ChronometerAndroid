@@ -18,6 +18,9 @@ const val BOARD_FIRMWARE = "0.4"
 const val PING_EVERY_MS = 2_000L
 const val RADIO_PING_EVERY_MS = 1_000L
 
+/** The board's HELLO asked again: its count shows a break whose line was lost, the last say. */
+const val HELLO_EVERY_MS = 5_000L
+
 /** A PING unanswered for 6 s: the board's program has stopped. */
 const val SILENT_MS = 6_000L
 
@@ -174,24 +177,27 @@ class Catchup(
     val outbox = ArrayList<String>()
 
     /**
-     * The count board [boardId]'s HELLO gave. The first HELLO: breaks before it were not this
-     * app's, but those that came on this link waiting for it ([firstHeld]) are.
+     * The count board [boardId]'s HELLO gave; true when it shows the board started again. The
+     * first HELLO: breaks before it were not this app's, but those that came on this link
+     * waiting for it ([firstHeld]) are.
      */
     fun hello(
         boardId: String,
         seq: Long,
         firstHeld: Long?,
         gotMs: Long,
-    ) {
+    ): Boolean {
         val known = counts[boardId]
         when {
             known == null -> counts[boardId] = Counts(minOf(seq + 1, firstHeld ?: (seq + 1)) - 1)
-            seq > known.last -> resend(known, known.last + 1, seq, gotMs) // missed while down
+            seq > known.last -> resend(known, known.last + 1, seq, gotMs) // missed, or its line lost
             seq < known.last -> {
                 known.restart() // it started again, and counted while no link was up
                 if (seq > 0) resend(known, 1, seq, gotMs)
+                return true
             }
         }
+        return false
     }
 
     /** Whether a BREAK is one this app has not had; a gap before it is asked for again. */
@@ -264,7 +270,8 @@ class BoardBridge(
     var nextPing: Long = 1,
     val counts: MutableMap<String, Counts> = mutableMapOf(),
 ) {
-    val sync: BoardClock = if (radio) RadioSync() else ClockSync()
+    var sync: BoardClock = if (radio) RadioSync() else ClockSync()
+        private set
     val pingEveryMs: Long get() = if (radio) RADIO_PING_EVERY_MS else PING_EVERY_MS
     private val catchup = Catchup(counts)
 
@@ -341,13 +348,16 @@ class BoardBridge(
         rest: List<String>,
         gotMs: Long,
     ): List<SourceEvent> {
-        board = rest.joinToString(" ")
+        val first = board.isEmpty() // asked again every few seconds: said once
+        board = rest.take(3).joinToString(" ")
         boardId = rest.getOrElse(2) { "" }
-        rest.getOrNull(3)?.takeIf(::isWholeNumber)?.toLongOrNull()?.let {
-            catchup.hello(boardId, it, held.minOfOrNull(Held::seq), gotMs)
+        val count = rest.getOrNull(3)?.takeIf(::isWholeNumber)?.toLongOrNull()
+        if (count != null && catchup.hello(boardId, count, held.minOfOrNull(Held::seq), gotMs)) {
+            // Its clock started again with it: a link that stayed up keeps no trip of the old one.
+            sync = if (radio) RadioSync() else ClockSync()
         }
         val runs = rest.getOrElse(1) { "?" }
-        return if (runs == BOARD_FIRMWARE) {
+        return if (runs == BOARD_FIRMWARE || !first) {
             emptyList()
         } else {
             listOf(SourceEvent.Board(BoardTrouble.OtherFirmware(runs, BOARD_FIRMWARE)))
