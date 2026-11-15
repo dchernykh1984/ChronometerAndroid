@@ -63,7 +63,16 @@ each commit: `./gradlew ktlintCheck detekt lintDebug testDebugUnitTest koverVeri
 - [X] T013 README (features, using the app, data files), `docs/server-protocol.md` (the download),
   `docs/state-persistence.md` (new tables). -- `docs: describe cutoff sources, chip files and the start protocol download`
 
+## Phase 6: the USB beam
+
+- [ ] T014 [US4] The USB beam: `UsbBeamSource` finds the beam board by its USB ids, asks once for
+  leave, opens its CDC port with DTR, and reads it by the beam board contract: a break timed by
+  the board's clock, a break before the HELLO kept, breaks never come said, a blocked or
+  flickering beam said. Its troubles on the main screen in three languages. Unit tests with a
+  fake board. Done when a finger over the sensor puts a break in the queue on a phone.
+  -- `feat(beam): take beam breaks from the beam board on USB`
+
 ## Dependencies
 
 T001 -> T002 -> T003 -> T004 -> T005 -> T006. T006 -> T007. T006 -> T008 -> T009 -> T010 -> T011.
-T012 after T009 and T007. T013 last.
+T012 after T009 and T007. T013 last of the first round. T014 after T006.

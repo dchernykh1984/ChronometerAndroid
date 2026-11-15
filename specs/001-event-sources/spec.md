@@ -252,10 +252,14 @@ the dead time and download a start protocol: the cutoff does not come back.
   carries a sequence number, a time on the phone's clock if known and the device's time; a source
   also reports its status and errors. On the phone a source runs inside the app; a device added
   later may speak the same event lines over its USB or Bluetooth link.
-- **FR-004**: Devices available in this round: test beam (a break every few seconds at random) and
-  test chips (passes of the chips of the loaded map in turn, two to four reads each within a
-  second, and now and then a chip that is not in the map; with no map loaded, only chips no map
-  holds). The others are stubs: listed, marked "not available yet", never started.
+- **FR-004**: Devices available: test beam (a break every few seconds at random), test chips
+  (passes of the chips of the loaded map in turn, two to four reads each within a second, and now
+  and then a chip that is not in the map; with no map loaded, only chips no map holds), and the
+  USB beam: the beam board on the phone's USB, read as ChronometerPython's beam board contract
+  (`specs/001-event-sources/contracts/beam-board-protocol.md` there) has it. Its troubles (no
+  board, no leave to use it, a board that does not answer, a blocked or flickering beam, breaks
+  that never came, another firmware) are said on the main screen in the referee's language. The
+  others are stubs: listed, marked "not available yet", never started.
 - **FR-005**: A source that fails is started again after 1 s, the pause doubling to at most 30 s
   while it keeps failing and returning to 1 s after 30 s of running without a failure.
 - **FR-006**: A read's or a break's time is the time on the phone's clock the source reports or,
@@ -355,7 +359,8 @@ the dead time and download a start protocol: the cutoff does not come back.
   needed.
 - The raw files use the desktop chronometer's formats, so tools made for its files read the
   phone's as well.
-- A real USB or Bluetooth device will need its permissions and a connected-device type for the
-  foreground service; that is for the round that adds one.
+- The USB beam needs no new permission: Android asks the referee to let the app use the board,
+  and "always" keeps the answer. The timing-mode service keeps its special-use type, which
+  already keeps the app alive; a Bluetooth device will need its permissions in its own round.
 - Not in this round: real devices, replaying a raw file, a chip report on the phone, check-in at the
   start corral, chips sent by the site.
