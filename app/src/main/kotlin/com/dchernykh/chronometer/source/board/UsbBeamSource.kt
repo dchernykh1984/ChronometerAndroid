@@ -4,6 +4,7 @@ import android.os.SystemClock
 import com.dchernykh.chronometer.source.BoardTrouble
 import com.dchernykh.chronometer.source.CutoffSource
 import com.dchernykh.chronometer.source.SourceEvent
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -92,19 +93,24 @@ class UsbBeamSource(
                         board.say(BoardTrouble.NoPermission)
                         delay(ASK_AGAIN_MS)
                     }
-                    else -> run(found, board)
+                    else -> useBoard(found, board)
                 }
             }
         }
 
-    private suspend fun ProducerScope<SourceEvent>.run(
+    // Whatever the system's USB throws -- a SecurityException for leave taken back, say -- is
+    // the board not opened, tried again in 2 s, not the source failed and paused for longer.
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun ProducerScope<SourceEvent>.useBoard(
         found: FoundBoard,
         board: Said,
     ) {
         val port =
             try {
                 withContext(io) { found.open() }
-            } catch (failure: IOException) {
+            } catch (cancel: CancellationException) {
+                throw cancel
+            } catch (failure: Exception) {
                 board.say(BoardTrouble.NotOpened(failure.message ?: failure.javaClass.simpleName))
                 delay(LOOK_AGAIN_MS)
                 return
@@ -158,6 +164,7 @@ class UsbBeamSource(
     }
 
     /** The port's lines into [lines], each timed as it came, until the port fails. */
+    @Suppress("TooGenericExceptionCaught") // whatever ends the reading ends the link
     private suspend fun read(
         port: BoardPort,
         lines: Channel<Pair<String, Long>>,
@@ -165,7 +172,9 @@ class UsbBeamSource(
         val splitter = LineSplitter()
         try {
             while (true) pass(port.read(READ_MS), splitter, lines)
-        } catch (_: IOException) {
+        } catch (cancel: CancellationException) {
+            throw cancel
+        } catch (_: Exception) {
             lines.close()
         }
     }
