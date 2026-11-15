@@ -177,7 +177,10 @@ with its own clock. Plug it into the phone with a USB-C (OTG) cable. Android
 asks whether to open the app for it: tick "always", and the board plugged in
 again mid-race asks nothing. The main screen says what keeps a break from
 coming: no board on USB, a board that does not answer, a blocked or flickering
-beam, breaks the board counted that never came. Both apps keep to one contract
+beam, breaks the board counted that never came. While it runs, the USB beam
+keeps the phone's processor awake, its screen off or not, so the board's lines
+are always read: that costs battery, and a long race wants a charged phone or a
+power bank. Both apps keep to one contract
 for the board's lines, ChronometerPython's
 `specs/001-event-sources/contracts/beam-board-protocol.md`.
 With chips, the settings also hold the dead time and **Download start
