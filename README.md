@@ -187,7 +187,9 @@ The **Bluetooth beam** reads the same boards over Bluetooth Low Energy: the
 RP2040-Zero through its BT05 module, the ESP32-C3 on its own. Type the board's
 name in the settings, `beam-` and the last 4 hex digits of its id (`beam-4103`),
 or its address: the app reads that board and no other in range. No pairing is
-needed. As timing mode starts, Android asks once to let the app use Bluetooth.
+needed. As timing mode starts, Android asks once to let the app use Bluetooth; on
+Android 11 and earlier the phone's location has to be on as well, as Android scans
+for Bluetooth devices only then.
 The main screen says what keeps a break from coming: no board named, Bluetooth
 off, the board out of range, the link lost. A break the board saw while the link
 was down comes once it is back, with its own time. Over Bluetooth the board's

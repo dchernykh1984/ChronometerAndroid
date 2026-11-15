@@ -35,6 +35,10 @@ val SERIAL_CHARACTERISTIC: UUID = UUID.fromString("0000ffe1-0000-1000-8000-00805
 private val NOTIFICATIONS: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
 
 private const val SCAN_MS = 5_000L
+
+// Android lets an app start 5 scans in 30 s, and then quietly gives it no result: a board
+// that fails to connect again and again must not run the app into that.
+private const val SCAN_SPACING_MS = 6_500L
 private const val CONNECT_MS = 10_000L
 private const val CHUNK = 20 // a write's bytes at the default ATT MTU
 private const val AWAKE_MS = 24 * 60 * 60 * 1_000L
@@ -79,8 +83,12 @@ class BlePorts(
     private val context: Context,
     private val name: String,
     private val clock: () -> Long = System::currentTimeMillis,
+    private val monotonic: () -> Long = android.os.SystemClock::elapsedRealtime,
+    private val pause: (Long) -> Unit = Thread::sleep,
+    private val scanMs: Long = SCAN_MS,
 ) : BoardPorts {
     private var why: BoardTrouble = BoardTrouble.NotFound
+    private var scannedAt: Long? = null
 
     override fun missing(): BoardTrouble = why
 
@@ -130,6 +138,8 @@ class BlePorts(
         wanted: String,
     ): BluetoothDevice? {
         scanner ?: return null
+        scannedAt?.let { last -> (SCAN_SPACING_MS - (monotonic() - last)).takeIf { it > 0 }?.let(pause) }
+        scannedAt = monotonic()
         val found = LinkedBlockingQueue<BluetoothDevice>()
         val callback =
             object : ScanCallback() {
@@ -144,7 +154,7 @@ class BlePorts(
         val settings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
         scanner.startScan(null, settings, callback)
         return try {
-            found.poll(SCAN_MS, TimeUnit.MILLISECONDS)
+            found.poll(scanMs, TimeUnit.MILLISECONDS)
         } finally {
             scanner.stopScan(callback)
         }
