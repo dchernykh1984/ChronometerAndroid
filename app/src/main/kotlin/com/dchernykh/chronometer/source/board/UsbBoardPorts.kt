@@ -9,6 +9,7 @@ import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbEndpoint
 import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
+import com.dchernykh.chronometer.source.OpenFailure
 import java.io.IOException
 
 /** MicroPython on an RP2040: the beam board's USB ids (res/xml/beam_board.xml says the same). */
@@ -97,19 +98,19 @@ class UsbBoardPort private constructor(
             val control = interfaces.firstOrNull { it.interfaceClass == UsbConstants.USB_CLASS_COMM }
             val data =
                 interfaces.firstOrNull { it.interfaceClass == UsbConstants.USB_CLASS_CDC_DATA }
-                    ?: notOpened("the beam board shows no serial port")
+                    ?: notOpened(OpenFailure.NO_PORT)
             val bulk =
                 (0 until data.endpointCount)
                     .map(data::getEndpoint)
                     .filter { it.type == UsbConstants.USB_ENDPOINT_XFER_BULK }
             val input = bulk.firstOrNull { it.direction == UsbConstants.USB_DIR_IN }
             val output = bulk.firstOrNull { it.direction == UsbConstants.USB_DIR_OUT }
-            if (input == null || output == null) notOpened("the beam board's serial port has no line in or out")
-            val connection = usb.openDevice(device) ?: notOpened("Android would not open the beam board")
+            if (input == null || output == null) notOpened(OpenFailure.NO_PORT)
+            val connection = usb.openDevice(device) ?: notOpened(OpenFailure.REFUSED)
             val claimed = listOfNotNull(data, control)
             if (!claimed.all { connection.claimInterface(it, true) }) {
                 connection.close()
-                notOpened("another app holds the beam board")
+                notOpened(OpenFailure.HELD)
             }
             connection.controlTransfer(
                 CLASS_TO_INTERFACE,
@@ -125,4 +126,4 @@ class UsbBoardPort private constructor(
     }
 }
 
-private fun notOpened(why: String): Nothing = throw IOException(why)
+private fun notOpened(why: OpenFailure): Nothing = throw BoardNotOpened(why)

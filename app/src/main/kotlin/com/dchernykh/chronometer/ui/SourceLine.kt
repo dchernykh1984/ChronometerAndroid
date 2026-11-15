@@ -14,6 +14,7 @@ import com.dchernykh.chronometer.data.Settings
 import com.dchernykh.chronometer.data.chosenDevice
 import com.dchernykh.chronometer.source.BoardTrouble
 import com.dchernykh.chronometer.source.EventProblem
+import com.dchernykh.chronometer.source.OpenFailure
 import com.dchernykh.chronometer.source.SourceError
 import com.dchernykh.chronometer.source.SourceState
 import com.dchernykh.chronometer.source.SourceStatus
@@ -89,7 +90,7 @@ private fun boardText(trouble: BoardTrouble): String =
     when (trouble) {
         BoardTrouble.NotFound -> stringResource(R.string.source_board_not_found)
         BoardTrouble.NoPermission -> stringResource(R.string.source_board_no_permission)
-        is BoardTrouble.NotOpened -> stringResource(R.string.source_board_not_opened, trouble.message)
+        is BoardTrouble.NotOpened -> notOpenedText(trouble)
         BoardTrouble.Lost -> stringResource(R.string.source_board_lost)
         BoardTrouble.Silent -> stringResource(R.string.source_board_silent)
         BoardTrouble.Blocked -> stringResource(R.string.source_board_blocked)
@@ -103,4 +104,13 @@ private fun boardText(trouble: BoardTrouble): String =
                 stringResource(R.string.source_board_breaks_missing, trouble.first, trouble.last)
             }
         is BoardTrouble.ClockNotRead -> stringResource(R.string.source_board_clock_not_read, trouble.breaks)
+    }
+
+@Composable
+private fun notOpenedText(trouble: BoardTrouble.NotOpened): String =
+    when (trouble.why) {
+        OpenFailure.HELD -> stringResource(R.string.source_board_held)
+        OpenFailure.NO_PORT -> stringResource(R.string.source_board_no_port)
+        OpenFailure.REFUSED -> stringResource(R.string.source_board_refused)
+        OpenFailure.OTHER -> stringResource(R.string.source_board_not_opened, trouble.words)
     }
