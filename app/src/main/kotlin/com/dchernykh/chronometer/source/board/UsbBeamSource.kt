@@ -195,7 +195,11 @@ class UsbBeamSource(
     ) {
         val splitter = LineSplitter()
         try {
-            while (true) pass(port.read(READ_MS), splitter, lines)
+            while (true) {
+                val started = monotonic()
+                val bytes = port.read(READ_MS)
+                pass(bytes, splitter, lines, idlesAfter(bytes, monotonic() - started))
+            }
         } catch (cancel: CancellationException) {
             throw cancel
         } catch (_: Exception) {
@@ -207,8 +211,12 @@ class UsbBeamSource(
         bytes: ByteArray,
         splitter: LineSplitter,
         lines: Channel<Pair<String, Long>>,
+        idle: Boolean,
     ) {
-        if (bytes.isEmpty()) delay(IDLE_MS) else splitter.feed(bytes).forEach { lines.send(it to clock()) }
+        when {
+            bytes.isNotEmpty() -> splitter.feed(bytes).forEach { lines.send(it to clock()) }
+            idle -> delay(IDLE_MS)
+        }
     }
 
     private suspend fun write(
@@ -223,6 +231,16 @@ class UsbBeamSource(
         }
     }
 }
+
+/**
+ * Whether a read that gave [bytes] after [tookMs] pauses before the next. One that waited its
+ * time out reads again at once, or a PONG coming meanwhile would be timed late; one back at
+ * once with nothing is an error, or a fake in tests, and pauses rather than spin.
+ */
+internal fun idlesAfter(
+    bytes: ByteArray,
+    tookMs: Long,
+): Boolean = bytes.isEmpty() && tookMs < READ_MS / 2
 
 /** The board's state as last said: said again only once it changes. */
 private class Said(
