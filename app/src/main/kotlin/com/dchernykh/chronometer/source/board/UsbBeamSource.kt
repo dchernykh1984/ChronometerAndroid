@@ -59,6 +59,9 @@ const val HOLD_OFF_MS = 1_000
 
 private const val LOOK_AGAIN_MS = 2_000L
 private const val ASK_AGAIN_MS = 1_000L
+
+// Asked only this soon after timing mode starts: the referee has just started it.
+private const val ASK_WITHIN_MS = 10_000L
 private const val READ_MS = 200
 private const val WRITE_MS = 1_000
 private const val TICK_MS = 100L
@@ -97,6 +100,7 @@ class UsbBeamSource(
         }
 
     private suspend fun ProducerScope<SourceEvent>.watch(board: Said) {
+        val started = monotonic()
         var asked = false
         while (true) {
             val found = withContext(io) { ports.find() }
@@ -107,7 +111,9 @@ class UsbBeamSource(
                     delay(LOOK_AGAIN_MS)
                 }
                 !found.permitted -> {
-                    if (!asked) found.ask() // once a plugging in: its question stays on screen
+                    // Once a plugging in, and only as timing mode starts: mid-race, a question
+                    // over the screen would stop the hand cutoffs until it was answered.
+                    if (!asked && monotonic() - started < ASK_WITHIN_MS) found.ask()
                     asked = true
                     board.say(BoardTrouble.NoPermission)
                     delay(ASK_AGAIN_MS)
