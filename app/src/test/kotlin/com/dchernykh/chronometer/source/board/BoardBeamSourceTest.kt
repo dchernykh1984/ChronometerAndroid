@@ -366,4 +366,17 @@ class BoardBeamSourceTest {
             advanceTimeBy(HELD_MS + 500)
             assertEquals(BASE_MS + 123, events.filterIsInstance<SourceEvent.BeamBreak>().single().timeMs)
         }
+
+    @Test
+    fun theBoardIsAskedItsCountEveryFewSecondsALostLastBreakComes() =
+        runTest {
+            val usb = FakeUsb()
+            val events = running(usb)
+            advanceTimeBy(500)
+            val port = usb.ports[0]
+            port.kept += "BREAK 1 2500000" // said, its line lost: no break comes after it
+            advanceTimeBy(HELLO_EVERY_MS)
+            assertTrue("RESEND 1" in port.written)
+            assertEquals(listOf(1L), events.filterIsInstance<SourceEvent.BeamBreak>().map { it.seq })
+        }
 }

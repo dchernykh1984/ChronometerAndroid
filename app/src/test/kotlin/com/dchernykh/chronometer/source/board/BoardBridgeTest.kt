@@ -329,4 +329,25 @@ class BoardBridgeTest {
         )
         assertEquals(listOf("BREAK 2 99" to 20L), splitter.feed("99\r\n".toByteArray(), 30L))
     }
+
+    @Test
+    fun aHelloAskedAgainIsSaidOnceAndItsCountAsksForALostBreak() {
+        val old = "HELLO beam-rp2040 0.3 e6614103 0"
+        val bridge = BoardBridge()
+        assertEquals(1, bridge.fromBoard(old, 0L).size) // the firmware said
+        assertTrue(bridge.read().fromBoard(old, 5L).isEmpty()) // asked again: said once
+        bridge.fromBoard("BREAK 1 1000", 6L)
+        bridge.fromBoard(hello(2), 10L) // break 2's line lost: no break after it shows it
+        assertEquals(listOf("RESEND 2"), bridge.outbox)
+    }
+
+    @Test
+    fun aBoardStartedAgainUnderALinkThatStayedUpHasItsClockReadAnew() {
+        val bridge = connected(radio = true).read()
+        bridge.fromBoard("BREAK 1 1000", 0L)
+        assertTrue(bridge.sync.read)
+        bridge.fromBoard(HELLO, 10L) // its start's HELLO: count 0, below 1
+        assertFalse(bridge.sync.read)
+        assertTrue(bridge.fromBoard("BREAK 1 2000", 11L).isEmpty()) // waits for the new clock
+    }
 }

@@ -178,10 +178,15 @@ class BoardBeamSource(
                 launch(io) { read(port, lines) }
                 write(port, OPENING)
                 var pingAt = monotonic()
+                var helloAt = pingAt + HELLO_EVERY_MS
                 do {
                     if (monotonic() >= pingAt) {
                         write(port, "${bridge.ping(clock())}\n".toByteArray())
                         pingAt = monotonic() + bridge.pingEveryMs
+                    }
+                    if (monotonic() >= helloAt) { // its count: a break whose line was lost shows
+                        write(port, "HELLO\n".toByteArray())
+                        helloAt = monotonic() + HELLO_EVERY_MS
                     }
                     bridge.release(clock()).forEach { send(it) }
                     // RESEND: breaks counted while no link was up, or lost on the way.
