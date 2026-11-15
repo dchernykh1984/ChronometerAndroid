@@ -3,6 +3,8 @@ package com.dchernykh.chronometer.source
 import com.dchernykh.chronometer.chips.ChipMap
 import com.dchernykh.chronometer.data.SettingsStore
 import com.dchernykh.chronometer.data.chosenDevice
+import com.dchernykh.chronometer.source.board.BoardPorts
+import com.dchernykh.chronometer.source.board.UsbBeamSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,9 +29,12 @@ private const val BATCH = 200
 fun builtInSource(
     device: DeviceId,
     chipMap: () -> ChipMap,
+    /** Where beam boards are found: the phone's USB in the app. */
+    boards: () -> BoardPorts? = { null },
 ): CutoffSource? =
     when (device) {
         DeviceId.TEST_BEAM -> TestBeamSource()
+        DeviceId.USB_BEAM -> boards()?.let(::UsbBeamSource)
         DeviceId.TEST_CHIPS -> TestChipsSource(chipMap)
         else -> null
     }
@@ -55,7 +60,7 @@ class SourceController(
     private val sink: suspend (List<SourceEvent>, Long, Boolean) -> Unit,
 ) {
     /** The source behind a device; the app gives the test chips its chip map. */
-    var sourceFor: (DeviceId) -> CutoffSource? = { builtInSource(it) { ChipMap() } }
+    var sourceFor: (DeviceId) -> CutoffSource? = { builtInSource(it, chipMap = { ChipMap() }) }
 
     private val statusState = MutableStateFlow(SourceStatus())
 

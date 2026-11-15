@@ -19,12 +19,12 @@ class DevicesTest {
     }
 
     @Test
-    fun onlyTheTestDevicesRunInThisRound() {
+    fun theTestDevicesAndTheUsbBeamRunTheOthersAreStubs() {
         assertEquals(
-            listOf(DeviceId.TEST_BEAM, DeviceId.TEST_CHIPS),
+            listOf(DeviceId.TEST_BEAM, DeviceId.USB_BEAM, DeviceId.TEST_CHIPS),
             DeviceId.entries.filter { it.available },
         )
-        assertEquals(DeviceId.entries.filter { it.available }, DeviceId.entries.filter { it.test })
+        assertEquals(listOf(DeviceId.TEST_BEAM, DeviceId.TEST_CHIPS), DeviceId.entries.filter { it.test })
     }
 
     @Test
