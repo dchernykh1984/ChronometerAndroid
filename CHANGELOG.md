@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.9.0](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.8.0...chronometer-android-v0.9.0) (2026-11-15)
+
+
+### Features
+
+* **beam:** read the beam board's lines and clock as the desktop connector does ([ab659fc](https://github.com/dchernykh1984/ChronometerAndroid/commit/ab659fcfb9132b7e78bf7055003372f50de78cbd))
+* **beam:** take beam breaks from the beam board on the phone's USB ([5e8e718](https://github.com/dchernykh1984/ChronometerAndroid/commit/5e8e718bda05b5c8de8719b30b65f4647f2d465a))
+* **sources:** say a beam board's troubles on the main screen, in the referee's language ([88e2683](https://github.com/dchernykh1984/ChronometerAndroid/commit/88e2683e1cce68bfe4419e9b1895224fe2d41763))
+
+
+### Bug Fixes
+
+* **beam:** ask for the beam board's leave only as timing mode starts, never over the screen mid-race ([01e7017](https://github.com/dchernykh1984/ChronometerAndroid/commit/01e70170107a88b8d7a6e70733da6999d80c4ad3))
+* **beam:** fit each beam board trouble in the two lines the main screen gives it ([ef28d5c](https://github.com/dchernykh1984/ChronometerAndroid/commit/ef28d5cad3d075aea35ed4b0c8a48c5e469110fa))
+* **beam:** keep the phone awake while the USB beam runs, so a pocketed phone still reads the board ([50dfa9a](https://github.com/dchernykh1984/ChronometerAndroid/commit/50dfa9aa004627e873d4d4d4cae4906360d81abc))
+* **beam:** read the board again at once after a read that waited its time out, so a PONG is timed as it came ([ce5eb38](https://github.com/dchernykh1984/ChronometerAndroid/commit/ce5eb3870ef687192b3589b61f9fce55797e929e))
+* **beam:** say how to be asked again for the beam board's leave, once Android's question is gone ([48a0207](https://github.com/dchernykh1984/ChronometerAndroid/commit/48a020779beb61e1a0678f3a1085766b4f6190a8))
+* **beam:** say why a beam board could not be opened in the referee's language, not in English ([61faaf9](https://github.com/dchernykh1984/ChronometerAndroid/commit/61faaf987b5b57664cff0460a7b5917b6fc9adde))
+* **beam:** take whatever the phone's USB throws as the board not opened or lost, tried again in 2 s ([92f7ccd](https://github.com/dchernykh1984/ChronometerAndroid/commit/92f7ccd607e9f0ebea59e7bc8ca8115ae774b370))
+* **sources:** say again the beam breaks that never came once a lasting board trouble after them ends ([628ccbf](https://github.com/dchernykh1984/ChronometerAndroid/commit/628ccbf28fb0c4f92a06a3f79d650d25e98ee183))
+
 ## [0.8.0](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.7.0...chronometer-android-v0.8.0) (2026-10-30)
 
 
