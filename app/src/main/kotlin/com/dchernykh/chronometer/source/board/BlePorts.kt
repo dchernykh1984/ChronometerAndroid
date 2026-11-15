@@ -265,6 +265,7 @@ class BlePort private constructor(
         val serial = serial ?: throw IOException("not connected")
         for (at in bytes.indices step CHUNK) {
             val chunk = bytes.copyOfRange(at, minOf(at + CHUNK, bytes.size))
+            events.written.drainPermits() // a late answer to a write given up on is not this one's
             if (!send(gatt, serial, chunk) || !events.written.tryAcquire(timeoutMs.toLong(), TimeUnit.MILLISECONDS)) {
                 throw IOException("the board took no write")
             }
