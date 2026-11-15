@@ -72,4 +72,18 @@ class BlePortsTest {
         awake.close()
         assertFalse(lock.isHeld)
     }
+
+    @Test
+    fun scansAreSpacedSoAndroidNeverStopsGivingResults() {
+        shadowOf(app).grantPermissions(*BluetoothLeave.needed)
+        shadowOf(app.getSystemService(BluetoothManager::class.java).adapter).setEnabled(true)
+        var now = 0L
+        val pauses = mutableListOf<Long>()
+        val ports = BlePorts(app, "beam-4103", monotonic = { now }, pause = { pauses += it }, scanMs = 10)
+        assertNull(ports.find()) // the first scan, no wait; none of the name in range
+        assertEquals(BoardTrouble.NotInRange("beam-4103"), ports.missing())
+        now += 1_000
+        ports.find()
+        assertEquals(listOf(5_500L), pauses)
+    }
 }
