@@ -23,6 +23,7 @@ private class FakePort : BoardPort {
     val written = mutableListOf<String>()
     private val said = ArrayDeque<ByteArray>()
     var gone = false
+    var breaks: RuntimeException? = null // what the system's USB may throw instead
     var answering = true
     var closed = false
 
@@ -32,6 +33,7 @@ private class FakePort : BoardPort {
 
     override fun read(timeoutMs: Int): ByteArray {
         if (gone) throw IOException("the beam board was unplugged")
+        breaks?.let { throw it }
         return said.removeFirstOrNull() ?: ByteArray(0)
     }
 
@@ -60,6 +62,7 @@ private class FakeUsb {
     var permitted = true
     var asked = 0
     var openFails: String? = null
+    var openThrows: RuntimeException? = null
     val ports = mutableListOf<FakePort>()
 
     val boards =
@@ -72,6 +75,7 @@ private class FakeUsb {
                     ask = { asked++ },
                     open = {
                         openFails?.let { throw IOException(it) }
+                        openThrows?.let { throw it }
                         FakePort().also { ports += it }
                     },
                 )
@@ -145,6 +149,25 @@ class UsbBeamSourceTest {
             val events = running(usb)
             advanceTimeBy(5_000)
             assertEquals(listOf(BoardTrouble.NotOpened("another app holds the beam board")), troubles(events))
+        }
+
+    @Test
+    fun whatTheSystemsUsbThrowsIsTheBoardNotOpenedOrLostAndTriedAgain() =
+        runTest {
+            val usb = FakeUsb().apply { openThrows = SecurityException("no leave for the device") }
+            val events = running(usb)
+            advanceTimeBy(1_000)
+            assertEquals(listOf(BoardTrouble.NotOpened("no leave for the device")), troubles(events))
+            usb.openThrows = null
+            advanceTimeBy(2_500)
+            usb.ports[0].breaks = IllegalStateException("the connection was closed")
+            advanceTimeBy(500)
+            assertEquals(
+                listOf(BoardTrouble.NotOpened("no leave for the device"), null, BoardTrouble.Lost),
+                troubles(events),
+            )
+            advanceTimeBy(2_500)
+            assertEquals(2, usb.ports.size) // and opened again, the source never failed
         }
 
     @Test
