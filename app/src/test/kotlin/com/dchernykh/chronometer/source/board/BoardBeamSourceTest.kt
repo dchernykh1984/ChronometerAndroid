@@ -312,6 +312,21 @@ class BoardBeamSourceTest {
         }
 
     @Test
+    fun theScreenSaysWhyNoBoardIsFoundAndWhyItMayNotBeUsed() =
+        runTest {
+            val usb = FakeUsb().apply { plugged = false }
+            usb.missing = BoardTrouble.NotNamed
+            val events = running(usb)
+            advanceTimeBy(500)
+            assertEquals(listOf(BoardTrouble.NotNamed), troubles(events))
+            usb.plugged = true
+            usb.permitted = false
+            usb.refused = BoardTrouble.NoBluetoothLeave
+            advanceTimeBy(2_000)
+            assertEquals(listOf(BoardTrouble.NotNamed, BoardTrouble.NoBluetoothLeave), troubles(events))
+        }
+
+    @Test
     fun overBluetoothTheBoardIsPingedEverySecond() =
         runTest {
             val usb = FakeUsb()

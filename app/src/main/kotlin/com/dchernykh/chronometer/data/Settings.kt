@@ -54,6 +54,8 @@ data class Settings(
     /** Where cutoffs come from besides the hand: nothing more, a beam or chips. */
     val cutoffSource: SourceKind = SourceKind.HAND,
     val beamDevice: DeviceId = DeviceId.TEST_BEAM,
+    /** The Bluetooth beam board to read, by its name (beam-1a2b) or address: no other one. */
+    val beamBoardName: String = "",
     val chipsDevice: DeviceId = DeviceId.TEST_CHIPS,
     /** Chip reads of one bib closer than this are one pass (spec FR-010). */
     val deadTimeS: Int = DEFAULT_DEAD_TIME_S,
