@@ -123,7 +123,7 @@
     <string name="download_stale">a new competition started while it downloaded</string>
     <string name="source_error_dropped">Events not stored, %1$d dropped after minutes of tries: %2$s</string>
     <string name="source_board_not_found">No beam board on USB: plug it in</string>
-    <string name="source_board_no_permission">Let the app use the beam board: allow it when Android asks; plug the board in again to be asked again</string>
+    <string name="source_board_no_permission">Allow the app the beam board when Android asks; to be asked again, replug it</string>
     <string name="source_board_not_opened">The beam board could not be opened: %1$s</string>
     <string name="source_board_held">Another app has the beam board: close it</string>
     <string name="source_board_no_port">The beam board shows no serial port: is its firmware on it?</string>
@@ -135,5 +135,5 @@
     <string name="source_board_other_firmware">The beam board runs firmware %1$s, the app is for %2$s: flash it again</string>
     <string name="source_board_break_missing">Beam break %1$d never came: check that finish by other means</string>
     <string name="source_board_breaks_missing">Beam breaks %1$d to %2$d never came: check those finishes by other means</string>
-    <string name="source_board_clock_not_read">Beam breaks timed by when they came, the board clock not read: %1$d</string>
+    <string name="source_board_clock_not_read">The board clock was not read: %1$d beam break(s) timed by when they came</string>
 </resources>
