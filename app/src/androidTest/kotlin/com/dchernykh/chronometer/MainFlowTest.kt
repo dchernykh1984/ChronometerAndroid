@@ -36,6 +36,7 @@ import com.dchernykh.chronometer.data.CutoffRepository
 import com.dchernykh.chronometer.data.SettingsStore
 import com.dchernykh.chronometer.data.ThemeMode
 import com.dchernykh.chronometer.service.RaceService
+import com.dchernykh.chronometer.source.BoardTrouble
 import com.dchernykh.chronometer.source.CutoffSource
 import com.dchernykh.chronometer.source.DeviceId
 import com.dchernykh.chronometer.source.SourceEvent
@@ -657,6 +658,35 @@ class MainFlowTest {
             recordAndAwait("cutoffButton", "77")
             composeRule.onNodeWithText("77").assertExists()
             composeRule.onNodeWithTag("sourceLine").assertExists()
+        } finally {
+            RaceService.stop(appContext())
+            controller.sourceFor = builtIn
+        }
+    }
+
+    @Test
+    fun aBeamBoardsTroubleIsSaidOnTheMainScreenAndAHandCutoffStillRecords() {
+        val controller = (appContext() as ChronometerApp).sourceController
+        val builtIn = controller.sourceFor
+        controller.sourceFor = {
+            CutoffSource {
+                flow {
+                    emit(SourceEvent.Board(BoardTrouble.NotFound))
+                    awaitCancellation()
+                }
+            }
+        }
+        openSettings()
+        selectRadio("sourceBeam")
+        saveSettings()
+        grantNotificationPermission()
+        composeRule.onNodeWithTag("timingModeToggle").performClick()
+        try {
+            waitForText(localizedString(AppLanguage.EN, R.string.timing_dnd_title))
+            composeRule.onNodeWithTag("timingOnDialogOk").performClick()
+            waitForText(localizedString(AppLanguage.EN, R.string.source_board_not_found))
+            recordAndAwait("cutoffButton", "88")
+            composeRule.onNodeWithText("88").assertExists()
         } finally {
             RaceService.stop(appContext())
             controller.sourceFor = builtIn
