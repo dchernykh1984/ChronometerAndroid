@@ -16,6 +16,7 @@ import com.dchernykh.chronometer.io.BackupWriter
 import com.dchernykh.chronometer.net.UploadClient
 import com.dchernykh.chronometer.source.SourceController
 import com.dchernykh.chronometer.source.SourceEvent
+import com.dchernykh.chronometer.source.board.UsbBoardPorts
 import com.dchernykh.chronometer.source.builtInSource
 
 /** Holds the app-wide singletons (manual dependency injection). */
@@ -50,7 +51,13 @@ class ChronometerApp : Application() {
             chipRepository.apply(batch.filterIsInstance<SourceEvent.ChipRead>(), takenIn, rawToo = firstTry)
         }.apply {
             // The test chips pass the riders of the map in use.
-            sourceFor = { builtInSource(it) { chipRepository.protocol.value?.map ?: ChipMap() } }
+            sourceFor = {
+                builtInSource(
+                    it,
+                    chipMap = { chipRepository.protocol.value?.map ?: ChipMap() },
+                    boards = { UsbBoardPorts(this@ChronometerApp) },
+                )
+            }
             cutoffRepository.whenANewCompetitionStarts(::startOver)
         }
     }

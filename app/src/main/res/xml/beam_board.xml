@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The beam board: MicroPython on an RP2040, vendor 0x2E8A, product 0x0005. -->
+    <usb-device
+        product-id="5"
+        vendor-id="11914" />
+</resources>
