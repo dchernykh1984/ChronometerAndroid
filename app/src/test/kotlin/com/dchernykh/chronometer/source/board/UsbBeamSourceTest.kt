@@ -175,6 +175,19 @@ class UsbBeamSourceTest {
         }
 
     @Test
+    fun aBoardPluggedInMidRaceIsNotAskedForOverTheScreen() =
+        runTest {
+            val usb = FakeUsb().apply { plugged = false }
+            val events = running(usb)
+            advanceTimeBy(20_000) // the race on, the board not yet in
+            usb.plugged = true
+            usb.permitted = false
+            advanceTimeBy(5_000)
+            assertEquals(0, usb.asked) // a question would cover the Cutoff button
+            assertEquals(listOf(BoardTrouble.NotFound, BoardTrouble.NoPermission), troubles(events))
+        }
+
+    @Test
     fun aBoardPluggedInAgainIsAskedForAgain() =
         runTest {
             val usb = FakeUsb().apply { permitted = false }
