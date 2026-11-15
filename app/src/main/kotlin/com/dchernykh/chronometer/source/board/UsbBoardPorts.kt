@@ -18,6 +18,10 @@ import java.io.IOException
 const val BOARD_VENDOR = 0x2E8A
 const val BOARD_PRODUCT = 0x0005
 
+/** The ESP32-C3's own USB (its USB Serial/JTAG), which MicroPython there speaks over. */
+const val ESP_VENDOR = 0x303A
+const val ESP_PRODUCT = 0x1001
+
 private const val ASKED = "com.dchernykh.chronometer.BEAM_BOARD_ASKED"
 
 // Longer than any race day; the lock goes when the USB beam stops.
@@ -28,6 +32,13 @@ private const val AWAKE_MS = 24 * 60 * 60 * 1_000L
 private const val CLASS_TO_INTERFACE = 0x21
 private const val SET_CONTROL_LINE_STATE = 0x22
 private const val DTR_AND_RTS = 0x03
+
+// The ESP32-C3's own USB holds the chip in reset while RTS is on, and starts its bootloader
+// when RTS goes off with DTR on: both stay off, as its MicroPython needs neither.
+private const val LINES_OFF = 0x00
+
+/** Each beam board's USB ids, and the control lines its port is opened with. */
+private val BOARDS = mapOf((BOARD_VENDOR to BOARD_PRODUCT) to DTR_AND_RTS, (ESP_VENDOR to ESP_PRODUCT) to LINES_OFF)
 private const val CONTROL_MS = 1_000
 
 /** The beam boards on the phone's USB, found by their ids, the first one taken. */
@@ -41,12 +52,13 @@ class UsbBoardPorts(
         val device =
             usb.deviceList.values
                 .sortedBy { it.deviceName }
-                .firstOrNull { it.vendorId == BOARD_VENDOR && it.productId == BOARD_PRODUCT }
+                .firstOrNull { (it.vendorId to it.productId) in BOARDS }
                 ?: return null
+        val lines = BOARDS.getValue(device.vendorId to device.productId)
         return FoundBoard(
             permitted = usb.hasPermission(device),
             ask = { ask(usb, device) },
-            open = { UsbBoardPort.open(usb, device) },
+            open = { UsbBoardPort.open(usb, device, lines) },
         )
     }
 
@@ -110,6 +122,7 @@ class UsbBoardPort private constructor(
         fun open(
             usb: UsbManager,
             device: UsbDevice,
+            lines: Int = DTR_AND_RTS,
         ): UsbBoardPort {
             val interfaces = (0 until device.interfaceCount).map(device::getInterface)
             val control = interfaces.firstOrNull { it.interfaceClass == UsbConstants.USB_CLASS_COMM }
@@ -132,7 +145,7 @@ class UsbBoardPort private constructor(
             connection.controlTransfer(
                 CLASS_TO_INTERFACE,
                 SET_CONTROL_LINE_STATE,
-                DTR_AND_RTS,
+                lines,
                 control?.id ?: 0,
                 null,
                 0,

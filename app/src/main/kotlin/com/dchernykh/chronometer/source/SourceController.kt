@@ -3,8 +3,8 @@ package com.dchernykh.chronometer.source
 import com.dchernykh.chronometer.chips.ChipMap
 import com.dchernykh.chronometer.data.SettingsStore
 import com.dchernykh.chronometer.data.chosenDevice
+import com.dchernykh.chronometer.source.board.BoardBeamSource
 import com.dchernykh.chronometer.source.board.BoardPorts
-import com.dchernykh.chronometer.source.board.UsbBeamSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,7 +34,7 @@ fun builtInSource(
 ): CutoffSource? =
     when (device) {
         DeviceId.TEST_BEAM -> TestBeamSource()
-        DeviceId.USB_BEAM -> boards()?.let(::UsbBeamSource)
+        DeviceId.USB_BEAM -> boards()?.let { BoardBeamSource(it) }
         DeviceId.TEST_CHIPS -> TestChipsSource(chipMap)
         else -> null
     }
