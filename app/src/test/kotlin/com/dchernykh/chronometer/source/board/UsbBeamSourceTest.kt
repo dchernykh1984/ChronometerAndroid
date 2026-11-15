@@ -175,6 +175,19 @@ class UsbBeamSourceTest {
         }
 
     @Test
+    fun aBoardPluggedInAgainIsAskedForAgain() =
+        runTest {
+            val usb = FakeUsb().apply { permitted = false }
+            running(usb)
+            advanceTimeBy(3_000)
+            usb.plugged = false // the referee answered no, and plugs the board in again
+            advanceTimeBy(2_500)
+            usb.plugged = true
+            advanceTimeBy(2_500)
+            assertEquals(2, usb.asked)
+        }
+
+    @Test
     fun aBoardThatCannotBeOpenedIsSaidByItsReasonOrTheSystemsWords() =
         runTest {
             val usb = FakeUsb().apply { openThrows = BoardNotOpened(OpenFailure.HELD) }
