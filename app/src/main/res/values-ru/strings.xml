@@ -123,7 +123,7 @@
     <string name="download_stale">пока шла загрузка, началось новое соревнование</string>
     <string name="source_error_dropped">События не сохранены, %1$d отброшено после нескольких минут попыток: %2$s</string>
     <string name="source_board_not_found">Платы луча нет на USB: подключите её</string>
-    <string name="source_board_no_permission">Разрешите приложению работать с платой луча: ответьте на вопрос Android</string>
+    <string name="source_board_no_permission">Разрешите приложению работать с платой луча, когда Android спросит; чтобы он спросил снова, подключите плату заново</string>
     <string name="source_board_not_opened">Плату луча не удалось открыть: %1$s</string>
     <string name="source_board_held">Плату луча занимает другое приложение: закройте его</string>
     <string name="source_board_no_port">У платы луча нет последовательного порта: есть ли на ней прошивка?</string>
