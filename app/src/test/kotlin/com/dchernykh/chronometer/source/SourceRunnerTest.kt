@@ -75,6 +75,28 @@ class SourceRunnerTest {
         }
 
     @Test
+    fun aNoticeALastingTroubleHidIsSaidAgainOnceThatTroubleEnds() =
+        runTest {
+            val said = mutableListOf<SourceError?>()
+            lateinit var board: SourceRunner
+            board =
+                runner {
+                    flow {
+                        for (trouble in listOf(BoardTrouble.BreaksMissing(6, 7), BoardTrouble.Blocked, null)) {
+                            emit(SourceEvent.Board(trouble))
+                            said += board.status.value.lastError
+                        }
+                        awaitCancellation()
+                    }
+                }
+            backgroundScope.launch { board.run {} }
+            runCurrent()
+            val lost = SourceError.Board(BoardTrouble.BreaksMissing(6, 7))
+            // Riders standing in the beam just after: the breaks lost are said again after them.
+            assertEquals(listOf(lost, SourceError.Board(BoardTrouble.Blocked), lost), said)
+        }
+
+    @Test
     fun aRunOf30SecondsBringsThePauseBackTo1Second() =
         runTest {
             val starts = mutableListOf<Long>()
