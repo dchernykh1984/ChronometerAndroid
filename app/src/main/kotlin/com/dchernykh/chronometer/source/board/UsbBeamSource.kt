@@ -3,6 +3,7 @@ package com.dchernykh.chronometer.source.board
 import android.os.SystemClock
 import com.dchernykh.chronometer.source.BoardTrouble
 import com.dchernykh.chronometer.source.CutoffSource
+import com.dchernykh.chronometer.source.OpenFailure
 import com.dchernykh.chronometer.source.SourceEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -32,6 +33,11 @@ class FoundBoard(
 fun interface BoardPorts {
     fun find(): FoundBoard?
 }
+
+/** A board that could not be opened, for a reason the screen says in the referee's language. */
+class BoardNotOpened(
+    val why: OpenFailure,
+) : IOException(why.name)
 
 /** A board's serial port. Both calls block, up to their timeouts; [read] may give nothing. */
 interface BoardPort : Closeable {
@@ -110,8 +116,13 @@ class UsbBeamSource(
                 withContext(io) { found.open() }
             } catch (cancel: CancellationException) {
                 throw cancel
+            } catch (failure: BoardNotOpened) {
+                board.say(BoardTrouble.NotOpened(failure.why))
+                delay(LOOK_AGAIN_MS)
+                return
             } catch (failure: Exception) {
-                board.say(BoardTrouble.NotOpened(failure.message ?: failure.javaClass.simpleName))
+                val words = failure.message ?: failure.javaClass.simpleName
+                board.say(BoardTrouble.NotOpened(OpenFailure.OTHER, words))
                 delay(LOOK_AGAIN_MS)
                 return
             }

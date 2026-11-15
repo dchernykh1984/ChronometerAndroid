@@ -76,9 +76,10 @@ sealed interface BoardTrouble {
     /** Android waits for the referee to let the app use the board. */
     data object NoPermission : BoardTrouble
 
-    /** The board could not be opened, as the system words it. */
+    /** The board could not be opened: [why], with the system's words for a reason of its own. */
     data class NotOpened(
-        val message: String,
+        val why: OpenFailure,
+        val words: String = "",
     ) : BoardTrouble
 
     /** The board's link was lost: unplugged, or its port failed. */
@@ -129,3 +130,16 @@ private fun timeProblem(timeMs: Long?): EventProblem? =
     } else {
         EventProblem.TIME_OUT_OF_RANGE
     }
+
+/** Why a beam board could not be opened; OTHER is the system's reason, said in its words. */
+enum class OpenFailure {
+    /** Another app has the board's port. */
+    HELD,
+
+    /** The board shows no serial port: no MicroPython on it, say. */
+    NO_PORT,
+
+    /** Android would not open it: unplugged meanwhile, or its leave taken back. */
+    REFUSED,
+    OTHER,
+}

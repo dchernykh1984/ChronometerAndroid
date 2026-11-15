@@ -1,6 +1,7 @@
 package com.dchernykh.chronometer.source.board
 
 import com.dchernykh.chronometer.source.BoardTrouble
+import com.dchernykh.chronometer.source.OpenFailure
 import com.dchernykh.chronometer.source.SourceEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.toList
@@ -62,7 +63,7 @@ private class FakeUsb {
     var permitted = true
     var asked = 0
     var openFails: String? = null
-    var openThrows: RuntimeException? = null
+    var openThrows: Exception? = null
     val ports = mutableListOf<FakePort>()
 
     val boards =
@@ -143,12 +144,21 @@ class UsbBeamSourceTest {
         }
 
     @Test
-    fun aBoardThatCannotBeOpenedIsSaidWithTheSystemsWords() =
+    fun aBoardThatCannotBeOpenedIsSaidByItsReasonOrTheSystemsWords() =
         runTest {
-            val usb = FakeUsb().apply { openFails = "another app holds the beam board" }
+            val usb = FakeUsb().apply { openThrows = BoardNotOpened(OpenFailure.HELD) }
             val events = running(usb)
-            advanceTimeBy(5_000)
-            assertEquals(listOf(BoardTrouble.NotOpened("another app holds the beam board")), troubles(events))
+            advanceTimeBy(1_000)
+            usb.openThrows = null
+            usb.openFails = "I/O error"
+            advanceTimeBy(2_500)
+            assertEquals(
+                listOf(
+                    BoardTrouble.NotOpened(OpenFailure.HELD),
+                    BoardTrouble.NotOpened(OpenFailure.OTHER, "I/O error"),
+                ),
+                troubles(events),
+            )
         }
 
     @Test
@@ -157,13 +167,14 @@ class UsbBeamSourceTest {
             val usb = FakeUsb().apply { openThrows = SecurityException("no leave for the device") }
             val events = running(usb)
             advanceTimeBy(1_000)
-            assertEquals(listOf(BoardTrouble.NotOpened("no leave for the device")), troubles(events))
+            val notOpened = BoardTrouble.NotOpened(OpenFailure.OTHER, "no leave for the device")
+            assertEquals(listOf(notOpened), troubles(events))
             usb.openThrows = null
             advanceTimeBy(2_500)
             usb.ports[0].breaks = IllegalStateException("the connection was closed")
             advanceTimeBy(500)
             assertEquals(
-                listOf(BoardTrouble.NotOpened("no leave for the device"), null, BoardTrouble.Lost),
+                listOf(notOpened, null, BoardTrouble.Lost),
                 troubles(events),
             )
             advanceTimeBy(2_500)

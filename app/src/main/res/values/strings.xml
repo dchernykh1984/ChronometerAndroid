@@ -125,6 +125,9 @@
     <string name="source_board_not_found">No beam board on USB: plug it in</string>
     <string name="source_board_no_permission">Let the app use the beam board: answer Android\'s question</string>
     <string name="source_board_not_opened">The beam board could not be opened: %1$s</string>
+    <string name="source_board_held">Another app has the beam board: close it</string>
+    <string name="source_board_no_port">The beam board shows no serial port: is its firmware on it?</string>
+    <string name="source_board_refused">Android would not open the beam board: plug it in again</string>
     <string name="source_board_lost">The link to the beam board was lost</string>
     <string name="source_board_silent">The beam board does not answer: unplug it and plug it in again</string>
     <string name="source_board_blocked">The beam is blocked: no break can be seen until the light is back</string>

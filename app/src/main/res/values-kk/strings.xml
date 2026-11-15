@@ -125,6 +125,9 @@
     <string name="source_board_not_found">USB-де сәуле тақтасы жоқ: оны қосыңыз</string>
     <string name="source_board_no_permission">Қолданбаға сәуле тақтасын пайдалануға рұқсат беріңіз: Android сұрағына жауап беріңіз</string>
     <string name="source_board_not_opened">Сәуле тақтасын ашу мүмкін болмады: %1$s</string>
+    <string name="source_board_held">Сәуле тақтасын басқа қолданба пайдаланып тұр: оны жабыңыз</string>
+    <string name="source_board_no_port">Сәуле тақтасында тізбекті порт жоқ: онда микробағдарлама бар ма?</string>
+    <string name="source_board_refused">Android сәуле тақтасын ашпады: оны қайта қосыңыз</string>
     <string name="source_board_lost">Сәуле тақтасымен байланыс үзілді</string>
     <string name="source_board_silent">Сәуле тақтасы жауап бермейді: оны ажыратып, қайта қосыңыз</string>
     <string name="source_board_blocked">Сәуле жабық: жарық қайтқанша іске қосылу көрінбейді</string>
