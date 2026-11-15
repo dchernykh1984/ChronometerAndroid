@@ -126,7 +126,7 @@
     <string name="source_board_not_named">Укажите имя Bluetooth-платы в настройках, например beam-1a2b</string>
     <string name="source_board_not_in_range">Плата %1$s вне зоны Bluetooth: она включена?</string>
     <string name="source_board_bluetooth_off">Bluetooth выключен: включите его для платы луча</string>
-    <string name="source_board_no_bluetooth_leave">Разрешите приложению Bluetooth, когда Android спросит</string>
+    <string name="source_board_no_bluetooth_leave">Разрешите приложению Bluetooth; если не спрашивает - в настройках Android</string>
     <string name="beam_board_name">Имя платы луча (Bluetooth), например beam-1a2b</string>
     <string name="source_board_no_permission">Разрешите плату луча на вопрос Android; спросит снова, если переподключить</string>
     <string name="source_board_not_opened">Плату луча не удалось открыть: %1$s</string>
