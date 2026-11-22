@@ -26,8 +26,15 @@ data class BoardFound(
     val rssi: Int? = null,
 )
 
-/** The picks as one setting, a line each: link, key and name, tab apart. */
-fun encodePicks(picks: List<BoardPick>): String = picks.joinToString("\n") { "${it.link.name}\t${it.key}\t${it.name}" }
+/**
+ * The picks as one setting, a line each: link, key and name, tab apart. A name is what a device
+ * around advertised, anyone's: a tab or a line end in it would cut the line, so none is kept.
+ */
+fun encodePicks(picks: List<BoardPick>): String =
+    picks.joinToString("\n") { "${it.link.name}\t${plain(it.key)}\t${plain(it.name)}" }
+
+/** A field of a pick's line: no control character, a tab or a line end among them. */
+fun plain(field: String): String = field.filterNot(Char::isISOControl)
 
 /** The picks back from [encodePicks]; a line that is not one is left out. */
 fun decodePicks(text: String): List<BoardPick> =
