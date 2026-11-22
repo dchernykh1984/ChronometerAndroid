@@ -116,12 +116,17 @@ class ClockKeeper(
         }
     }
 
+    /** GNSS let go, as timing mode stops: what was said of it is said no more. */
     @Synchronized
     fun stopGnss() {
         gnss?.stop()
         gnss = null
         check.forget()
         lastVerdict = GnssVerdict.WAITING
+        val news = newsState.value
+        if (news is ClockNews.GnssDropped || news == ClockNews.NoLocation || news == ClockNews.LocationOff) {
+            newsState.value = null
+        }
     }
 
     /** The clock's line now. */
