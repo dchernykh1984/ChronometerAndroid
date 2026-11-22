@@ -311,17 +311,17 @@ class BoardBridgeTest {
     }
 
     @Test
-    fun onlyALineWithItsEndCountsTimedWhenItsEndCame() {
+    fun onlyALineWithItsEndCountsTimedWhenItsFirstPieceCame() {
         val splitter = LineSplitter()
         val first = splitter.feed("HELLO beam-rp2040\r\nBREAK 5 12".toByteArray(), 5L)
         assertEquals(listOf("HELLO beam-rp2040" to 5L), first)
-        assertEquals(listOf("BREAK 5 12345678" to 9L), splitter.feed("345678\r\n".toByteArray(), 9L))
+        assertEquals(listOf("BREAK 5 12345678" to 5L), splitter.feed("345678\r\n".toByteArray(), 9L))
         assertTrue(LineSplitter().feed("BREAK 5 12".toByteArray(), 0L).isEmpty()) // cut short: no line
     }
 
     @Test
     fun overBluetoothALineIsTimedWhenItsFirstPieceCame() {
-        val splitter = LineSplitter(firstPiece = true)
+        val splitter = LineSplitter()
         assertTrue(splitter.feed("PONG 1 1234567890 12".toByteArray(), 10L).isEmpty())
         assertEquals(
             listOf("PONG 1 1234567890 1234567890" to 10L),
