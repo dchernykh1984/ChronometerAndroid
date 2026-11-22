@@ -162,6 +162,7 @@
     <string name="board_ble">%1$s (Bluetooth, %2$d dBm)</string>
     <string name="board_ble_no_signal">%1$s (Bluetooth)</string>
     <string name="board_gone">%1$s (not found by the last search)</string>
+    <string name="board_blink_named">Blink %1$s</string>
     <string name="board_blink">Blink</string>
     <string name="boards_locked">Stop timing mode to change the boards picked</string>
     <string name="board_blink_hint">Blink: the board\'s LED flashes 5 times. An ESP32-C3\'s blue LED is lit while the laser is on its sensor: block the beam to see it flash.</string>

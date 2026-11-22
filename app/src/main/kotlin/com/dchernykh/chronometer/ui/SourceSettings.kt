@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
@@ -19,6 +20,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.dchernykh.chronometer.R
@@ -152,23 +156,28 @@ private fun BoardsList(
         )
     if (ui.search.search != null && rows.isEmpty()) Text(stringResource(R.string.boards_none_found))
     for (row in rows) {
+        val pick = row.board.pick
+        val label = boardLabel(row)
+        val blinkLabel = stringResource(R.string.board_blink_named, pick.name)
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            val pick = row.board.pick
-            Checkbox(
-                checked = row.picked,
-                enabled = !ui.locked,
-                onCheckedChange = { checked ->
-                    val others = settings.beamBoards.filter { !it.isBoard(pick) } // by its name before too
-                    onChange(settings.copy(beamBoards = if (checked) others + pick else others))
-                },
-                modifier = Modifier.testTag("pick ${pick.key}"),
-            )
-            Text(
-                text = boardLabel(row),
-                color = if (row.here) Color.Unspecified else MaterialTheme.colorScheme.outline,
-                modifier = Modifier.weight(1f),
-            )
-            TextButton(onClick = { ui.onBlink(pick) }, modifier = Modifier.testTag("blink ${pick.key}")) {
+            // The check and the board's name one control: tapped anywhere, read out together.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .toggleable(value = row.picked, enabled = !ui.locked, role = Role.Checkbox) { checked ->
+                            val others = settings.beamBoards.filter { !it.isBoard(pick) } // by its name before too
+                            onChange(settings.copy(beamBoards = if (checked) others + pick else others))
+                        }.testTag("pick ${pick.key}"),
+            ) {
+                Checkbox(checked = row.picked, onCheckedChange = null, enabled = !ui.locked)
+                Text(text = label, color = if (row.here) Color.Unspecified else MaterialTheme.colorScheme.outline)
+            }
+            TextButton(
+                onClick = { ui.onBlink(pick) },
+                modifier = Modifier.semantics { contentDescription = blinkLabel }.testTag("blink ${pick.key}"),
+            ) {
                 Text(stringResource(R.string.board_blink))
             }
         }
