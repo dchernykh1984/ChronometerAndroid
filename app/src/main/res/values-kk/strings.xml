@@ -166,7 +166,7 @@
     <string name="board_blink_named">%1$s тақтасын жыпылықтату</string>
     <string name="board_blink">Жыпылықтату</string>
     <string name="boards_locked">Тақталарды таңдау уақыт өлшеу режимі өшкенде өзгереді</string>
-    <string name="board_blink_hint">Жыпылықтату: тақтаның жарық диоды 5 рет жыпылықтайды. ESP32-C3 көк диоды лазер датчикке түсіп тұрғанда жанып тұрады: жыпылықтауды көру үшін сәулені жабыңыз.</string>
+    <string name="board_blink_hint">Жыпылықтату: тақтаның жарық диоды 5 рет жыпылықтайды; лазер датчикке түсіп тұрғанда жанып тұратын ESP32-C3 көк диоды әр жыпылықтауда сөнеді.</string>
     <string name="blink_reaching">%1$s: қосылуда...</string>
     <string name="blink_flashing">%1$s: жарық диоды 5 рет жыпылықтайды</string>
     <string name="blink_not_connected">%1$s: қазір қосылмаған</string>

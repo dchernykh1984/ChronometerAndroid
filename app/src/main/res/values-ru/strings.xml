@@ -166,7 +166,7 @@
     <string name="board_blink_named">Мигнуть светодиодом платы %1$s</string>
     <string name="board_blink">Мигнуть</string>
     <string name="boards_locked">Выбор плат меняется, когда режим хронометража выключен</string>
-    <string name="board_blink_hint">Мигнуть: светодиод платы мигнёт 5 раз. Синий светодиод ESP32-C3 горит, пока лазер светит на датчик: перекройте луч, чтобы увидеть мигание.</string>
+    <string name="board_blink_hint">Мигнуть: светодиод платы мигнёт 5 раз; синий светодиод ESP32-C3, который горит, пока лазер светит на датчик, на каждое мигание гаснет.</string>
     <string name="blink_reaching">%1$s: подключаюсь...</string>
     <string name="blink_flashing">%1$s: светодиод мигает 5 раз</string>
     <string name="blink_not_connected">%1$s: сейчас не подключена</string>
