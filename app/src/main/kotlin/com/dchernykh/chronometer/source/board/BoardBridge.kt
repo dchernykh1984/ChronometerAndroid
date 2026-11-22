@@ -14,9 +14,9 @@ import kotlin.math.roundToLong
 val BOARD_NAMES = setOf("beam-rp2040", "beam-esp32c3")
 const val BOARD_FIRMWARE = "0.4"
 
-/** A PING every 2 s on USB, every 1 s over Bluetooth: there more trips, more short ones. */
+/** A PING every 2 s on USB, every 0.5 s over Bluetooth: there more trips, more short ones. */
 const val PING_EVERY_MS = 2_000L
-const val RADIO_PING_EVERY_MS = 1_000L
+const val RADIO_PING_EVERY_MS = 500L
 
 /** The board's HELLO asked again: its count shows a break whose line was lost, the last say. */
 const val HELLO_EVERY_MS = 5_000L
@@ -39,7 +39,10 @@ const val RESENT_WITHIN_MS = 10_000L
 private const val LONGEST_TRIP_MS = 20.0
 private const val SAMPLES = 9
 private const val STEP_MS = 50.0
-private const val RADIO_SAMPLES = 16
+
+/** Bluetooth round trips kept, 16 s of them: the shortest way each way of these maps the clock. */
+internal const val RADIO_SAMPLES = 32
+
 private const val RADIO_READY = 4
 private const val RADIO_STEP_MS = 100.0
 private const val HELD_MAX = 64

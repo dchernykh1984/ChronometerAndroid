@@ -327,11 +327,11 @@ class BoardBeamSourceTest {
         }
 
     @Test
-    fun overBluetoothTheBoardIsPingedEverySecond() =
+    fun overBluetoothTheBoardIsPingedTwiceASecond() =
         runTest {
             val usb = FakeUsb()
             running(usb, radio = true)
-            advanceTimeBy(3_500)
+            advanceTimeBy(1_750)
             val pings = usb.ports[0].written.filter { it.startsWith("PING") }
             assertEquals(listOf("PING 1", "PING 2", "PING 3", "PING 4"), pings)
         }
