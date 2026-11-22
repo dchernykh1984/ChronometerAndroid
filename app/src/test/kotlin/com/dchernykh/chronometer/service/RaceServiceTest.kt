@@ -68,7 +68,7 @@ class RaceServiceTest {
         try {
             controller.get().onStartCommand(Intent(), 0, 1)
             controller.get().onStartCommand(Intent(), 0, 2)
-            assertEquals(DeviceId.TEST_BEAM, app.sourceController.device.value)
+            assertEquals(DeviceId.BOARDS, app.sourceController.device.value)
             Thread.sleep(200) // the source starts on a worker thread
             assertEquals(1, starts)
         } finally {

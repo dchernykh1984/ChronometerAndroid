@@ -14,18 +14,18 @@ enum class SourceKind {
 }
 
 /**
- * The devices a source can run (spec FR-004). The test ones make events up; the USB beam
- * is a beam board on the phone's USB, the Bluetooth beam one over Bluetooth; the others
- * are listed, "not available yet", and never started.
+ * The devices a source can run (spec FR-004). The beam boards are those the referee picked in
+ * the list of the boards around, on USB and Bluetooth (ChronometerPython's spec 003), listed
+ * first; the test ones make events up; the others are listed, "not available yet", and never
+ * started.
  */
 enum class DeviceId(
     val kind: SourceKind,
     val available: Boolean,
     val test: Boolean,
 ) {
+    BOARDS(SourceKind.BEAM, available = true, test = false),
     TEST_BEAM(SourceKind.BEAM, available = true, test = true),
-    USB_BEAM(SourceKind.BEAM, available = true, test = false),
-    BLE_BEAM(SourceKind.BEAM, available = true, test = false),
     TEST_CHIPS(SourceKind.CHIPS, available = true, test = true),
     LLRP(SourceKind.CHIPS, available = false, test = false),
     RACERESULT(SourceKind.CHIPS, available = false, test = false),
@@ -36,10 +36,13 @@ enum class DeviceId(
         /** A kind's devices, in the order the settings list them. */
         fun of(kind: SourceKind): List<DeviceId> = entries.filter { it.kind == kind }
 
-        /** A stored name back to a device of [kind], or that kind's test device. */
+        /**
+         * A stored name back to a device of [kind], or that kind's first: the beam boards, which
+         * took the place of the USB and Bluetooth beams, or the test chips.
+         */
         fun fromName(
             name: String?,
             kind: SourceKind,
-        ): DeviceId = entries.firstOrNull { it.name == name && it.kind == kind } ?: of(kind).first { it.test }
+        ): DeviceId = entries.firstOrNull { it.name == name && it.kind == kind } ?: of(kind).first()
     }
 }

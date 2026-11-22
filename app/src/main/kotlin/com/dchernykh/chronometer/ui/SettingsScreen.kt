@@ -52,6 +52,7 @@ import com.dchernykh.chronometer.data.DEAD_TIME_RANGE_S
 import com.dchernykh.chronometer.data.Settings
 import com.dchernykh.chronometer.data.ThemeMode
 import com.dchernykh.chronometer.data.isUploadConfigured
+import com.dchernykh.chronometer.service.RaceService
 import com.dchernykh.chronometer.source.SourceKind
 import java.util.UUID
 
@@ -64,6 +65,9 @@ fun SettingsScreen(
     val context = LocalContext.current
     // Baseline to detect edits; reset after a save or a "New competition".
     var initialSettings by remember { mutableStateOf(viewModel.loadSettings()) }
+    val boardSearch by viewModel.boardSearch.collectAsStateWithLifecycle()
+    val blinkNote by viewModel.blinkNote.collectAsStateWithLifecycle()
+    val timingModeOn by RaceService.runningState.collectAsStateWithLifecycle()
     var settings by remember { mutableStateOf(initialSettings) }
     var storageGranted by remember { mutableStateOf(StoragePermission.isGranted(context)) }
     var folderRefresh by remember { mutableStateOf(0) }
@@ -259,6 +263,14 @@ fun SettingsScreen(
                     initialSettings = settings
                     viewModel.downloadStartProtocol()
                 },
+                boards =
+                    BoardsUi(
+                        search = boardSearch,
+                        locked = timingModeOn,
+                        note = blinkNote,
+                        onFind = viewModel::findBoards,
+                        onBlink = viewModel::blink,
+                    ),
             )
 
             Row(

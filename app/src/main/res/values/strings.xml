@@ -66,8 +66,6 @@
     <string name="source_chips">Timing chips</string>
     <string name="source_device">Device</string>
     <string name="device_test_beam">Test beam</string>
-    <string name="device_usb_beam">USB beam</string>
-    <string name="device_ble_beam">Bluetooth beam</string>
     <string name="device_test_chips">Test chips</string>
     <string name="device_llrp">LLRP reader (Impinj, Zebra)</string>
     <string name="device_raceresult">RaceResult decoder</string>
@@ -127,7 +125,6 @@
     <string name="source_board_not_in_range">No beam board %1$s in Bluetooth range: is it on?</string>
     <string name="source_board_bluetooth_off">Bluetooth is off: switch it on for the beam board</string>
     <string name="source_board_no_bluetooth_leave">Allow the app Bluetooth, in Android\'s settings for the app if it asks no more</string>
-    <string name="beam_board_name">Beam board\'s name (Bluetooth), as beam-1a2b</string>
     <string name="source_board_no_permission">Allow the app the beam board when Android asks; to be asked again, replug it</string>
     <string name="source_board_not_opened">The beam board could not be opened: %1$s</string>
     <string name="source_board_held">Another app has the beam board: close it</string>
@@ -154,4 +151,27 @@
     <string name="clock_news_gnss_far_internet">GNSS time not taken: over a second off the internet\'s (spoofed?)</string>
     <string name="clock_news_gnss_far_system">GNSS time not taken: over a minute off the phone\'s clock (spoofed?)</string>
     <string name="clock_news_no_location">GNSS not used: the location is not allowed</string>
+
+    <!-- The beam boards around, picked from a list (spec 003). -->
+    <string name="device_boards">Beam boards</string>
+    <string name="boards_find">Find boards</string>
+    <string name="boards_searching">Searching for boards...</string>
+    <string name="boards_none_found">No beam board found: are they on?</string>
+    <string name="board_usb">%1$s (USB)</string>
+    <string name="board_ble">%1$s (Bluetooth, %2$d dBm)</string>
+    <string name="board_ble_no_signal">%1$s (Bluetooth)</string>
+    <string name="board_gone">%1$s (not found by the last search)</string>
+    <string name="board_blink">Blink</string>
+    <string name="boards_locked">Stop timing mode to change the boards picked</string>
+    <string name="board_blink_hint">Blink: the board\'s LED flashes 5 times. An ESP32-C3\'s blue LED is lit while the laser is on its sensor: block the beam to see it flash.</string>
+    <string name="blink_reaching">%1$s: reaching it...</string>
+    <string name="blink_flashing">%1$s: its LED flashes 5 times</string>
+    <string name="blink_not_connected">%1$s: not connected now</string>
+    <string name="blink_not_found">%1$s: not found: is it on, in range, and read by no other phone?</string>
+    <string name="blink_not_permitted">%1$s: waiting for leave to use it</string>
+    <string name="blink_not_opened">%1$s: could not be opened</string>
+    <string name="board_line_ok">%1$s: connected</string>
+    <string name="board_line_trouble">%1$s: %2$s</string>
+    <string name="source_board_none_picked">No board picked: find the boards around and pick one</string>
+    <string name="source_board_twin">the same board as %1$s, read on that link only</string>
 </resources>

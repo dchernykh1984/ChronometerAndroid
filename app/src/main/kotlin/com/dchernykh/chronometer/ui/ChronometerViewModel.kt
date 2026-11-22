@@ -12,10 +12,17 @@ import com.dchernykh.chronometer.data.CutoffEvent
 import com.dchernykh.chronometer.data.PendingBreakEntity
 import com.dchernykh.chronometer.data.Settings
 import com.dchernykh.chronometer.source.SourceStatus
+import com.dchernykh.chronometer.source.board.BlinkNote
+import com.dchernykh.chronometer.source.board.Blinked
+import com.dchernykh.chronometer.source.board.BoardFinder
+import com.dchernykh.chronometer.source.board.BoardPick
+import com.dchernykh.chronometer.source.board.BoardSearchState
+import com.dchernykh.chronometer.source.board.blinkOnce
 import com.dchernykh.chronometer.startprotocol.Download
 import com.dchernykh.chronometer.time.ClockNews
 import com.dchernykh.chronometer.time.ClockReading
 import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +31,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 // One function a screen action: the screens reach the app through this one model.
 @Suppress("TooManyFunctions")
@@ -89,6 +97,40 @@ class ChronometerViewModel(
 
     /** The cutoff source's state, for its line on the main screen. */
     val sourceStatus: StateFlow<SourceStatus> = app.sourceController.status
+
+    private val searchState = MutableStateFlow(BoardSearchState())
+
+    /** The boards around, as the last search found them (spec 003, FR-001). */
+    val boardSearch: StateFlow<BoardSearchState> = searchState.asStateFlow()
+
+    private val blinkState = MutableStateFlow<BlinkNote?>(null)
+
+    /** How the last blink went (FR-003). */
+    val blinkNote: StateFlow<BlinkNote?> = blinkState.asStateFlow()
+
+    /** The boards around looked for: 5 s of Bluetooth, off the main thread. */
+    fun findBoards() {
+        if (searchState.value.running) return
+        searchState.value = searchState.value.copy(running = true)
+        viewModelScope.launch {
+            val found = withContext(Dispatchers.IO) { BoardFinder(app).find() }
+            searchState.value = BoardSearchState(running = false, search = found)
+        }
+    }
+
+    /** The board's LED blinked: by the beam boards running, else by reaching it for a moment. */
+    fun blink(pick: BoardPick) {
+        when (app.sourceController.blink(pick.key)) {
+            true -> blinkState.value = BlinkNote(pick.name, Blinked.DONE)
+            false -> blinkState.value = BlinkNote(pick.name, Blinked.NOT_CONNECTED)
+            null ->
+                viewModelScope.launch {
+                    blinkState.value = BlinkNote(pick.name, Blinked.REACHING)
+                    val blinked = withContext(Dispatchers.IO) { blinkOnce(app.portsOf(pick)) }
+                    blinkState.value = BlinkNote(pick.name, blinked)
+                }
+        }
+    }
 
     /** What the referee is to be told of the clock (spec 003, FR-009). */
     val clockNews: StateFlow<ClockNews?> = app.clockKeeper.news

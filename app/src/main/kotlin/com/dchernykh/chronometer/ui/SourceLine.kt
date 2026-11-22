@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -51,6 +52,20 @@ internal fun SourceLine(
             style = MaterialTheme.typography.labelMedium,
             modifier = Modifier.testTag("sourceLine"),
         )
+        // Each board picked, and its state (spec 003, FR-005).
+        status.boards.forEach { (board, trouble) ->
+            Text(
+                text =
+                    if (trouble == null) {
+                        stringResource(R.string.board_line_ok, board)
+                    } else {
+                        stringResource(R.string.board_line_trouble, board, boardText(trouble))
+                    },
+                style = MaterialTheme.typography.labelMedium,
+                color = if (trouble == null) Color.Unspecified else MaterialTheme.colorScheme.error,
+                modifier = Modifier.testTag("boardLine"),
+            )
+        }
         status.lastError?.let { error ->
             Text(
                 text = errorText(error),
@@ -152,7 +167,12 @@ private fun errorText(error: SourceError): String =
         SourceError.Ended -> stringResource(R.string.source_error_ended)
         is SourceError.NotStored -> stringResource(R.string.source_error_not_stored, error.message)
         is SourceError.Dropped -> stringResource(R.string.source_error_dropped, error.events, error.message)
-        is SourceError.Board -> boardText(error.trouble)
+        is SourceError.Board ->
+            if (error.board.isEmpty()) {
+                boardText(error.trouble)
+            } else {
+                stringResource(R.string.board_line_trouble, error.board, boardText(error.trouble))
+            }
         is SourceError.Invalid ->
             stringResource(
                 when (error.problem) {
@@ -163,10 +183,13 @@ private fun errorText(error: SourceError): String =
     }
 
 @Composable
-private fun boardText(trouble: BoardTrouble): String =
+internal fun boardText(trouble: BoardTrouble): String =
     when (trouble) {
-        BoardTrouble.NotFound -> stringResource(R.string.source_board_not_found)
-        BoardTrouble.NoPermission -> stringResource(R.string.source_board_no_permission)
+        BoardTrouble.NotFound,
+        BoardTrouble.NoBoardPicked,
+        is BoardTrouble.Twin,
+        BoardTrouble.NoPermission,
+        -> pickText(trouble)
         BoardTrouble.NotNamed,
         is BoardTrouble.NotInRange,
         BoardTrouble.BluetoothOff,
@@ -186,6 +209,16 @@ private fun boardText(trouble: BoardTrouble): String =
                 stringResource(R.string.source_board_breaks_missing, trouble.first, trouble.last)
             }
         is BoardTrouble.ClockNotRead -> stringResource(R.string.source_board_clock_not_read, trouble.breaks)
+    }
+
+/** The troubles of the boards picked, or of reaching one at all. */
+@Composable
+private fun pickText(trouble: BoardTrouble): String =
+    when (trouble) {
+        BoardTrouble.NoBoardPicked -> stringResource(R.string.source_board_none_picked)
+        is BoardTrouble.Twin -> stringResource(R.string.source_board_twin, trouble.other)
+        BoardTrouble.NoPermission -> stringResource(R.string.source_board_no_permission)
+        else -> stringResource(R.string.source_board_not_found)
     }
 
 /** The Bluetooth beam's own troubles in finding its board. */

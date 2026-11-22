@@ -66,8 +66,6 @@
     <string name="source_chips">Чиптер</string>
     <string name="source_device">Құрылғы</string>
     <string name="device_test_beam">Сынақ сәулесі</string>
-    <string name="device_usb_beam">USB сәулесі</string>
-    <string name="device_ble_beam">Bluetooth сәулесі</string>
     <string name="device_test_chips">Сынақ чиптері</string>
     <string name="device_llrp">LLRP оқу құрылғысы (Impinj, Zebra)</string>
     <string name="device_raceresult">RaceResult декодері</string>
@@ -127,7 +125,6 @@
     <string name="source_board_not_in_range">%1$s тақтасы Bluetooth аймағында жоқ: ол қосулы ма?</string>
     <string name="source_board_bluetooth_off">Bluetooth өшірулі: сәуле тақтасы үшін қосыңыз</string>
     <string name="source_board_no_bluetooth_leave">Қолданбаға Bluetooth-ты рұқсат етіңіз; сұрамаса - Android баптауында</string>
-    <string name="beam_board_name">Сәуле тақтасының аты (Bluetooth), мысалы beam-1a2b</string>
     <string name="source_board_no_permission">Android сұрағанда тақтаға рұқсат беріңіз; қайта сұрауы үшін қайта қосыңыз</string>
     <string name="source_board_not_opened">Сәуле тақтасын ашу мүмкін болмады: %1$s</string>
     <string name="source_board_held">Сәуле тақтасын басқа қолданба пайдаланып тұр: оны жабыңыз</string>
@@ -154,4 +151,27 @@
     <string name="clock_news_gnss_far_internet">GNSS уақыты алынбады: интернет уақытынан бір секундтан артық айырмашылық (жалған сигнал?)</string>
     <string name="clock_news_gnss_far_system">GNSS уақыты алынбады: телефон сағатынан бір минуттан артық айырмашылық (жалған сигнал?)</string>
     <string name="clock_news_no_location">GNSS қолданылмайды: геолокацияға рұқсат жоқ</string>
+
+    <!-- The beam boards around, picked from a list (spec 003). -->
+    <string name="device_boards">Сәуле тақталары</string>
+    <string name="boards_find">Тақталарды табу</string>
+    <string name="boards_searching">Тақталар ізделуде...</string>
+    <string name="boards_none_found">Сәуле тақталары табылмады: олар қосулы ма?</string>
+    <string name="board_usb">%1$s (USB)</string>
+    <string name="board_ble">%1$s (Bluetooth, %2$d дБм)</string>
+    <string name="board_ble_no_signal">%1$s (Bluetooth)</string>
+    <string name="board_gone">%1$s (соңғы іздеуде табылмады)</string>
+    <string name="board_blink">Жыпылықтату</string>
+    <string name="boards_locked">Тақталарды таңдау уақыт өлшеу режимі өшкенде өзгереді</string>
+    <string name="board_blink_hint">Жыпылықтату: тақтаның жарық диоды 5 рет жыпылықтайды. ESP32-C3 көк диоды лазер датчикке түсіп тұрғанда жанып тұрады: жыпылықтауды көру үшін сәулені жабыңыз.</string>
+    <string name="blink_reaching">%1$s: қосылуда...</string>
+    <string name="blink_flashing">%1$s: жарық диоды 5 рет жыпылықтайды</string>
+    <string name="blink_not_connected">%1$s: қазір қосылмаған</string>
+    <string name="blink_not_found">%1$s: табылмады: ол қосулы, жақын және басқа телефонға қосылмаған ба?</string>
+    <string name="blink_not_permitted">%1$s: қолдануға рұқсат күтуде</string>
+    <string name="blink_not_opened">%1$s: қосылу мүмкін болмады</string>
+    <string name="board_line_ok">%1$s: қосылған</string>
+    <string name="board_line_trouble">%1$s: %2$s</string>
+    <string name="source_board_none_picked">Тақталар таңдалмаған: жақын тақталарды тауып, керектісін белгілеңіз</string>
+    <string name="source_board_twin">%1$s тақтасымен бірдей тақта: тек сол байланыс арқылы оқылады</string>
 </resources>

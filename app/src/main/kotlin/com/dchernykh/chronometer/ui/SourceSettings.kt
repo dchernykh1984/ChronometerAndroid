@@ -3,14 +3,18 @@ package com.dchernykh.chronometer.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -23,10 +27,27 @@ import com.dchernykh.chronometer.data.Settings
 import com.dchernykh.chronometer.data.chosenDevice
 import com.dchernykh.chronometer.source.DeviceId
 import com.dchernykh.chronometer.source.SourceKind
+import com.dchernykh.chronometer.source.board.BlinkNote
+import com.dchernykh.chronometer.source.board.Blinked
+import com.dchernykh.chronometer.source.board.BoardLink
+import com.dchernykh.chronometer.source.board.BoardPick
+import com.dchernykh.chronometer.source.board.BoardRow
+import com.dchernykh.chronometer.source.board.BoardSearchState
+import com.dchernykh.chronometer.source.board.boardRows
 import com.dchernykh.chronometer.startprotocol.Download
 import com.dchernykh.chronometer.startprotocol.DownloadProblem
 
 private const val DEAD_TIME_DIGITS = 3
+
+/** The list of the boards around as the settings show it (spec 003), and what it can ask. */
+internal class BoardsUi(
+    val search: BoardSearchState,
+    /** Timing mode on: the pick waits for it to stop, as the next start reads it. */
+    val locked: Boolean,
+    val note: BlinkNote?,
+    val onFind: () -> Unit,
+    val onBlink: (BoardPick) -> Unit,
+)
 
 /**
  * Where cutoffs come from, the device that makes them and, for chips, the dead time and the
@@ -40,6 +61,7 @@ internal fun CutoffSourceSection(
     download: Download?,
     canDownload: Boolean,
     onDownload: () -> Unit,
+    boards: BoardsUi,
 ) {
     Text(stringResource(R.string.cutoff_source))
     FlowRow(
@@ -80,14 +102,8 @@ internal fun CutoffSourceSection(
             )
         }
     }
-    if (kind == SourceKind.BEAM && chosen == DeviceId.BLE_BEAM) {
-        OutlinedTextField(
-            value = settings.beamBoardName,
-            onValueChange = { typed -> onChange(settings.copy(beamBoardName = typed.trim())) },
-            label = { Text(stringResource(R.string.beam_board_name)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth().testTag("beamBoardField"),
-        )
+    if (kind == SourceKind.BEAM && chosen == DeviceId.BOARDS) {
+        BoardsList(settings, onChange, boards)
     }
     if (kind == SourceKind.CHIPS) {
         OutlinedTextField(
@@ -107,6 +123,85 @@ internal fun CutoffSourceSection(
         StartListDownload(download, canDownload, onDownload)
     }
 }
+
+/**
+ * The boards around, found on asking, each with a check that picks it and Blink (spec 003,
+ * FR-001 to FR-003); those picked and not found by the last search kept, greyed.
+ */
+@Composable
+private fun BoardsList(
+    settings: Settings,
+    onChange: (Settings) -> Unit,
+    ui: BoardsUi,
+) {
+    OutlinedButton(
+        onClick = ui.onFind,
+        enabled = !ui.search.running,
+        modifier = Modifier.fillMaxWidth().testTag("findBoards"),
+    ) { Text(stringResource(if (ui.search.running) R.string.boards_searching else R.string.boards_find)) }
+    ui.search.search
+        ?.trouble
+        ?.let { Text(boardText(it), color = MaterialTheme.colorScheme.error) }
+    val rows =
+        boardRows(
+            ui.search.search
+                ?.found
+                .orEmpty(),
+            settings.beamBoards,
+        )
+    if (ui.search.search != null && rows.isEmpty()) Text(stringResource(R.string.boards_none_found))
+    for (row in rows) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            val pick = row.board.pick
+            Checkbox(
+                checked = row.picked,
+                enabled = !ui.locked,
+                onCheckedChange = { checked ->
+                    val others = settings.beamBoards.filter { it.key != pick.key }
+                    onChange(settings.copy(beamBoards = if (checked) others + pick else others))
+                },
+                modifier = Modifier.testTag("pick ${pick.key}"),
+            )
+            Text(
+                text = boardLabel(row),
+                color = if (row.here) Color.Unspecified else MaterialTheme.colorScheme.outline,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = { ui.onBlink(pick) }, modifier = Modifier.testTag("blink ${pick.key}")) {
+                Text(stringResource(R.string.board_blink))
+            }
+        }
+    }
+    if (ui.locked) Text(stringResource(R.string.boards_locked), style = MaterialTheme.typography.bodySmall)
+    ui.note?.let { Text(blinkText(it), style = MaterialTheme.typography.bodySmall) }
+    Text(stringResource(R.string.board_blink_hint), style = MaterialTheme.typography.bodySmall)
+}
+
+@Composable
+private fun boardLabel(row: BoardRow): String {
+    val pick = row.board.pick
+    val rssi = row.board.rssi
+    return when {
+        !row.here -> stringResource(R.string.board_gone, pick.name)
+        pick.link == BoardLink.USB -> stringResource(R.string.board_usb, pick.name)
+        rssi != null -> stringResource(R.string.board_ble, pick.name, rssi)
+        else -> stringResource(R.string.board_ble_no_signal, pick.name)
+    }
+}
+
+@Composable
+private fun blinkText(note: BlinkNote): String =
+    stringResource(
+        when (note.blinked) {
+            Blinked.REACHING -> R.string.blink_reaching
+            Blinked.DONE -> R.string.blink_flashing
+            Blinked.NOT_CONNECTED -> R.string.blink_not_connected
+            Blinked.NOT_FOUND -> R.string.blink_not_found
+            Blinked.NOT_PERMITTED -> R.string.blink_not_permitted
+            Blinked.NOT_OPENED -> R.string.blink_not_opened
+        },
+        note.name,
+    )
 
 /** "Download start protocol" and what the last download did (FR-009). */
 @Composable
@@ -181,9 +276,8 @@ internal fun deviceLabel(device: DeviceId): String {
     val name =
         stringResource(
             when (device) {
+                DeviceId.BOARDS -> R.string.device_boards
                 DeviceId.TEST_BEAM -> R.string.device_test_beam
-                DeviceId.USB_BEAM -> R.string.device_usb_beam
-                DeviceId.BLE_BEAM -> R.string.device_ble_beam
                 DeviceId.TEST_CHIPS -> R.string.device_test_chips
                 DeviceId.LLRP -> R.string.device_llrp
                 DeviceId.RACERESULT -> R.string.device_raceresult

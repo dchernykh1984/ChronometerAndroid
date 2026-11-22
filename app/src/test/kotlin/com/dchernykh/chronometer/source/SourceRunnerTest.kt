@@ -75,6 +75,28 @@ class SourceRunnerTest {
         }
 
     @Test
+    fun eachBoardPickedHasItsOwnStateAndItsNoticesAreSaidWithItsName() =
+        runTest {
+            val runner =
+                runner {
+                    flow {
+                        emit(SourceEvent.Board(BoardTrouble.NotInRange("AA"), board = "beam-7c1c"))
+                        emit(SourceEvent.Board(null, board = "beam-b6b0"))
+                        emit(SourceEvent.Board(BoardTrouble.BreaksMissing(6, 7), board = "beam-b6b0"))
+                        emit(SourceEvent.Board(BoardTrouble.Blocked, board = "beam-b6b0"))
+                        emit(SourceEvent.Board(null, board = "beam-7c1c")) // back: its trouble ends, no other's
+                        awaitCancellation()
+                    }
+                }
+            backgroundScope.launch { runner.run {} }
+            runCurrent()
+            val status = runner.status.value
+            assertEquals(mapOf("beam-7c1c" to null, "beam-b6b0" to BoardTrouble.Blocked), status.boards)
+            assertEquals(listOf("beam-7c1c", "beam-b6b0"), status.boards.keys.toList()) // in the order picked
+            assertEquals(SourceError.Board(BoardTrouble.BreaksMissing(6, 7), "beam-b6b0"), status.lastError)
+        }
+
+    @Test
     fun aNoticeALastingTroubleHidIsSaidAgainOnceThatTroubleEnds() =
         runTest {
             val said = mutableListOf<SourceError?>()
