@@ -170,6 +170,10 @@ dependencies {
         testImplementation("org.bouncycastle:bcprov-jdk18on:1.85") {
             because("Fix known vulnerabilities in Robolectric's test-only provider")
         }
+        // Guava comes in for the unit tests only, never shipped: patched for GHSA-xxph-c9ww-hj94.
+        testImplementation("com.google.guava:guava:33.7.2-jre") {
+            because("Fix a known vulnerability in the test classpath's Guava")
+        }
     }
 
     implementation(libs.androidx.core.ktx)
