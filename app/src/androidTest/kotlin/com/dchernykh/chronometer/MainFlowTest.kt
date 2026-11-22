@@ -346,6 +346,20 @@ class MainFlowTest {
         }
     }
 
+    /**
+     * The time of the break waiting, as the app stored it: a source's break is moved onto the
+     * clock the app keeps to world time (spec 003), which NTP may have set off the emulator's own.
+     */
+    private fun storedBreakTime(): String {
+        val beams = (appContext() as ChronometerApp).database.beamDao()
+        var stored: String? = null
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            stored = runBlocking { beams.oldestBreakFrom(0) }?.timeStr
+            stored != null
+        }
+        return checkNotNull(stored)
+    }
+
     /** The cutoffs in Room, which the hold's check and the final one both read. */
     private fun storedCutoffs() = runBlocking { (appContext() as ChronometerApp).database.cutoffDao().getAll() }
 
@@ -704,7 +718,6 @@ class MainFlowTest {
         val controller = (appContext() as ChronometerApp).sourceController
         val builtIn = controller.sourceFor
         val breakMs = System.currentTimeMillis() - BREAK_AGO_MS
-        val breakTime = TimeFormatter.currentTimeString(breakMs)
         controller.sourceFor = {
             CutoffSource {
                 flow {
@@ -721,6 +734,7 @@ class MainFlowTest {
         try {
             waitForText(localizedString(AppLanguage.EN, R.string.timing_dnd_title))
             composeRule.onNodeWithTag("timingOnDialogOk").performClick()
+            val breakTime = storedBreakTime()
             waitForText(localizedString(AppLanguage.EN, R.string.cutoff_at, timeOfDay(breakTime)))
             typePendingNumber("15")
             // The log shows the break's full time once the tap has taken; a repeat tap
