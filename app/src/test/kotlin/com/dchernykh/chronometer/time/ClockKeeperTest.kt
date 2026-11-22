@@ -83,6 +83,9 @@ class ClockKeeperTest {
         keeper.stopGnss()
         keeper.offerGnss(WORLD_MS, 1.0) // started anew: waiting, nothing said
         assertEquals(ClockNews.GnssDropped(GnssVerdict.UNSTEADY), keeper.news.value)
+        keeper.offerGnss(WORLD_MS, 1.0) // steady and near the internet's: taken
+        assertNull(keeper.news.value) // no more said dropped
+        assertEquals(ClockSource.GNSS, keeper.reading().source)
     }
 
     @Test
