@@ -214,7 +214,7 @@ class SourceControllerTest {
         }
 
     @Test
-    fun anEventTheDeviceDidNotTimeIsTimedAsItArrives() =
+    fun anEventIsTimedOnTheCorrectedClockAsItArrives() =
         runTest {
             choose(SourceKind.CHIPS)
             val base = 1_767_261_600_000L
@@ -222,7 +222,8 @@ class SourceControllerTest {
                 SourceController(
                     store,
                     { testScheduler.currentTime },
-                    wallClock = { base + testScheduler.currentTime },
+                    // The phone's clock 250 ms behind world time: a device's time is moved by as much.
+                    stamp = { system -> system?.plus(250) ?: (base + testScheduler.currentTime) },
                     storeScope = backgroundScope,
                 ) { batch, _, _ ->
                     delay(5_000) // a slow store: the time must not be taken now
@@ -242,7 +243,7 @@ class SourceControllerTest {
             controller.start(backgroundScope)
             advanceTimeBy(7_000)
             runCurrent()
-            assertEquals(listOf(base + 1_000, base), taken.flatten().map { (it as SourceEvent.ChipRead).timeMs })
+            assertEquals(listOf(base + 1_000, base + 250), taken.flatten().map { (it as SourceEvent.ChipRead).timeMs })
         }
 
     @Test

@@ -28,6 +28,8 @@ class RaceServiceTest {
     fun setUp() {
         // The source the service starts stores through the cutoffs, which queue uploads.
         WorkManagerTestInitHelper.initializeTestWorkManager(RuntimeEnvironment.getApplication())
+        // The clock it keeps asks no NTP server from a test.
+        (RuntimeEnvironment.getApplication() as ChronometerApp).clockKeeper.measure = { null }
     }
 
     @Test

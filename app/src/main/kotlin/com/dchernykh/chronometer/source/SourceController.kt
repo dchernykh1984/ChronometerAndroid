@@ -50,8 +50,11 @@ fun builtInSource(
 class SourceController(
     private val settingsStore: SettingsStore,
     private val now: () -> Long,
-    /** The phone's clock: an event its device did not time is timed by it as it arrives. */
-    private val wallClock: () -> Long = System::currentTimeMillis,
+    /**
+     * An event's time on the phone's clock as it arrives, given its device's on the system's,
+     * or null for one its device did not time: corrected to world time in the app (spec 003).
+     */
+    private val stamp: (Long?) -> Long = { it ?: System.currentTimeMillis() },
     /** Which competition an event arrives in; the sink drops one from a competition since replaced. */
     private val competition: () -> Long = { 0L },
     /** Where events are stored: it outlives a stop, so what arrived is stored all the same. */
@@ -127,7 +130,7 @@ class SourceController(
                         }
                     }
                 }
-                runner.run { channel.send(Taken(competition(), it.timedOnArrival(wallClock()))) }
+                runner.run { channel.send(Taken(competition(), it.timedOnArrival(stamp))) }
             }
         // Closed once the run has ended, so an event it was handing on as it stopped is kept.
         job?.invokeOnCompletion { channel.close() }
@@ -218,13 +221,14 @@ class SourceController(
 }
 
 /**
- * A read or a break its device did not time, timed now (spec FR-006): as it arrives, not
- * when it is stored, which a burst or a store tried again can put seconds later.
+ * A read or a break on the phone's clock as it arrives (spec FR-006): one its device did not
+ * time, timed now, not when it is stored, which a burst or a store tried again can put seconds
+ * later; one it did, its time moved onto the corrected clock.
  */
-private fun SourceEvent.timedOnArrival(nowMs: Long): SourceEvent =
+private fun SourceEvent.timedOnArrival(stamp: (Long?) -> Long): SourceEvent =
     when (this) {
-        is SourceEvent.ChipRead -> if (timeMs == null) copy(timeMs = nowMs) else this
-        is SourceEvent.BeamBreak -> if (timeMs == null) copy(timeMs = nowMs) else this
+        is SourceEvent.ChipRead -> copy(timeMs = stamp(timeMs))
+        is SourceEvent.BeamBreak -> copy(timeMs = stamp(timeMs))
         else -> this
     }
 
