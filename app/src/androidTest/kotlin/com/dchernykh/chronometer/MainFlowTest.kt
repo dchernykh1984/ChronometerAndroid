@@ -181,11 +181,29 @@ class MainFlowTest {
     }
 
     private fun openSettings() {
-        composeRule.onNodeWithTag("settingsButton").performClick()
+        // A single tap can be dropped on the slow tablet: tapped until Settings is open.
         composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
-            composeRule.onAllNodesWithTag("siteUrlField").fetchSemanticsNodes().isNotEmpty()
+            val open = composeRule.onAllNodesWithTag("siteUrlField").fetchSemanticsNodes().isNotEmpty()
+            if (!open) composeRule.onNodeWithTag("settingsButton").performClick()
+            open
         }
         composeRule.onNodeWithTag("siteUrlField").assertIsDisplayed()
+    }
+
+    /**
+     * Timing mode started, its Do Not Disturb hint shown: the toggle tapped until it shows, as a
+     * single tap can be dropped on the slow tablet. Each tap is waited on before the next look,
+     * so a tap that took is never followed by one that would stop it again.
+     */
+    private fun startTimingMode() {
+        val hint = localizedString(AppLanguage.EN, R.string.timing_dnd_title)
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            val shown = composeRule.onAllNodesWithText(hint).fetchSemanticsNodes().isNotEmpty()
+            if (!shown && !RaceService.runningState.value) {
+                composeRule.onNodeWithTag("timingModeToggle").performClick()
+            }
+            shown
+        }
     }
 
     /**
@@ -682,9 +700,8 @@ class MainFlowTest {
         selectRadio("sourceBeam")
         saveSettings()
         grantTimingLeave()
-        composeRule.onNodeWithTag("timingModeToggle").performClick()
+        startTimingMode()
         try {
-            waitForText(localizedString(AppLanguage.EN, R.string.timing_dnd_title))
             composeRule.onNodeWithTag("timingOnDialogOk").performClick()
             composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
                 controller.status.value.state is SourceState.Restarting
@@ -714,9 +731,8 @@ class MainFlowTest {
         selectRadio("sourceBeam")
         saveSettings()
         grantTimingLeave()
-        composeRule.onNodeWithTag("timingModeToggle").performClick()
+        startTimingMode()
         try {
-            waitForText(localizedString(AppLanguage.EN, R.string.timing_dnd_title))
             composeRule.onNodeWithTag("timingOnDialogOk").performClick()
             waitForText(localizedString(AppLanguage.EN, R.string.source_board_not_found))
             recordAndAwait("cutoffButton", "88")
@@ -744,9 +760,8 @@ class MainFlowTest {
         selectRadio("sourceBeam")
         saveSettings()
         grantTimingLeave()
-        composeRule.onNodeWithTag("timingModeToggle").performClick()
+        startTimingMode()
         try {
-            waitForText(localizedString(AppLanguage.EN, R.string.timing_dnd_title))
             composeRule.onNodeWithTag("timingOnDialogOk").performClick()
             val breakTime = storedBreakTime()
             waitForText(localizedString(AppLanguage.EN, R.string.cutoff_at, timeOfDay(breakTime)))
@@ -916,9 +931,8 @@ class MainFlowTest {
     @Test
     fun enablingTimingModeShowsDoNotDisturbHint() {
         grantTimingLeave()
-        composeRule.onNodeWithTag("timingModeToggle").performClick()
+        startTimingMode()
         try {
-            waitForText(localizedString(AppLanguage.EN, R.string.timing_dnd_title))
             composeRule.onNodeWithTag("timingOnDialogOk").performClick()
         } finally {
             RaceService.stop(appContext())
