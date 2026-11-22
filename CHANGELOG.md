@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.1](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.11.0...chronometer-android-v0.11.1) (2026-11-22)
+
+
+### Bug Fixes
+
+* **beam:** read firmware 0.5, whose FLASH puts a lit ESP32-C3 LED out for Blink ([a24011e](https://github.com/dchernykh1984/ChronometerAndroid/commit/a24011e0332b62154dca2adc4fae32225ab46c84))
+
 ## [0.11.0](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.10.0...chronometer-android-v0.11.0) (2026-11-22)
 
 
