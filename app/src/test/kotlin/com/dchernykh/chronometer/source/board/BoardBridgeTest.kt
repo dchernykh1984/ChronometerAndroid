@@ -123,7 +123,7 @@ class BoardBridgeTest {
 
     @Test
     fun theRadioClockStartsAgainOnAClockStep() {
-        val sync = radioTrips(0.0, listOf(1.0 to 1.0) + List(16) { 9.0 to 9.0 })
+        val sync = radioTrips(0.0, listOf(1.0 to 1.0) + List(RADIO_SAMPLES) { 9.0 to 9.0 })
         assertEquals(0.0, sync.offset, 1e-9) // the first, shortest trip rolled off: 9 and 9
         val sent = 2_000_000.0
         val boardUs = ((sent - 5_000.0) * 1_000).toLong()
