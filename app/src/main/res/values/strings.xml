@@ -161,6 +161,7 @@
     <string name="board_usb">%1$s (USB)</string>
     <string name="board_ble">%1$s (Bluetooth, %2$d dBm)</string>
     <string name="board_ble_no_signal">%1$s (Bluetooth)</string>
+    <string name="board_read_now">%1$s (read now)</string>
     <string name="board_gone">%1$s (not found by the last search)</string>
     <string name="board_blink_named">Blink %1$s</string>
     <string name="board_blink">Blink</string>
