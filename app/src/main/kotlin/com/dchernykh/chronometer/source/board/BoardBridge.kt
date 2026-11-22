@@ -409,12 +409,11 @@ class BoardBridge(
 
 /**
  * The board's bytes as lines, each with its moment: only a line with its end counts, as one
- * cut short when the link ended may be a BREAK of half its digits. Over USB a line is timed
- * when its end came; over Bluetooth ([firstPiece]) when its first piece did, the radio's
- * pieces of one line coming a connection event apart.
+ * cut short when the link ended may be a BREAK of half its digits. A line is timed when its
+ * first piece came, over USB as over Bluetooth (the beam boards' contract): timed at its end,
+ * it would carry the time its last characters took, a connection event apart over the radio.
  */
 class LineSplitter(
-    private val firstPiece: Boolean = false,
     private val longest: Int = 256,
 ) {
     private val pending = StringBuilder()
@@ -429,7 +428,7 @@ class LineSplitter(
             val char = (byte.toInt() and 0xFF).toChar()
             when {
                 char == '\n' -> {
-                    lines += pending.toString().trim() to (if (firstPiece) startedAt else at)
+                    lines += pending.toString().trim() to startedAt
                     pending.clear()
                 }
                 pending.length < longest -> {

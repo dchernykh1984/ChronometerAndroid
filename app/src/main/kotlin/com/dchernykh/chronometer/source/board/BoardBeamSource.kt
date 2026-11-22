@@ -217,7 +217,7 @@ class BoardBeamSource(
         port: BoardPort,
         lines: Channel<Pair<String, Long>>,
     ) {
-        val splitter = LineSplitter(firstPiece = radio)
+        val splitter = LineSplitter()
         try {
             while (true) {
                 val started = monotonic()
