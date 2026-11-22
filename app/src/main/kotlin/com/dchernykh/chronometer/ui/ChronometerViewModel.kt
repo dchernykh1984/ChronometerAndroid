@@ -120,6 +120,8 @@ class ChronometerViewModel(
 
     /** The board's LED blinked: by the beam boards running, else by reaching it for a moment. */
     fun blink(pick: BoardPick) {
+        // One board reached at a time: a second press while it is would race it for the board.
+        if (blinkState.value?.blinked == Blinked.REACHING) return
         when (app.sourceController.blink(pick.key)) {
             true -> blinkState.value = BlinkNote(pick.name, Blinked.DONE)
             false -> blinkState.value = BlinkNote(pick.name, Blinked.NOT_CONNECTED)
