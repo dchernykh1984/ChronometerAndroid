@@ -66,8 +66,6 @@
     <string name="source_chips">Чипы</string>
     <string name="source_device">Устройство</string>
     <string name="device_test_beam">Тестовый луч</string>
-    <string name="device_usb_beam">Луч по USB</string>
-    <string name="device_ble_beam">Луч по Bluetooth</string>
     <string name="device_test_chips">Тестовые чипы</string>
     <string name="device_llrp">Считыватель LLRP (Impinj, Zebra)</string>
     <string name="device_raceresult">Декодер RaceResult</string>
@@ -127,7 +125,6 @@
     <string name="source_board_not_in_range">Плата %1$s вне зоны Bluetooth: она включена?</string>
     <string name="source_board_bluetooth_off">Bluetooth выключен: включите его для платы луча</string>
     <string name="source_board_no_bluetooth_leave">Разрешите приложению Bluetooth; если не спрашивает - в настройках Android</string>
-    <string name="beam_board_name">Имя платы луча (Bluetooth), например beam-1a2b</string>
     <string name="source_board_no_permission">Разрешите плату луча на вопрос Android; спросит снова, если переподключить</string>
     <string name="source_board_not_opened">Плату луча не удалось открыть: %1$s</string>
     <string name="source_board_held">Плату луча занимает другое приложение: закройте его</string>
@@ -154,4 +151,27 @@
     <string name="clock_news_gnss_far_internet">Время GNSS не принято: расходится с интернетом больше чем на секунду (подмена?)</string>
     <string name="clock_news_gnss_far_system">Время GNSS не принято: расходится с часами телефона больше чем на минуту (подмена?)</string>
     <string name="clock_news_no_location">GNSS не используется: нет доступа к геолокации</string>
+
+    <!-- The beam boards around, picked from a list (spec 003). -->
+    <string name="device_boards">Платы луча</string>
+    <string name="boards_find">Найти платы</string>
+    <string name="boards_searching">Ищу платы...</string>
+    <string name="boards_none_found">Платы луча не найдены: они включены?</string>
+    <string name="board_usb">%1$s (USB)</string>
+    <string name="board_ble">%1$s (Bluetooth, %2$d дБм)</string>
+    <string name="board_ble_no_signal">%1$s (Bluetooth)</string>
+    <string name="board_gone">%1$s (не найдена при последнем поиске)</string>
+    <string name="board_blink">Мигнуть</string>
+    <string name="boards_locked">Выбор плат меняется, когда режим хронометража выключен</string>
+    <string name="board_blink_hint">Мигнуть: светодиод платы мигнёт 5 раз. Синий светодиод ESP32-C3 горит, пока лазер светит на датчик: перекройте луч, чтобы увидеть мигание.</string>
+    <string name="blink_reaching">%1$s: подключаюсь...</string>
+    <string name="blink_flashing">%1$s: светодиод мигает 5 раз</string>
+    <string name="blink_not_connected">%1$s: сейчас не подключена</string>
+    <string name="blink_not_found">%1$s: не найдена: она включена, рядом и не подключена к другому телефону?</string>
+    <string name="blink_not_permitted">%1$s: ждёт разрешения на доступ</string>
+    <string name="blink_not_opened">%1$s: не удалось подключиться</string>
+    <string name="board_line_ok">%1$s: подключена</string>
+    <string name="board_line_trouble">%1$s: %2$s</string>
+    <string name="source_board_none_picked">Платы не выбраны: найдите платы рядом и отметьте нужные</string>
+    <string name="source_board_twin">та же плата, что %1$s: читается только по той связи</string>
 </resources>

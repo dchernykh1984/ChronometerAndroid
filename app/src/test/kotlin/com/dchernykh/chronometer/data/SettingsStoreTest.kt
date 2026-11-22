@@ -3,6 +3,9 @@ package com.dchernykh.chronometer.data
 import android.content.Context
 import com.dchernykh.chronometer.source.DeviceId
 import com.dchernykh.chronometer.source.SourceKind
+import com.dchernykh.chronometer.source.board.BoardLink
+import com.dchernykh.chronometer.source.board.BoardPick
+import com.dchernykh.chronometer.source.board.USB_KEY
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -164,7 +167,8 @@ class SettingsStoreTest {
     fun theCutoffSourceIsByHandWithTheTestDevicesAnd5SecondsByDefault() {
         val loaded = store.load()
         assertEquals(SourceKind.HAND, loaded.cutoffSource)
-        assertEquals(DeviceId.TEST_BEAM, loaded.beamDevice)
+        assertEquals(DeviceId.BOARDS, loaded.beamDevice) // the boards first (spec 003)
+        assertEquals(emptyList<BoardPick>(), loaded.beamBoards)
         assertEquals(DeviceId.TEST_CHIPS, loaded.chipsDevice)
         assertEquals(5, loaded.deadTimeS)
     }
@@ -174,8 +178,8 @@ class SettingsStoreTest {
         store.save(
             store.load().copy(
                 cutoffSource = SourceKind.CHIPS,
-                beamDevice = DeviceId.USB_BEAM,
-                beamBoardName = " beam-4103 ",
+                beamDevice = DeviceId.TEST_BEAM,
+                beamBoards = listOf(USB, RADIO),
                 chipsDevice = DeviceId.LLRP,
                 deadTimeS = 8,
             ),
@@ -183,8 +187,8 @@ class SettingsStoreTest {
         store.resetForNewCompetition()
         val loaded = SettingsStore(RuntimeEnvironment.getApplication()).load()
         assertEquals(SourceKind.CHIPS, loaded.cutoffSource)
-        assertEquals(DeviceId.USB_BEAM, loaded.beamDevice)
-        assertEquals("beam-4103", loaded.beamBoardName) // kept, its spaces trimmed
+        assertEquals(DeviceId.TEST_BEAM, loaded.beamDevice)
+        assertEquals(listOf(USB, RADIO), loaded.beamBoards)
         assertEquals(DeviceId.LLRP, loaded.chipsDevice)
         assertEquals(8, loaded.deadTimeS)
     }
@@ -206,6 +210,36 @@ class SettingsStoreTest {
             .edit()
             .putString("beam_device", "LLRP")
             .commit()
-        assertEquals(DeviceId.TEST_BEAM, store.load().beamDevice)
+        assertEquals(DeviceId.BOARDS, store.load().beamDevice)
+    }
+
+    @Test
+    fun aBoardReadByAnOlderVersionIsThatBoardPicked() {
+        val prefs =
+            RuntimeEnvironment.getApplication().getSharedPreferences(
+                "chronometer_settings",
+                Context.MODE_PRIVATE,
+            )
+        prefs
+            .edit()
+            .putString("beam_device", "BLE_BEAM")
+            .putString("beam_board_name", " beam-4103 ")
+            .commit()
+        val bluetooth = store.load()
+        assertEquals(DeviceId.BOARDS, bluetooth.beamDevice)
+        assertEquals(listOf(BoardPick(BoardLink.BLE, "beam-4103", "beam-4103")), bluetooth.beamBoards)
+        prefs.edit().putString("beam_device", "USB_BEAM").commit()
+        assertEquals(listOf(BoardPick(BoardLink.USB, USB_KEY, "USB")), store.load().beamBoards)
+        prefs
+            .edit()
+            .putString("beam_device", "BLE_BEAM")
+            .putString("beam_board_name", "")
+            .commit()
+        assertEquals(emptyList<BoardPick>(), store.load().beamBoards) // none named: none picked
+        store.save(store.load().copy(beamBoards = listOf(RADIO)))
+        assertEquals(listOf(RADIO), store.load().beamBoards) // saved once: the pick, not the old name
     }
 }
+
+private val USB = BoardPick(BoardLink.USB, USB_KEY, "beam-rp2040")
+private val RADIO = BoardPick(BoardLink.BLE, "AA:BB:CC:DD:EE:FF", "beam-7c1c")

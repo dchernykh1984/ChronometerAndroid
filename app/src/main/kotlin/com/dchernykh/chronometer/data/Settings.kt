@@ -2,6 +2,7 @@ package com.dchernykh.chronometer.data
 
 import com.dchernykh.chronometer.source.DeviceId
 import com.dchernykh.chronometer.source.SourceKind
+import com.dchernykh.chronometer.source.board.BoardPick
 
 /** UI language; SYSTEM follows the device locale, others force that language. */
 enum class AppLanguage(
@@ -53,9 +54,9 @@ data class Settings(
     val language: AppLanguage = AppLanguage.SYSTEM,
     /** Where cutoffs come from besides the hand: nothing more, a beam or chips. */
     val cutoffSource: SourceKind = SourceKind.HAND,
-    val beamDevice: DeviceId = DeviceId.TEST_BEAM,
-    /** The Bluetooth beam board to read, by its name (beam-1a2b) or address: no other one. */
-    val beamBoardName: String = "",
+    val beamDevice: DeviceId = DeviceId.BOARDS,
+    /** The beam boards picked in the list of the boards around: read, and no other (spec 003). */
+    val beamBoards: List<BoardPick> = emptyList(),
     val chipsDevice: DeviceId = DeviceId.TEST_CHIPS,
     /** Chip reads of one bib closer than this are one pass (spec FR-010). */
     val deadTimeS: Int = DEFAULT_DEAD_TIME_S,

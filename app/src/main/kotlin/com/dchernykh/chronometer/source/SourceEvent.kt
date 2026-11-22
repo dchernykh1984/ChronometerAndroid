@@ -56,10 +56,12 @@ sealed interface SourceEvent {
 
     /**
      * A beam board's word on itself, for the screen to say in the referee's language: a
-     * trouble, or null once all is well again, which ends a lasting one.
+     * trouble, or null once all is well again, which ends a lasting one. [board] names it
+     * among the boards picked (spec 003); empty, the source's one board.
      */
     data class Board(
         val trouble: BoardTrouble?,
+        val board: String = "",
     ) : SourceEvent
 }
 
@@ -72,6 +74,17 @@ sealed interface BoardTrouble {
 
     /** No beam board on USB. */
     data object NotFound : BoardTrouble
+
+    /** Beam boards chosen, and none picked in the list of the boards around (spec 003). */
+    data object NoBoardPicked : BoardTrouble
+
+    /**
+     * The board picked twice, on its USB and its Bluetooth, and read on the link that said
+     * HELLO first only, [other]'s: each of its breaks would be two cutoffs (spec 003).
+     */
+    data class Twin(
+        val other: String,
+    ) : BoardTrouble
 
     /** The Bluetooth beam with no board named in the settings: none is read (contract, step 1). */
     data object NotNamed : BoardTrouble

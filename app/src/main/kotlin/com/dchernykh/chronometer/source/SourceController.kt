@@ -3,8 +3,7 @@ package com.dchernykh.chronometer.source
 import com.dchernykh.chronometer.chips.ChipMap
 import com.dchernykh.chronometer.data.SettingsStore
 import com.dchernykh.chronometer.data.chosenDevice
-import com.dchernykh.chronometer.source.board.BoardBeamSource
-import com.dchernykh.chronometer.source.board.BoardPorts
+import com.dchernykh.chronometer.source.board.BoardsSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,15 +28,12 @@ private const val BATCH = 200
 fun builtInSource(
     device: DeviceId,
     chipMap: () -> ChipMap,
-    /** Where beam boards are found: the phone's USB in the app. */
-    boards: () -> BoardPorts? = { null },
-    /** Where the beam board named in the settings is found over Bluetooth. */
-    radios: () -> BoardPorts? = { null },
+    /** The beam boards the settings pick, as the app reads them. */
+    boards: () -> CutoffSource? = { null },
 ): CutoffSource? =
     when (device) {
+        DeviceId.BOARDS -> boards()
         DeviceId.TEST_BEAM -> TestBeamSource()
-        DeviceId.USB_BEAM -> boards()?.let { BoardBeamSource(it) }
-        DeviceId.BLE_BEAM -> radios()?.let { BoardBeamSource(it, radio = true) }
         DeviceId.TEST_CHIPS -> TestChipsSource(chipMap)
         else -> null
     }
@@ -78,6 +74,8 @@ class SourceController(
     private var scope: CoroutineScope? = null
     private var job: Job? = null
 
+    @Volatile private var running: CutoffSource? = null
+
     // App-wide, not a run's: a consumer of a run before a restart that still cannot store
     // shows on the run after it.
     private val storeError = MutableStateFlow<SourceError?>(null)
@@ -101,6 +99,7 @@ class SourceController(
                 SourceStatus(state = if (device == null) SourceState.Stopped else SourceState.NotAvailable)
             return
         }
+        running = source
         val runner = SourceRunner(source, now)
         // Unlimited: the source never waits for Room, whatever a burst of reads holds.
         val channel = Channel<Taken>(Channel.UNLIMITED)
@@ -206,9 +205,16 @@ class SourceController(
     /** The device the settings choose; null by hand. */
     private fun chosenDevice(): DeviceId? = settingsStore.load().chosenDevice
 
+    /**
+     * The board of [key] blinked by the beam boards running (spec 003, FR-003): null when they
+     * do not read it, false when it is not connected now.
+     */
+    fun blink(key: String): Boolean? = (running as? BoardsSource)?.blink(key)
+
     fun stop() {
         job?.cancel()
         job = null
+        running = null
         // What the source sent is stored all the same: its channel closes as the run ends,
         // and the consumer ends once it has it all.
         scope = null

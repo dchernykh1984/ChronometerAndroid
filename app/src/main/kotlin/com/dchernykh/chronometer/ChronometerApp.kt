@@ -17,6 +17,11 @@ import com.dchernykh.chronometer.net.UploadClient
 import com.dchernykh.chronometer.source.SourceController
 import com.dchernykh.chronometer.source.SourceEvent
 import com.dchernykh.chronometer.source.board.BlePorts
+import com.dchernykh.chronometer.source.board.BoardBeamSource
+import com.dchernykh.chronometer.source.board.BoardLink
+import com.dchernykh.chronometer.source.board.BoardPick
+import com.dchernykh.chronometer.source.board.BoardPorts
+import com.dchernykh.chronometer.source.board.BoardsSource
 import com.dchernykh.chronometer.source.board.UsbBoardPorts
 import com.dchernykh.chronometer.source.builtInSource
 import com.dchernykh.chronometer.time.ClockKeeper
@@ -61,13 +66,24 @@ class ChronometerApp : Application() {
                 builtInSource(
                     it,
                     chipMap = { chipRepository.protocol.value?.map ?: ChipMap() },
-                    boards = { UsbBoardPorts(this@ChronometerApp) },
-                    radios = { BlePorts(this@ChronometerApp, settingsStore.load().beamBoardName) },
+                    boards = {
+                        BoardsSource(settingsStore.load().beamBoards) { pick, claim ->
+                            BoardBeamSource(
+                                portsOf(pick),
+                                radio = pick.link == BoardLink.BLE,
+                                picked = claim,
+                            )
+                        }
+                    },
                 )
             }
             cutoffRepository.whenANewCompetitionStarts(::startOver)
         }
     }
+
+    /** Where a board picked is found: the phone's USB, or Bluetooth by its address. */
+    fun portsOf(pick: BoardPick): BoardPorts =
+        if (pick.link == BoardLink.BLE) BlePorts(this, pick.key) else UsbBoardPorts(this)
 
     override fun onCreate() {
         super.onCreate()

@@ -285,7 +285,9 @@ class BoardBridge(
     var board: String = ""
         private set
 
-    private var boardId = ""
+    /** The board's id, as its HELLO gave it: empty before. */
+    var boardId = ""
+        private set
     private val pings = LinkedHashMap<Long, Long>() // sent at, by number
     private val held = ArrayList<Held>()
     private var dark: String? = null

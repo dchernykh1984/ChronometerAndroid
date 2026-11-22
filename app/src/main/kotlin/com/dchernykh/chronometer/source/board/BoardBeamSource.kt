@@ -9,6 +9,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ProducerScope
@@ -80,6 +81,15 @@ private const val IDLE_MS = 5L
 // The newline first ends a line the board may hold half of from before.
 private val OPENING = "\nHOLDOFF $HOLD_OFF_MS\nHELLO\nSTATUS\n".toByteArray()
 
+/** A blink: FLASH 1 to FLASH 5, this far apart (spec 003, FR-003). */
+const val FLASHES = 5
+const val FLASH_EVERY_MS = 400L
+
+/** The board is another link's already, [other]'s: this one lets it go for good. */
+private class TwinBoard(
+    val other: String,
+) : Exception(other)
+
 /**
  * The beam (spec FR-004): a beam board on the phone's USB, or over Bluetooth ([radio]), each
  * break timed by the board's own clock. It looks for the board every 2 s until one is found,
@@ -93,10 +103,23 @@ class BoardBeamSource(
     private val clock: () -> Long = System::currentTimeMillis,
     private val monotonic: () -> Long = SystemClock::elapsedRealtime,
     private val io: CoroutineDispatcher = Dispatchers.IO,
+    /**
+     * One of the boards picked (spec 003): whether the board of the id its HELLO gave is this
+     * link's to read, null when it is, else the name of the link reading it already (the board
+     * picked on its USB and its Bluetooth); and its first state said, all well too, as each
+     * board shows its own. Null for the one board of a source.
+     */
+    private val picked: ((String) -> String?)? = null,
 ) : CutoffSource {
     // Carried over from one opening to the next, as the contract's steps 3 to 5 have it.
     private var nextPing = 1L
     private val counts = mutableMapOf<String, Counts>()
+    private val blinks = Channel<Unit>(Channel.CONFLATED)
+
+    @Volatile private var connected = false
+
+    /** The board's LED blinked, FLASHES times (FR-003); false while no board is connected. */
+    fun blink(): Boolean = connected && blinks.trySend(Unit).isSuccess
 
     override fun events(): Flow<SourceEvent> =
         channelFlow {
@@ -104,7 +127,7 @@ class BoardBeamSource(
             // the board drops them once they wait half a second.
             val awake = ports.keepAwake()
             try {
-                watch(Said(this))
+                watch(Said(this, first = picked != null))
             } finally {
                 awake.close()
             }
@@ -129,7 +152,13 @@ class BoardBeamSource(
                     board.say(found.refused)
                     delay(ASK_AGAIN_MS)
                 }
-                else -> useBoard(found, board)
+                else ->
+                    try {
+                        useBoard(found, board)
+                    } catch (twin: TwinBoard) {
+                        board.say(BoardTrouble.Twin(twin.other))
+                        awaitCancellation() // let go for good: the other link reads the board
+                    }
             }
         }
     }
@@ -179,6 +208,7 @@ class BoardBeamSource(
                 write(port, OPENING)
                 var pingAt = monotonic()
                 var helloAt = pingAt + HELLO_EVERY_MS
+                var flashes = emptyList<Pair<Long, Int>>() // (due, n)
                 do {
                     if (monotonic() >= pingAt) {
                         write(port, "${bridge.ping(clock())}\n".toByteArray())
@@ -192,12 +222,26 @@ class BoardBeamSource(
                     // RESEND: breaks counted while no link was up, or lost on the way.
                     while (bridge.outbox.isNotEmpty()) write(port, "${bridge.outbox.removeAt(0)}\n".toByteArray())
                     board.say(bridge.trouble(clock()))
+                    flashes = flash(port, flashes)
                 } while (take(lines, bridge))
                 coroutineContext.cancelChildren()
             }
         } finally {
+            connected = false
             nextPing = bridge.nextPing
         }
+    }
+
+    /** The flashes due written, a blink asked for scheduled; the ones still to come. */
+    private suspend fun flash(
+        port: BoardPort,
+        pending: List<Pair<Long, Int>>,
+    ): List<Pair<Long, Int>> {
+        val now = monotonic()
+        val flashes =
+            if (blinks.tryReceive().isSuccess) List(FLASHES) { now + it * FLASH_EVERY_MS to it + 1 } else pending
+        flashes.filter { it.first <= now }.forEach { write(port, "FLASH ${it.second}\n".toByteArray()) }
+        return flashes.filter { it.first > now }
     }
 
     /** One line of the board's taken, or none within a tick; false once the port is gone. */
@@ -208,6 +252,10 @@ class BoardBeamSource(
         val got = withTimeoutOrNull(TICK_MS) { lines.receiveCatching() } ?: return true
         val (line, at) = got.getOrNull() ?: return false
         bridge.fromBoard(line, at).forEach { send(it) }
+        if (bridge.boardId.isNotEmpty()) {
+            picked?.invoke(bridge.boardId)?.let { throw TwinBoard(it) }
+            connected = true
+        }
         return true
     }
 
@@ -268,11 +316,15 @@ internal fun idlesAfter(
     tookMs: Long,
 ): Boolean = bytes.isEmpty() && tookMs < READ_MS / 2
 
-/** The board's state as last said: said again only once it changes. */
+/** Nothing said yet. */
+private object Unsaid
+
+/** The board's state as last said: said again only once it changes; the first, all well, if [first]. */
 private class Said(
     private val events: ProducerScope<SourceEvent>,
+    first: Boolean,
 ) {
-    private var last: BoardTrouble? = null
+    private var last: Any? = if (first) Unsaid else null
 
     suspend fun say(trouble: BoardTrouble?) {
         if (trouble != last) {

@@ -5,6 +5,11 @@ import android.os.Environment
 import androidx.core.content.edit
 import com.dchernykh.chronometer.source.DeviceId
 import com.dchernykh.chronometer.source.SourceKind
+import com.dchernykh.chronometer.source.board.BoardLink
+import com.dchernykh.chronometer.source.board.BoardPick
+import com.dchernykh.chronometer.source.board.USB_KEY
+import com.dchernykh.chronometer.source.board.decodePicks
+import com.dchernykh.chronometer.source.board.encodePicks
 import java.io.File
 import java.util.UUID
 
@@ -46,7 +51,12 @@ class SettingsStore(
             language = AppLanguage.fromName(prefs.getString(KEY_LANG, null)),
             cutoffSource = SourceKind.fromName(prefs.getString(KEY_SOURCE, null)),
             beamDevice = DeviceId.fromName(prefs.getString(KEY_BEAM_DEVICE, null), SourceKind.BEAM),
-            beamBoardName = prefs.getString(KEY_BEAM_BOARD, "").orEmpty(),
+            beamBoards =
+                prefs.getString(KEY_BEAM_BOARDS, null)?.let(::decodePicks)
+                    ?: carriedOverPick(
+                        prefs.getString(KEY_BEAM_DEVICE, null),
+                        prefs.getString(KEY_BEAM_BOARD, "").orEmpty(),
+                    ),
             chipsDevice = DeviceId.fromName(prefs.getString(KEY_CHIPS_DEVICE, null), SourceKind.CHIPS),
             deadTimeS = prefs.getInt(KEY_DEAD_TIME, DEFAULT_DEAD_TIME_S).coerceIn(DEAD_TIME_RANGE_S),
         )
@@ -66,7 +76,7 @@ class SettingsStore(
             putString(KEY_LANG, settings.language.name)
             putString(KEY_SOURCE, settings.cutoffSource.name)
             putString(KEY_BEAM_DEVICE, settings.beamDevice.name)
-            putString(KEY_BEAM_BOARD, settings.beamBoardName.trim())
+            putString(KEY_BEAM_BOARDS, encodePicks(settings.beamBoards))
             putString(KEY_CHIPS_DEVICE, settings.chipsDevice.name)
             // One out of range is no dead time: the one stored stays, never one clamped to 1 s.
             putInt(
@@ -145,8 +155,24 @@ class SettingsStore(
         const val KEY_BEAM_DEVICE = "beam_device"
         const val KEY_CHIPS_DEVICE = "chips_device"
         const val KEY_DEAD_TIME = "dead_time_s"
-        const val KEY_BEAM_BOARD = "beam_board_name"
+        const val KEY_BEAM_BOARD = "beam_board_name" // before spec 003: carried over
+        const val KEY_BEAM_BOARDS = "beam_boards"
         const val KEY_REV = "client_revision"
         const val KEY_EMPTY_SNAPSHOT = "allow_empty_snapshot"
     }
 }
+
+/**
+ * The board an older version read, [device] its beam then and [named] the board's name typed, as
+ * the same board picked: the Bluetooth beam's by that name, the USB beam's as the board on the
+ * phone's USB (spec 003).
+ */
+internal fun carriedOverPick(
+    device: String?,
+    named: String,
+): List<BoardPick> =
+    when (device) {
+        "BLE_BEAM" -> if (named.isBlank()) emptyList() else listOf(BoardPick(BoardLink.BLE, named.trim(), named.trim()))
+        "USB_BEAM" -> listOf(BoardPick(BoardLink.USB, USB_KEY, "USB"))
+        else -> emptyList()
+    }

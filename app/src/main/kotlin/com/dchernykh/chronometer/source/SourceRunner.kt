@@ -29,9 +29,10 @@ sealed interface SourceError {
         val message: String,
     ) : SourceError
 
-    /** A beam board's trouble, said in the referee's language. */
+    /** A beam board's trouble, said in the referee's language; [board] names one of those picked. */
     data class Board(
         val trouble: BoardTrouble,
+        val board: String = "",
     ) : SourceError
 
     /** An event the app could not use. */
@@ -63,6 +64,8 @@ data class SourceStatus(
     val state: SourceState = SourceState.Stopped,
     val invalidEvents: Int = 0,
     val lastError: SourceError? = null,
+    /** Each beam board picked by its name, and its lasting trouble, null while all is well (spec 003). */
+    val boards: Map<String, BoardTrouble?> = emptyMap(),
 )
 
 private const val FIRST_PAUSE_MS = 1_000L
@@ -160,12 +163,26 @@ class SourceRunner(
             }
             // A device's word on its connection: nothing to store, so it is not handed on.
             event is SourceEvent.Status -> Unit
+            event is SourceEvent.Board && event.board.isNotEmpty() -> statusState.update { it.named(event) }
             event is SourceEvent.Board -> {
                 event.trouble?.takeUnless { it.lasting }?.let { notice = SourceError.Board(it) }
                 statusState.update { it.copy(lastError = board(it.lastError, event, notice)) }
             }
             else -> onEvent(event)
         }
+    }
+}
+
+/**
+ * A board picked has spoken (spec 003): a notice, breaks that never came say, is the last error;
+ * a lasting trouble, or none, is its state, beside the other boards' (FR-005).
+ */
+private fun SourceStatus.named(event: SourceEvent.Board): SourceStatus {
+    val trouble = event.trouble
+    return if (trouble != null && !trouble.lasting) {
+        copy(lastError = SourceError.Board(trouble, event.board))
+    } else {
+        copy(boards = boards + (event.board to trouble))
     }
 }
 

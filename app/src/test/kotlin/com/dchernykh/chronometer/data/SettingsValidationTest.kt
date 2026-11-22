@@ -92,11 +92,11 @@ class SettingsValidationTest {
                 deviceUuid = "",
                 folderPath = "",
                 sendEnabled = false,
-                beamDevice = DeviceId.USB_BEAM,
+                beamDevice = DeviceId.TEST_BEAM,
                 chipsDevice = DeviceId.LLRP,
             )
         assertEquals(null, settings.copy(cutoffSource = SourceKind.HAND).chosenDevice)
-        assertEquals(DeviceId.USB_BEAM, settings.copy(cutoffSource = SourceKind.BEAM).chosenDevice)
+        assertEquals(DeviceId.TEST_BEAM, settings.copy(cutoffSource = SourceKind.BEAM).chosenDevice)
         assertEquals(DeviceId.LLRP, settings.copy(cutoffSource = SourceKind.CHIPS).chosenDevice)
     }
 }
