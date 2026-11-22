@@ -2,6 +2,7 @@ package com.dchernykh.chronometer.source.board
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
@@ -11,6 +12,7 @@ import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.BluetoothStatusCodes
 import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
@@ -63,6 +65,16 @@ class ScanGate(
     companion object {
         /** The app's one gate. */
         val app = ScanGate()
+    }
+}
+
+/** A scan's filter for the board [wanted]: by its address when it is one, else by its name. */
+fun boardFilter(wanted: String): ScanFilter {
+    val address = wanted.uppercase()
+    return if (BluetoothAdapter.checkBluetoothAddress(address)) {
+        ScanFilter.Builder().setDeviceAddress(address).build()
+    } else {
+        ScanFilter.Builder().setDeviceName(wanted).build()
     }
 }
 
@@ -172,7 +184,9 @@ class BlePorts(
                 }
             }
         val settings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
-        scanner.startScan(null, settings, callback)
+        // Filtered: Android pauses a scan with no filter while the screen is off, and a board
+        // lost with the phone in a pocket would be found again only once it is on.
+        scanner.startScan(listOf(boardFilter(wanted)), settings, callback)
         return try {
             found.poll(scanMs, TimeUnit.MILLISECONDS)
         } finally {

@@ -47,6 +47,13 @@ class BlePortsTest {
     }
 
     @Test
+    fun aBoardIsLookedForByAFilterSoTheScanGoesOnWithTheScreenOff() {
+        assertEquals("AA:BB:CC:DD:EE:FF", boardFilter("aa:bb:cc:dd:ee:ff").deviceAddress)
+        assertEquals("beam-4103", boardFilter("beam-4103").deviceName) // typed before spec 003
+        assertNull(boardFilter("beam-4103").deviceAddress)
+    }
+
+    @Test
     fun noBoardNamedIsNoneReadAndTheScreenSaysToNameOne() {
         val ports = BlePorts(app, "  ")
         assertNull(ports.find())
