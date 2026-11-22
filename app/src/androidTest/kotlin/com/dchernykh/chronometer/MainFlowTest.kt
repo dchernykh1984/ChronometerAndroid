@@ -349,8 +349,14 @@ class MainFlowTest {
     /** The cutoffs in Room, which the hold's check and the final one both read. */
     private fun storedCutoffs() = runBlocking { (appContext() as ChronometerApp).database.cutoffDao().getAll() }
 
-    /** Now on the line's own scale, as the formatter writes a tap's moment. */
-    private fun lineNow(): Long = checkNotNull(TimeFormatter.millisOf(TimeFormatter.currentTimeString()))
+    /**
+     * Now on the line's own scale, as the formatter writes a tap's moment: on the clock the app
+     * keeps to world time (spec 003), which NTP may have moved off the emulator's own.
+     */
+    private fun lineNow(): Long {
+        val kept = (appContext() as ChronometerApp).clockKeeper.clock.nowMs()
+        return checkNotNull(TimeFormatter.millisOf(TimeFormatter.currentTimeString(kept)))
+    }
 
     /** The one cutoff stored is [number]'s, timed within the moments of [tap]. */
     private fun assertTimedAtTheTap(
@@ -647,7 +653,7 @@ class MainFlowTest {
         openSettings()
         selectRadio("sourceBeam")
         saveSettings()
-        grantNotificationPermission()
+        grantTimingLeave()
         composeRule.onNodeWithTag("timingModeToggle").performClick()
         try {
             waitForText(localizedString(AppLanguage.EN, R.string.timing_dnd_title))
@@ -679,7 +685,7 @@ class MainFlowTest {
         openSettings()
         selectRadio("sourceBeam")
         saveSettings()
-        grantNotificationPermission()
+        grantTimingLeave()
         composeRule.onNodeWithTag("timingModeToggle").performClick()
         try {
             waitForText(localizedString(AppLanguage.EN, R.string.timing_dnd_title))
@@ -710,7 +716,7 @@ class MainFlowTest {
         openSettings()
         selectRadio("sourceBeam")
         saveSettings()
-        grantNotificationPermission()
+        grantTimingLeave()
         composeRule.onNodeWithTag("timingModeToggle").performClick()
         try {
             waitForText(localizedString(AppLanguage.EN, R.string.timing_dnd_title))
@@ -881,7 +887,7 @@ class MainFlowTest {
 
     @Test
     fun enablingTimingModeShowsDoNotDisturbHint() {
-        grantNotificationPermission()
+        grantTimingLeave()
         composeRule.onNodeWithTag("timingModeToggle").performClick()
         try {
             waitForText(localizedString(AppLanguage.EN, R.string.timing_dnd_title))
@@ -1139,13 +1145,17 @@ class MainFlowTest {
         composeRule.onNodeWithTag("editSaveButton").assertExists()
     }
 
-    private fun grantNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            InstrumentationRegistry
-                .getInstrumentation()
-                .uiAutomation
-                .grantRuntimePermission(appContext().packageName, Manifest.permission.POST_NOTIFICATIONS)
-        }
+    /** What timing mode asks leave for, given: its notification, and the location for GNSS's time. */
+    private fun grantTimingLeave() {
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        val leave =
+            listOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION) +
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    listOf(Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    emptyList()
+                }
+        leave.forEach { automation.grantRuntimePermission(appContext().packageName, it) }
     }
 
     private companion object {
