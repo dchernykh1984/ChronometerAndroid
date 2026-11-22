@@ -73,7 +73,8 @@ class BoardFinder(
                     callbackType: Int,
                     result: ScanResult,
                 ) {
-                    val name = result.scanRecord?.deviceName ?: result.device.name
+                    // What a device around advertises is anyone's: no control character kept.
+                    val name = (result.scanRecord?.deviceName ?: result.device.name)?.let(::plain)
                     val services =
                         result.scanRecord
                             ?.serviceUuids

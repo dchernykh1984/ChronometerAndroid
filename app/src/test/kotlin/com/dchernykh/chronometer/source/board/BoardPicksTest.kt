@@ -16,6 +16,9 @@ class BoardPicksTest {
         assertEquals(emptyList<BoardPick>(), decodePicks(""))
         // A line that is not a pick is left out: of another link, short, or with no key.
         assertEquals(listOf(near), decodePicks("WIFI\tx\ty\nBLE\tAA:BB\tbeam-7c1c\nBLE\tonly\nUSB\t \tusb"))
+        // A name a device around advertised with a tab and a line end: one pick still.
+        val odd = BoardPick(BoardLink.BLE, "EE:FF", "beam-\tUSB\tusb\nBLE")
+        assertEquals(listOf(BoardPick(BoardLink.BLE, "EE:FF", "beam-USBusbBLE")), decodePicks(encodePicks(listOf(odd))))
     }
 
     @Test
