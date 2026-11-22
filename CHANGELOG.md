@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.10.0](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.9.0...chronometer-android-v0.10.0) (2026-11-22)
+
+
+### Features
+
+* **beam:** PING a Bluetooth board every 0.5 s, its clock from the last 32 answers ([4a2f6f4](https://github.com/dchernykh1984/ChronometerAndroid/commit/4a2f6f4b60e6474443fd267113980bb0dcc8cf28))
+* **beam:** read the beam boards' contract 0.4 and an ESP32-C3 on USB ([96bfb29](https://github.com/dchernykh1984/ChronometerAndroid/commit/96bfb296746bc8b8fab1765864460ae775a5dd6b))
+* **beam:** the Bluetooth beam: the board named in the settings, read over its serial service ([2c5fa56](https://github.com/dchernykh1984/ChronometerAndroid/commit/2c5fa56dc747fd6c7116d243f46e883fade61873))
+
+
+### Bug Fixes
+
+* **beam:** a late answer to a Bluetooth write given up on never counts for the next ([f10b721](https://github.com/dchernykh1984/ChronometerAndroid/commit/f10b721d554a28fb2260111c420a552dfb7f82ad))
+* **beam:** ask the board's count every 5 s, say its firmware once, read a restarted board's clock anew ([00b0355](https://github.com/dchernykh1984/ChronometerAndroid/commit/00b0355a3e7e3271394f65b0b4bd7902d054a9be))
+* **beam:** say where to allow Bluetooth once Android asks no more ([bcd4796](https://github.com/dchernykh1984/ChronometerAndroid/commit/bcd4796923251eb58158d91b5c6934f952d0ae79))
+* **beam:** space Bluetooth scans 6.5 s apart, as Android gives no result past 5 in 30 s ([884b4da](https://github.com/dchernykh1984/ChronometerAndroid/commit/884b4da05e9bc6f9cc1576ef12d1fe26edc0debd))
+* **beam:** time a board's line by its first piece over USB too, as the contract says ([614a437](https://github.com/dchernykh1984/ChronometerAndroid/commit/614a437a052948a19a5a4147e3818732c42bac3a))
+* **beam:** write to a Bluetooth board with response where it takes no other, as the BT05 ([ab4e2da](https://github.com/dchernykh1984/ChronometerAndroid/commit/ab4e2da71ccedd97330e045007311c0bc158a916))
+
 ## [0.9.0](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.8.0...chronometer-android-v0.9.0) (2026-11-15)
 
 
