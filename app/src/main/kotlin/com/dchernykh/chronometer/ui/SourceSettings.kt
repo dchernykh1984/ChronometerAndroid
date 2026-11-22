@@ -157,7 +157,7 @@ private fun BoardsList(
     if (ui.search.search != null && rows.isEmpty()) Text(stringResource(R.string.boards_none_found))
     for (row in rows) {
         val pick = row.board.pick
-        val label = boardLabel(row)
+        val label = boardLabel(row, timing = ui.locked)
         val blinkLabel = stringResource(R.string.board_blink_named, pick.name)
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             // The check and the board's name one control: tapped anywhere, read out together.
@@ -188,10 +188,15 @@ private fun BoardsList(
 }
 
 @Composable
-private fun boardLabel(row: BoardRow): String {
+private fun boardLabel(
+    row: BoardRow,
+    timing: Boolean,
+): String {
     val pick = row.board.pick
     val rssi = row.board.rssi
     return when {
+        // A board connected advertises no more: one picked while timing runs is read, not lost.
+        !row.here && timing -> stringResource(R.string.board_read_now, pick.name)
         !row.here -> stringResource(R.string.board_gone, pick.name)
         pick.link == BoardLink.USB -> stringResource(R.string.board_usb, pick.name)
         rssi != null -> stringResource(R.string.board_ble, pick.name, rssi)
