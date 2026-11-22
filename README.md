@@ -26,15 +26,21 @@ connectivity returns.
   app alive during a long race; while it is on, the screen stays awake and the
   app suggests enabling Do Not Disturb.
 - **Cutoff sources**: by hand (the default), a light beam or timing chips, each
-  with its device. This release runs the USB beam, the Bluetooth beam, the test
-  beam and the test chips; the LLRP (Impinj, Zebra), RaceResult and R2000 readers
-  are listed as "not available yet". A source runs while timing mode is on,
+  with its device. This release runs the beam boards (picked from a list of the
+  boards around, on USB and Bluetooth), the test beam and the test chips; the LLRP
+  (Impinj, Zebra), RaceResult and R2000 readers are listed as "not available yet". A source runs while timing mode is on,
   starts again after a growing pause (1 s up to 30 s) when it fails, and shows
   its state on the main screen. Recording by hand works in every mode.
 - **Light beam**: every break waits on the main screen, oldest first. Type the
   rider's number and tap **Cutoff**: the oldest break gets it, at the break's
   time, which the button shows ("Cutoff 10:00:00.123"). A false break is
   discarded after a confirmation; DSQ always takes the time of the tap.
+- **A clock that knows world time**: every cutoff, by hand or by a device, is
+  stamped on the phone's clock corrected to world time, from GNSS while timing
+  mode is on and from NTP whenever the internet answers; the phone's own clock is
+  never set. A GNSS time that is not plausible (it jumps, or disagrees with the
+  internet's or the phone's) is not taken: GNSS may be jammed or spoofed at a
+  start. The main screen says where the time comes from and how far it may be off.
 - **Timing chips**: `start.txt` in the data folder maps chips to bibs (field 11
   of the StartProtocolMaker start protocol; a relay's riders bind to bib + k).
   A bib's reads less than the dead time apart (5 s by default, 1-120 s) are one
@@ -171,30 +177,33 @@ Not Disturb; **Finish timing mode** stops it. Type a number and tap **Cutoff**
 **Cutoff source** in the settings picks by hand, the light beam or chips and
 the device; a test device marks its cutoffs as test data on the main screen.
 
-The **USB beam** is a beam board ChronometerPython builds and flashes (its
+The **beam boards** are the boards ChronometerPython builds and flashes (its
 `beam/` folder says how): an RP2040-Zero or an ESP32-C3 SuperMini that times each
-break of its light with its own clock. Plug it into the phone with a USB-C (OTG)
-cable. Android
-asks whether to open the app for it: tick "always", and the board plugged in
-again mid-race asks nothing. The main screen says what keeps a break from
-coming: no board on USB, a board that does not answer, a blocked or flickering
-beam, breaks the board counted that never came. While it runs, the USB beam
-keeps the phone's processor awake, its screen off or not, so the board's lines
-are always read: that costs battery, and a long race wants a charged phone or a
-power bank.
+break of its light with its own clock, on the phone's USB (a USB-C OTG cable) or
+over Bluetooth Low Energy (the RP2040-Zero through its BT05 module, the ESP32-C3
+on its own; no pairing is needed). In the settings, **Find boards** lists the
+boards around: the one on USB, then those on Bluetooth, the nearest first, with
+their signal. A check picks a board, one or several: every break of every board
+picked is a cutoff of its own, nothing merged, and no other board in range is
+read. **Blink** flashes a board's LED 5 times to tell which one it is (an
+ESP32-C3's blue LED is lit while the laser is on its sensor: block the beam to see
+it flash). The pick is kept; it changes while timing mode is off. One board picked
+on both its USB and its Bluetooth is read on the link that answered first only.
 
-The **Bluetooth beam** reads the same boards over Bluetooth Low Energy: the
-RP2040-Zero through its BT05 module, the ESP32-C3 on its own. Type the board's
-name in the settings, `beam-` and the last 4 hex digits of its id (`beam-4103`),
-or its address: the app reads that board and no other in range. No pairing is
-needed. As timing mode starts, Android asks once to let the app use Bluetooth; on
-Android 11 and earlier the phone's location has to be on as well, as Android scans
-for Bluetooth devices only then.
-The main screen says what keeps a break from coming: no board named, Bluetooth
-off, the board out of range, the link lost. A break the board saw while the link
-was down comes once it is back, with its own time. Over Bluetooth the board's
-clock is read from the shortest trip each way of its last answers, as a radio
-reply waits for the radio's next connection event.
+Android asks to let the app use Bluetooth as the boards are first looked for, and
+whether to open the app for a board plugged into USB: tick "always", and the board
+plugged in again mid-race asks nothing. The main screen says each board's state:
+connected, out of range, its link lost, a blocked or flickering beam, breaks it
+counted that never came. A break the board saw while its link was down comes once
+it is back, with its own time. Over Bluetooth the board's clock is read from the
+shortest trip each way of its last answers, as a radio reply waits for the radio's
+next connection event. While a board is read, the phone's processor stays awake,
+its screen off or not, so the board's lines are always read: that costs battery,
+and a long race wants a charged phone or a power bank.
+
+As timing mode starts, Android asks for the phone's location: GNSS's time keeps
+the clock to world time where there is no internet. Refused, the clock is kept by
+the internet, or is the phone's own, and the main screen says so.
 
 Both apps keep to one contract for the board's lines, ChronometerPython's
 `specs/001-event-sources/contracts/beam-board-protocol.md` (version 0.4).
