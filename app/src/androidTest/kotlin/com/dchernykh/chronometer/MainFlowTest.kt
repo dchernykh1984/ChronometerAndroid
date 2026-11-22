@@ -188,8 +188,19 @@ class MainFlowTest {
         composeRule.onNodeWithTag("siteUrlField").assertIsDisplayed()
     }
 
+    /**
+     * Tap Save until it took: the stored settings changed, or the screen closed (a save of no
+     * change). A single tap can be dropped on the slow tablet, the settings then unsaved and the
+     * test waiting for a screen that never comes; a language change keeps the screen, recreated.
+     */
     private fun saveSettings() {
-        composeRule.onNodeWithTag("saveButton").performScrollTo().performClick()
+        val before = SettingsStore(appContext()).load()
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            val open = composeRule.onAllNodesWithTag("saveButton").fetchSemanticsNodes().isNotEmpty()
+            val took = SettingsStore(appContext()).load() != before || !open
+            if (!took) composeRule.onNodeWithTag("saveButton").performScrollTo().performClick()
+            took
+        }
         composeRule.waitForIdle()
     }
 
@@ -537,7 +548,7 @@ class MainFlowTest {
     @Test
     fun themeChoiceIsAppliedAndReflectedInSettings() {
         openSettings()
-        composeRule.onNodeWithTag("themeDark").performScrollTo().performClick()
+        selectRadio("themeDark") // a single tap can be dropped on the slow tablet
         saveSettings()
 
         // The theme is reactive (no recreate); reopening shows it selected + stored.
@@ -1063,7 +1074,8 @@ class MainFlowTest {
         openDeleteDialog()
         composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
             val open = composeRule.onAllNodesWithTag("confirmDeleteCutoff").fetchSemanticsNodes().isNotEmpty()
-            if (open) composeRule.onNodeWithTag("confirmDeleteCutoff").performClick()
+            // A tap as the dialog closes finds no window to go to: a try, not a failure.
+            if (open) runCatching { composeRule.onNodeWithTag("confirmDeleteCutoff").performClick() }
             !open
         }
         composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
