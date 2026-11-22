@@ -106,10 +106,22 @@ class NtpTest {
         val link = FakeLink(answers)
         var tick = 0.0
         val got =
-            askNtp("s", { (tick).also { tick += 10.0 } }, { link }, tries = 5)
+            askNtp("s", { (tick).also { tick += 10.0 } }, { listOf({ link }) }, tries = 5)
         assertEquals(listOf(10, 10), got.map { it.tripMs.toInt() })
         assertEquals(1, answers.size) // nothing asked after the silence
         assertTrue(link.closed)
+    }
+
+    @Test
+    fun aServersAddressesAreTriedUntilOneAnswers() {
+        // Its IPv6 address first, on a network whose IPv6 goes nowhere: its IPv4 one answers.
+        val ok: (Long) -> ByteArray = { reply(it, WORLD_MS + 5, WORLD_MS + 5) }
+        val v6 = FakeLink(ArrayDeque(listOf(SocketTimeoutException())))
+        val v4 = FakeLink(ArrayDeque(listOf(ok, ok)))
+        var tick = 0.0
+        val got = askNtp("s", { (tick).also { tick += 10.0 } }, { listOf({ v6 }, { v4 }) }, tries = 2)
+        assertEquals(listOf(10, 10), got.map { it.tripMs.toInt() })
+        assertTrue(v6.closed && v4.closed)
     }
 
     @Test
