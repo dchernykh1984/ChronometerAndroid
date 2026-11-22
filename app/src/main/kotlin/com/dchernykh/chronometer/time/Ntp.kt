@@ -110,23 +110,46 @@ private class UdpLink(
     override fun close() = socket.close()
 }
 
-/** A link to [server]; an [IOException] when its name is not found or no socket opens. */
-fun udpLink(server: String): NtpLink = UdpLink(InetAddress.getByName(server))
+/**
+ * A link to each of [server]'s addresses, IPv6 and IPv4 alike, opened when asked; an
+ * [IOException] when its name is not found.
+ */
+fun udpLinks(server: String): List<() -> NtpLink> =
+    InetAddress.getAllByName(server).map { address -> { UdpLink(address) } }
 
 /**
- * The answers [server] gives to [tries] requests, on [clockMs]; none when it is not found. A
- * refused try is tried again; one unanswered ends the server's turn, so five silent servers
- * take 5 s, not 20.
+ * The answers [server] gives to [tries] requests, on [clockMs]; none when it is not found. Its
+ * addresses are tried in turn until one answers: the IPv6 one first, say, on a network whose
+ * IPv6 goes nowhere.
  */
 fun askNtp(
     server: String,
     clockMs: () -> Double,
-    link: (String) -> NtpLink = ::udpLink,
+    links: (String) -> List<() -> NtpLink> = ::udpLinks,
     tries: Int = NTP_QUERIES,
+): List<NtpAnswer> {
+    val addresses =
+        try {
+            links(server)
+        } catch (_: IOException) {
+            return emptyList() // not found: no network, say
+        }
+    return addresses.firstNotNullOfOrNull { open -> askAt(server, open, clockMs, tries).ifEmpty { null } }.orEmpty()
+}
+
+/**
+ * The answers one of a server's addresses gives. A refused try is tried again; one unanswered
+ * ends the address's turn, so five silent servers take 5 s, not 20.
+ */
+private fun askAt(
+    server: String,
+    open: () -> NtpLink,
+    clockMs: () -> Double,
+    tries: Int,
 ): List<NtpAnswer> {
     val answers = mutableListOf<NtpAnswer>()
     try {
-        link(server).use { udp ->
+        open().use { udp ->
             repeat(tries) {
                 val cookie = cookies.nextLong()
                 val sent = clockMs()
@@ -143,7 +166,7 @@ fun askNtp(
             }
         }
     } catch (_: IOException) {
-        // Not found, or no socket at all: no network.
+        // No socket of the address's family at all.
     }
     return answers
 }
