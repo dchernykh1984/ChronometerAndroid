@@ -196,8 +196,11 @@ class MainFlowTest {
     private fun saveSettings() {
         val before = SettingsStore(appContext()).load()
         composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
-            val open = composeRule.onAllNodesWithTag("saveButton").fetchSemanticsNodes().isNotEmpty()
-            val took = SettingsStore(appContext()).load() != before || !open
+            // The store first: a saved language recreates the activity, and the screen is
+            // looked at only while nothing is saved yet.
+            val took =
+                SettingsStore(appContext()).load() != before ||
+                    composeRule.onAllNodesWithTag("saveButton").fetchSemanticsNodes().isEmpty()
             if (!took) composeRule.onNodeWithTag("saveButton").performScrollTo().performClick()
             took
         }
