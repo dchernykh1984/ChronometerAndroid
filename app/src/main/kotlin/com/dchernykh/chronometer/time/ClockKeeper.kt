@@ -82,7 +82,11 @@ class ClockKeeper(
         val fresh = internet?.takeIf { mono() - it.second <= INTERNET_FRESH_MS }?.first
         val verdict = check.verdict(offsetMs, fresh, system() - mono())
         when (verdict) {
-            GnssVerdict.TAKEN -> offer(offsetMs, errorMs, ClockSource.GNSS)
+            GnssVerdict.TAKEN -> {
+                offer(offsetMs, errorMs, ClockSource.GNSS)
+                // Plausible again, a cold start's first fixes settled say: no more said dropped.
+                if (newsState.value is ClockNews.GnssDropped) newsState.value = null
+            }
             GnssVerdict.WAITING -> Unit
             else -> if (verdict != lastVerdict) newsState.value = ClockNews.GnssDropped(verdict)
         }
