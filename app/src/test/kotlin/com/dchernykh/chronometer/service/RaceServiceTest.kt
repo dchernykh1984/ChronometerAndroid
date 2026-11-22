@@ -1,6 +1,7 @@
 package com.dchernykh.chronometer.service
 
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import androidx.work.testing.WorkManagerTestInitHelper
 import com.dchernykh.chronometer.ChronometerApp
 import com.dchernykh.chronometer.source.CutoffSource
@@ -38,6 +39,17 @@ class RaceServiceTest {
         service.onStartCommand(Intent(), 0, 1)
         // The service went foreground with our ongoing notification.
         assertNotNull(shadowOf(service).lastForegroundNotification)
+    }
+
+    @Test
+    fun restartedInTheBackgroundWithoutTheLocationsTypeTimingGoesOnAllTheSame() {
+        val located = ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+        val asked = mutableListOf<Int>()
+        goForeground(located) { types ->
+            asked += types
+            if (types and ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION != 0) throw SecurityException("not while in use")
+        }
+        assertEquals(listOf(located, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE), asked)
     }
 
     @Test
