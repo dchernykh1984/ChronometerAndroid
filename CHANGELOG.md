@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.11.0](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.10.0...chronometer-android-v0.11.0) (2026-11-22)
+
+
+### Features
+
+* **beam:** one scan gate for every Bluetooth scan of the app ([96a2984](https://github.com/dchernykh1984/ChronometerAndroid/commit/96a2984243f89fad8ab74139c3c77827e478dbc9))
+* **beam:** the boards around picked from a list, read at once, each break a cutoff of its own ([7de2e60](https://github.com/dchernykh1984/ChronometerAndroid/commit/7de2e60c417ff247d31ef6b0c883e2f67b49422c))
+* **clock:** every stamp on the phone's clock, GNSS while timing, and the clock line ([6e8667b](https://github.com/dchernykh1984/ChronometerAndroid/commit/6e8667b07444af635e55435c0950b00673db6c99))
+* **clock:** measure the phone's clock against world time by NTP and GNSS ([e5bb66d](https://github.com/dchernykh1984/ChronometerAndroid/commit/e5bb66d04bf1ab52c2fb1efccb26461b707c2270))
+
+
+### Bug Fixes
+
+* **beam:** a blink pressed again while a board is being reached waits for it ([1993b9f](https://github.com/dchernykh1984/ChronometerAndroid/commit/1993b9f4f8a9f01e87cc32d7ee09efe97481a8f5))
+* **beam:** a board lost is looked for by a filtered scan, which goes on with the screen off ([6455118](https://github.com/dchernykh1984/ChronometerAndroid/commit/6455118b6cdbbddbbeb9f136a9722a0c7879dcf3))
+* **beam:** a board picked by its name before is the board found of that name, listed once ([4543344](https://github.com/dchernykh1984/ChronometerAndroid/commit/4543344c0b68e7d78b49b49fac2545db629c10b1))
+* **beam:** a board picked while timing runs is said read in the list, not lost ([c39bd09](https://github.com/dchernykh1984/ChronometerAndroid/commit/c39bd09f5b8ac9dc71a4dd029c74f492a08bf348))
+* **beam:** a board's check and name are one control, read out together, and Blink says which board ([7696529](https://github.com/dchernykh1984/ChronometerAndroid/commit/7696529bf368e528d5a52f09665157c9f2aae649))
+* **beam:** a name a device around advertises keeps no control character, nor cuts the pick's line ([16ee4d2](https://github.com/dchernykh1984/ChronometerAndroid/commit/16ee4d2ce646a1bd04f8804a71dc0e47ea0a7ccf))
+* **beam:** one board's failure is said and that board looked for again, the others read on ([6a533bd](https://github.com/dchernykh1984/ChronometerAndroid/commit/6a533bd691914bf44f5ef08db498cc6bc73f2af0))
+* **clock:** a DSQ is stamped on the phone's clock kept to world time, as every cutoff ([aa007d7](https://github.com/dchernykh1984/ChronometerAndroid/commit/aa007d713bc8df005b0cec73a216a15ba10c9fc3))
+* **clock:** a GNSS time dropped is said no more once GNSS's time is taken again ([156f5ca](https://github.com/dchernykh1984/ChronometerAndroid/commit/156f5ca4bf5a7d410daa3e6a404bd9a0fe31c5a2))
+* **clock:** an NTP server's addresses are tried in turn, an IPv6 one going nowhere passed by ([d5df12b](https://github.com/dchernykh1984/ChronometerAndroid/commit/d5df12bb4d497272f9a852ca355c5e1e4d6ec412))
+* **clock:** the phone's location switched off is said, as GNSS gives no time then ([ea0877b](https://github.com/dchernykh1984/ChronometerAndroid/commit/ea0877bf3c57bd1ff8c2f1accc4d9d0fc712d48b))
+* **clock:** what was said of GNSS is said no more once timing mode lets it go ([f288114](https://github.com/dchernykh1984/ChronometerAndroid/commit/f288114d76871d1772dfd11cf564b22ff5d23316))
+* **service:** restarted in the background, timing goes on without the location's type ([06d974c](https://github.com/dchernykh1984/ChronometerAndroid/commit/06d974cdced8b95c3f97db254c655cdd8505ec58))
+
 ## [0.10.0](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.9.0...chronometer-android-v0.10.0) (2026-11-22)
 
 
