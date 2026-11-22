@@ -44,13 +44,22 @@ data class BoardRow(
     val here: Boolean,
 )
 
-/** The list: the boards found, then those picked that the last search did not find. */
+/**
+ * Whether this pick is the board [found]: by its key, or, picked by its name in an older
+ * version (the Bluetooth beam's typed name), by the name the board advertises.
+ */
+fun BoardPick.isBoard(found: BoardPick): Boolean {
+    if (key == found.key) return true
+    val radio = link == BoardLink.BLE && found.link == BoardLink.BLE
+    return radio && found.name.isNotEmpty() && key.equals(found.name, ignoreCase = true)
+}
+
+/** The list: the boards found, then those picked that the last search did not find; each board once. */
 fun boardRows(
     found: List<BoardFound>,
     picks: List<BoardPick>,
-): List<BoardRow> {
-    val picked = picks.map(BoardPick::key).toSet()
-    val seen = found.map { it.pick.key }.toSet()
-    return found.map { BoardRow(it, it.pick.key in picked, here = true) } +
-        picks.filter { it.key !in seen }.map { BoardRow(BoardFound(it), picked = true, here = false) }
-}
+): List<BoardRow> =
+    found.map { board -> BoardRow(board, picks.any { it.isBoard(board.pick) }, here = true) } +
+        picks
+            .filter { pick -> found.none { pick.isBoard(it.pick) } }
+            .map { BoardRow(BoardFound(it), picked = true, here = false) }

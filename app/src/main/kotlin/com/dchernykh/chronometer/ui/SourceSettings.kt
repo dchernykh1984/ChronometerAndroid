@@ -34,6 +34,7 @@ import com.dchernykh.chronometer.source.board.BoardPick
 import com.dchernykh.chronometer.source.board.BoardRow
 import com.dchernykh.chronometer.source.board.BoardSearchState
 import com.dchernykh.chronometer.source.board.boardRows
+import com.dchernykh.chronometer.source.board.isBoard
 import com.dchernykh.chronometer.startprotocol.Download
 import com.dchernykh.chronometer.startprotocol.DownloadProblem
 
@@ -157,7 +158,7 @@ private fun BoardsList(
                 checked = row.picked,
                 enabled = !ui.locked,
                 onCheckedChange = { checked ->
-                    val others = settings.beamBoards.filter { it.key != pick.key }
+                    val others = settings.beamBoards.filter { !it.isBoard(pick) } // by its name before too
                     onChange(settings.copy(beamBoards = if (checked) others + pick else others))
                 },
                 modifier = Modifier.testTag("pick ${pick.key}"),
