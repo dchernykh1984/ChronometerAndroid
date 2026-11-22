@@ -1,5 +1,11 @@
 package com.dchernykh.chronometer.source.board
 
+import android.bluetooth.BluetoothGattCharacteristic.PROPERTY_NOTIFY
+import android.bluetooth.BluetoothGattCharacteristic.PROPERTY_READ
+import android.bluetooth.BluetoothGattCharacteristic.PROPERTY_WRITE
+import android.bluetooth.BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE
+import android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+import android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
 import android.bluetooth.BluetoothManager
 import com.dchernykh.chronometer.source.BoardTrouble
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -24,6 +30,13 @@ import org.robolectric.shadows.ShadowPowerManager
 @RunWith(RobolectricTestRunner::class)
 class BlePortsTest {
     private val app = RuntimeEnvironment.getApplication()
+
+    @Test
+    fun aBoardTakingOnlyWritesWithResponseIsWrittenSo() {
+        val bt05 = PROPERTY_READ or PROPERTY_WRITE or PROPERTY_NOTIFY // the prototype's MLT-BT05
+        assertEquals(WRITE_TYPE_DEFAULT, writeTypeFor(bt05))
+        assertEquals(WRITE_TYPE_NO_RESPONSE, writeTypeFor(bt05 or PROPERTY_WRITE_NO_RESPONSE))
+    }
 
     @Test
     fun aBoardIsTheOneNamedByItsNameOrItsAddressAndNoOther() {

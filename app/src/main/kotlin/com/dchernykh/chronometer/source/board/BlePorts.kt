@@ -308,22 +308,35 @@ class BlePort private constructor(
     }
 }
 
-/** One write of [chunk], without response, as Android of each version takes it. */
+/**
+ * The write the serial characteristic takes, from its [properties]: without response where it
+ * offers that (the ESP32-C3), with response where not (the prototype's BT05, an MLT-BT05 v6.1,
+ * drops any other, and the board would never hear a command).
+ */
+internal fun writeTypeFor(properties: Int): Int =
+    if ((properties and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE) != 0) {
+        BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+    } else {
+        BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+    }
+
+/** One write of [chunk], of the type [serial] takes, as Android of each version takes it. */
 @SuppressLint("MissingPermission")
 @Suppress("DEPRECATION")
 private fun send(
     gatt: BluetoothGatt,
     serial: BluetoothGattCharacteristic,
     chunk: ByteArray,
-): Boolean =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        gatt.writeCharacteristic(serial, chunk, BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE) ==
-            BluetoothStatusCodes.SUCCESS
+): Boolean {
+    val type = writeTypeFor(serial.properties)
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        gatt.writeCharacteristic(serial, chunk, type) == BluetoothStatusCodes.SUCCESS
     } else {
-        serial.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+        serial.writeType = type
         serial.value = chunk
         gatt.writeCharacteristic(serial)
     }
+}
 
 /** The serial characteristic's notifications asked for; its answer comes as a step. */
 @SuppressLint("MissingPermission")
