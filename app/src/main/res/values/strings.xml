@@ -150,6 +150,7 @@
     <string name="clock_news_gnss_unsteady">GNSS time not taken: it jumps from fix to fix (jammed or spoofed?)</string>
     <string name="clock_news_gnss_far_internet">GNSS time not taken: over a second off the internet\'s (spoofed?)</string>
     <string name="clock_news_gnss_far_system">GNSS time not taken: over a minute off the phone\'s clock (spoofed?)</string>
+    <string name="clock_news_location_off">GNSS not used: the phone\'s location is off</string>
     <string name="clock_news_no_location">GNSS not used: the location is not allowed</string>
 
     <!-- The beam boards around, picked from a list (spec 003). -->

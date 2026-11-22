@@ -157,6 +157,7 @@ private fun clockNewsText(news: ClockNews): String =
                 },
             )
         ClockNews.NoLocation -> stringResource(R.string.clock_news_no_location)
+        ClockNews.LocationOff -> stringResource(R.string.clock_news_location_off)
     }
 
 @Composable

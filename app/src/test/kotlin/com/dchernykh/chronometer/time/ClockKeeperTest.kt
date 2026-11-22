@@ -140,6 +140,21 @@ class GnssTimeTest {
     }
 
     @Test
+    fun theLocationSwitchedOffIsSaidAndOnAgainNoMore() {
+        shadowOf(app).grantPermissions(Manifest.permission.ACCESS_FINE_LOCATION)
+        val manager = app.getSystemService(LocationManager::class.java)
+        shadowOf(manager).setProviderEnabled(LocationManager.GPS_PROVIDER, false)
+        val keeper = ClockKeeper()
+        keeper.startGnss(app)
+        assertEquals(ClockNews.LocationOff, keeper.news.value)
+        keeper.gnssSwitched(true)
+        assertNull(keeper.news.value)
+        keeper.gnssSwitched(false)
+        assertEquals(ClockNews.LocationOff, keeper.news.value)
+        keeper.stopGnss()
+    }
+
+    @Test
     fun gnssFixesSteadyAndPlausibleSetTheClock() {
         shadowOf(app).grantPermissions(Manifest.permission.ACCESS_FINE_LOCATION)
         val manager = app.getSystemService(LocationManager::class.java)

@@ -150,6 +150,7 @@
     <string name="clock_news_gnss_unsteady">Время GNSS не принято: скачет от замера к замеру (глушат или подменяют?)</string>
     <string name="clock_news_gnss_far_internet">Время GNSS не принято: расходится с интернетом больше чем на секунду (подмена?)</string>
     <string name="clock_news_gnss_far_system">Время GNSS не принято: расходится с часами телефона больше чем на минуту (подмена?)</string>
+    <string name="clock_news_location_off">GNSS не используется: геолокация телефона выключена</string>
     <string name="clock_news_no_location">GNSS не используется: нет доступа к геолокации</string>
 
     <!-- The beam boards around, picked from a list (spec 003). -->
