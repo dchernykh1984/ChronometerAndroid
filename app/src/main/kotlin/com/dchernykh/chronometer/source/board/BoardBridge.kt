@@ -7,12 +7,12 @@ import kotlin.math.roundToLong
 
 /*
  * The beam boards' lines, as the desktop connector reads them: one contract for both,
- * ChronometerPython's specs/001-event-sources/contracts/beam-board-protocol.md (0.4).
+ * ChronometerPython's specs/001-event-sources/contracts/beam-board-protocol.md (0.5).
  */
 
 /** The names a board's HELLO gives, and the firmware this app is built for. */
 val BOARD_NAMES = setOf("beam-rp2040", "beam-esp32c3")
-const val BOARD_FIRMWARE = "0.4"
+const val BOARD_FIRMWARE = "0.5"
 
 /** A PING every 2 s on USB, every 0.5 s over Bluetooth: there more trips, more short ones. */
 const val PING_EVERY_MS = 2_000L

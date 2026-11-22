@@ -186,8 +186,8 @@ boards around: the one on USB, then those on Bluetooth, the nearest first, with
 their signal. A check picks a board, one or several: every break of every board
 picked is a cutoff of its own, nothing merged, and no other board in range is
 read. **Blink** flashes a board's LED 5 times to tell which one it is (an
-ESP32-C3's blue LED is lit while the laser is on its sensor: block the beam to see
-it flash). The pick is kept; it changes while timing mode is off. One board picked
+ESP32-C3's blue LED, lit while the laser is on its sensor, goes out for each flash,
+from firmware 0.5 on). The pick is kept; it changes while timing mode is off. One board picked
 on both its USB and its Bluetooth is read on the link that answered first only.
 
 Android asks to let the app use Bluetooth as the boards are first looked for, and
@@ -206,7 +206,7 @@ the clock to world time where there is no internet. Refused, the clock is kept b
 the internet, or is the phone's own, and the main screen says so.
 
 Both apps keep to one contract for the board's lines, ChronometerPython's
-`specs/001-event-sources/contracts/beam-board-protocol.md` (version 0.4).
+`specs/001-event-sources/contracts/beam-board-protocol.md` (version 0.5).
 With chips, the settings also hold the dead time and **Download start
 protocol**: while there is a network, it saves the settings, fetches the start
 list StartProtocolMaker uploaded to the site and replaces `start.txt` with it
