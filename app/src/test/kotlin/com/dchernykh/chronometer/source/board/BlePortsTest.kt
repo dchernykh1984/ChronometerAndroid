@@ -92,7 +92,8 @@ class BlePortsTest {
         shadowOf(app.getSystemService(BluetoothManager::class.java).adapter).setEnabled(true)
         var now = 0L
         val pauses = mutableListOf<Long>()
-        val ports = BlePorts(app, "beam-4103", monotonic = { now }, pause = { pauses += it }, scanMs = 10)
+        val ports =
+            BlePorts(app, "beam-4103", scanMs = 10, gate = ScanGate({ now }, { pauses += it }))
         assertNull(ports.find()) // the first scan, no wait; none of the name in range
         assertEquals(BoardTrouble.NotInRange("beam-4103"), ports.missing())
         now += 1_000
