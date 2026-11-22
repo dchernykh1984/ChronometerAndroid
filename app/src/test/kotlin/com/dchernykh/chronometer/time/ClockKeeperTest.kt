@@ -80,12 +80,15 @@ class ClockKeeperTest {
         assertEquals(ClockSource.INTERNET, keeper.reading().source)
         keeper.offerGnss(WORLD_MS + 1_600, 1.0)
         assertEquals(ClockNews.GnssDropped(GnssVerdict.UNSTEADY), keeper.news.value)
-        keeper.stopGnss()
-        keeper.offerGnss(WORLD_MS, 1.0) // started anew: waiting, nothing said
-        assertEquals(ClockNews.GnssDropped(GnssVerdict.UNSTEADY), keeper.news.value)
+        keeper.offerGnss(WORLD_MS, 1.0) // jumped back: unsteady still, said once
         keeper.offerGnss(WORLD_MS, 1.0) // steady and near the internet's: taken
         assertNull(keeper.news.value) // no more said dropped
         assertEquals(ClockSource.GNSS, keeper.reading().source)
+        keeper.offerGnss(WORLD_MS + 1_500, 1.0)
+        keeper.stopGnss() // timing mode off: what was said of GNSS goes with it
+        assertNull(keeper.news.value)
+        keeper.offerGnss(WORLD_MS, 1.0) // started anew: waiting, nothing said
+        assertNull(keeper.news.value)
     }
 
     @Test
@@ -151,7 +154,8 @@ class GnssTimeTest {
         assertNull(keeper.news.value)
         keeper.gnssSwitched(false)
         assertEquals(ClockNews.LocationOff, keeper.news.value)
-        keeper.stopGnss()
+        keeper.stopGnss() // timing mode off: GNSS is not asked for, nothing is said of it
+        assertNull(keeper.news.value)
     }
 
     @Test
