@@ -150,6 +150,7 @@
     <string name="clock_news_gnss_unsteady">GNSS уақыты алынбады: өлшемнен өлшемге секіреді (кедергі немесе жалған сигнал?)</string>
     <string name="clock_news_gnss_far_internet">GNSS уақыты алынбады: интернет уақытынан бір секундтан артық айырмашылық (жалған сигнал?)</string>
     <string name="clock_news_gnss_far_system">GNSS уақыты алынбады: телефон сағатынан бір минуттан артық айырмашылық (жалған сигнал?)</string>
+    <string name="clock_news_location_off">GNSS қолданылмайды: телефонның геолокациясы өшірулі</string>
     <string name="clock_news_no_location">GNSS қолданылмайды: геолокацияға рұқсат жоқ</string>
 
     <!-- The beam boards around, picked from a list (spec 003). -->

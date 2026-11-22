@@ -101,6 +101,8 @@ fun fixOffset(
 class GnssTime(
     private val context: Context,
     private val onFix: (offsetMs: Double, errorMs: Double) -> Unit,
+    /** The phone's location switched on or off: off, GNSS gives no fix. */
+    private val onSwitched: (on: Boolean) -> Unit = {},
 ) {
     private var fixes: Fixes? = null
 
@@ -118,6 +120,7 @@ class GnssTime(
         val heard = Fixes()
         manager.requestLocationUpdates(LocationManager.GPS_PROVIDER, FIX_EVERY_MS, 0f, heard, Looper.getMainLooper())
         fixes = heard
+        onSwitched(manager.isProviderEnabled(LocationManager.GPS_PROVIDER))
         return true
     }
 
@@ -148,9 +151,13 @@ class GnssTime(
             extras: Bundle?,
         ) = Unit
 
-        override fun onProviderEnabled(provider: String) = Unit
+        override fun onProviderEnabled(provider: String) {
+            if (provider == LocationManager.GPS_PROVIDER) onSwitched(true)
+        }
 
-        override fun onProviderDisabled(provider: String) = Unit
+        override fun onProviderDisabled(provider: String) {
+            if (provider == LocationManager.GPS_PROVIDER) onSwitched(false)
+        }
     }
 }
 

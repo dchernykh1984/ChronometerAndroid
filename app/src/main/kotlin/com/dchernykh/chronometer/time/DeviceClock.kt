@@ -26,6 +26,9 @@ sealed interface ClockNews {
 
     /** The location not allowed: GNSS is not used. */
     data object NoLocation : ClockNews
+
+    /** The phone's location switched off: GNSS gives no time until it is on. */
+    data object LocationOff : ClockNews
 }
 
 private const val DRIFT_PPM = 50.0 // how fast an offset goes stale while its rate is not known

@@ -97,12 +97,22 @@ class ClockKeeper(
     @Synchronized
     fun startGnss(context: Context) {
         if (gnss != null) return
-        val time = GnssTime(context, ::offerGnss)
+        val time = GnssTime(context, ::offerGnss, ::gnssSwitched)
         if (time.start()) {
             gnss = time
             if (newsState.value == ClockNews.NoLocation) newsState.value = null
         } else {
             newsState.value = ClockNews.NoLocation
+        }
+    }
+
+    /** The phone's location switched on or off: off, GNSS's time is not used, and that is said. */
+    @Synchronized
+    fun gnssSwitched(on: Boolean) {
+        if (!on) {
+            newsState.value = ClockNews.LocationOff
+        } else if (newsState.value == ClockNews.LocationOff) {
+            newsState.value = null
         }
     }
 
