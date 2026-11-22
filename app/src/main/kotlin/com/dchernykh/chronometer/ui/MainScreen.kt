@@ -82,6 +82,7 @@ fun MainScreen(
     val pendingBreaks by viewModel.pendingBreaks.collectAsStateWithLifecycle()
     val startProtocol by viewModel.startProtocol.collectAsStateWithLifecycle()
     val unknownChips by viewModel.unknownChips.collectAsStateWithLifecycle()
+    val clockNews by viewModel.clockNews.collectAsStateWithLifecycle()
     val focusRequester = remember { FocusRequester() }
     val logState = rememberLazyListState()
     // Landscape has little vertical room, so shrink the input controls to keep the
@@ -110,22 +111,23 @@ fun MainScreen(
         onDispose { view.keepScreenOn = false }
     }
 
-    val notificationLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-            // Start regardless: without the permission the notification is just hidden.
+    val leaveLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+            // Start regardless: without the notifications' leave the notification is just hidden,
+            // without the location's GNSS is not used and the clock line says so.
             RaceService.start(context)
             showTimingOnDialog = true
         }
 
     fun toggleTimingMode() {
+        val missing =
+            timingLeave().filter { ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED }
         if (timingModeOn) {
             RaceService.stop(context)
             showTimingDoneDialog = true
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else if (missing.isNotEmpty()) {
+            // Asked as timing mode starts (spec 003, FR-014), the location for GNSS's time.
+            leaveLauncher.launch(missing.toTypedArray())
         } else {
             RaceService.start(context)
             showTimingOnDialog = true
@@ -261,6 +263,7 @@ fun MainScreen(
                 modifier = Modifier.padding(top = 8.dp),
             )
             SourceLine(settings, sourceStatus)
+            ClockLine(viewModel::clockReading, clockNews)
             ChipsLine(settings, startProtocol, unknownChips.size, onOpenChips)
             PendingBreaks(pendingBreaks, viewModel::discardBreak)
 
@@ -568,3 +571,13 @@ private fun uploadStatusLabel(status: UploadStatus): String =
             UploadStatus.FAILED -> R.string.diag_upload_failed
         },
     )
+
+/** What timing mode asks leave for: its notification, and the location for GNSS's time (spec 003). */
+private fun timingLeave(): List<String> {
+    val location = listOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        listOf(Manifest.permission.POST_NOTIFICATIONS) + location
+    } else {
+        location
+    }
+}

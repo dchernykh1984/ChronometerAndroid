@@ -141,4 +141,17 @@
     <string name="source_board_break_missing">Сәуленің %1$d іске қосылуы келмеді: бұл мәрені басқаша тексеріңіз</string>
     <string name="source_board_breaks_missing">Сәуленің %1$d-%2$d іске қосылулары келмеді: бұл мәрелерді басқаша тексеріңіз</string>
     <string name="source_board_clock_not_read">Тақта сағаты оқылмады: %1$d іске қосылу келген уақыты бойынша жазылды</string>
+
+    <!-- The phone's clock against world time (spec 003). -->
+    <string name="clock_line_system">Сағат: телефондікі, тексерілмеген</string>
+    <string name="clock_line_internet">Сағат: интернет бойынша, дәлдігі %1$d мс</string>
+    <string name="clock_line_gnss">Сағат: GNSS бойынша, дәлдігі %1$d мс</string>
+    <string name="clock_source_system">телефон сағаты</string>
+    <string name="clock_source_internet">интернет</string>
+    <string name="clock_source_gnss">GNSS</string>
+    <string name="clock_news_corrected">Сағат %1$s с түзетілді (%2$s): бұған дейінгі белгілер ескі сағат бойынша</string>
+    <string name="clock_news_gnss_unsteady">GNSS уақыты алынбады: өлшемнен өлшемге секіреді (кедергі немесе жалған сигнал?)</string>
+    <string name="clock_news_gnss_far_internet">GNSS уақыты алынбады: интернет уақытынан бір секундтан артық айырмашылық (жалған сигнал?)</string>
+    <string name="clock_news_gnss_far_system">GNSS уақыты алынбады: телефон сағатынан бір минуттан артық айырмашылық (жалған сигнал?)</string>
+    <string name="clock_news_no_location">GNSS қолданылмайды: геолокацияға рұқсат жоқ</string>
 </resources>

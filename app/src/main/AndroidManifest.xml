@@ -29,9 +29,11 @@
     <uses-permission
         android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30" />
-    <uses-permission
-        android:name="android.permission.ACCESS_FINE_LOCATION"
-        android:maxSdkVersion="30" />
+    <!-- The location: GNSS's time for the clock (spec 003), and, before Android 12, Bluetooth's
+         scans. Asked as timing mode starts; the service reads it, so it says so. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
     <!-- A phone without Bluetooth Low Energy still runs the app, by hand or on USB. -->
     <uses-feature
@@ -77,7 +79,7 @@
         <service
             android:name=".service.RaceService"
             android:exported="false"
-            android:foregroundServiceType="specialUse">
+            android:foregroundServiceType="specialUse|location">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Keeps event timing alive so referees never miss a cutoff" />

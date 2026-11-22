@@ -13,6 +13,8 @@ import com.dchernykh.chronometer.data.PendingBreakEntity
 import com.dchernykh.chronometer.data.Settings
 import com.dchernykh.chronometer.source.SourceStatus
 import com.dchernykh.chronometer.startprotocol.Download
+import com.dchernykh.chronometer.time.ClockNews
+import com.dchernykh.chronometer.time.ClockReading
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -88,6 +90,12 @@ class ChronometerViewModel(
     /** The cutoff source's state, for its line on the main screen. */
     val sourceStatus: StateFlow<SourceStatus> = app.sourceController.status
 
+    /** What the referee is to be told of the clock (spec 003, FR-009). */
+    val clockNews: StateFlow<ClockNews?> = app.clockKeeper.news
+
+    /** The clock's line now: where its time comes from, and how far it may be off. */
+    fun clockReading(): ClockReading = app.clockKeeper.reading()
+
     val uploadDiagnostics: StateFlow<UploadDiagnostics> =
         combine(repository.uploadWorkInfo, app.uploadErrorStore.error, ::uploadDiagnosticsOf)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), UploadDiagnostics())
@@ -99,7 +107,7 @@ class ChronometerViewModel(
     fun recordCutoff(number: String) {
         // The tap's moment and the break the button shows, taken now: the beam check below may
         // wait for a batch, and a break stored meanwhile is the next rider's, not this number's.
-        val tappedAt = System.currentTimeMillis()
+        val tappedAt = app.clockKeeper.clock.nowMs() // on the clock kept to world time
         val shown = pendingBreaks.value.firstOrNull()?.id
         val event = CutoffEvent.lapEvent(settingsState.value.finishMode)
         viewModelScope.launch {

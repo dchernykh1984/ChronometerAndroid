@@ -5,6 +5,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -18,6 +23,13 @@ import com.dchernykh.chronometer.source.OpenFailure
 import com.dchernykh.chronometer.source.SourceError
 import com.dchernykh.chronometer.source.SourceState
 import com.dchernykh.chronometer.source.SourceStatus
+import com.dchernykh.chronometer.time.ClockNews
+import com.dchernykh.chronometer.time.ClockReading
+import com.dchernykh.chronometer.time.ClockSource
+import com.dchernykh.chronometer.time.GnssVerdict
+import kotlinx.coroutines.delay
+import java.util.Locale
+import kotlin.math.roundToInt
 
 /** The chosen device and what it is doing, its last error and a test-data warning. */
 @Composable
@@ -66,6 +78,71 @@ internal fun SourceLine(
         }
     }
 }
+
+/**
+ * Where the time comes from and how far it may be off, read again every second, and what the
+ * referee is to be told of the clock (spec 003, FR-009).
+ */
+@Composable
+internal fun ClockLine(
+    reading: () -> ClockReading,
+    news: ClockNews?,
+) {
+    var now by remember { mutableStateOf(reading()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(CLOCK_EVERY_MS)
+            now = reading()
+        }
+    }
+    val within = now.withinMs?.roundToInt()
+    Text(
+        text =
+            when {
+                within == null -> stringResource(R.string.clock_line_system)
+                now.source == ClockSource.GNSS -> stringResource(R.string.clock_line_gnss, within)
+                else -> stringResource(R.string.clock_line_internet, within)
+            },
+        style = MaterialTheme.typography.labelMedium,
+        modifier = Modifier.testTag("clockLine"),
+    )
+    news?.let {
+        Text(
+            text = clockNewsText(it),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.testTag("clockNews"),
+        )
+    }
+}
+
+private const val CLOCK_EVERY_MS = 1_000L
+
+@Composable
+private fun clockNewsText(news: ClockNews): String =
+    when (news) {
+        is ClockNews.Corrected ->
+            stringResource(
+                R.string.clock_news_corrected,
+                String.format(Locale.ROOT, "%+.3f", news.byMs / 1_000.0),
+                stringResource(
+                    when (news.source) {
+                        ClockSource.GNSS -> R.string.clock_source_gnss
+                        ClockSource.INTERNET -> R.string.clock_source_internet
+                        ClockSource.SYSTEM -> R.string.clock_source_system
+                    },
+                ),
+            )
+        is ClockNews.GnssDropped ->
+            stringResource(
+                when (news.why) {
+                    GnssVerdict.FAR_FROM_INTERNET -> R.string.clock_news_gnss_far_internet
+                    GnssVerdict.FAR_FROM_SYSTEM -> R.string.clock_news_gnss_far_system
+                    else -> R.string.clock_news_gnss_unsteady
+                },
+            )
+        ClockNews.NoLocation -> stringResource(R.string.clock_news_no_location)
+    }
 
 @Composable
 private fun errorText(error: SourceError): String =

@@ -19,6 +19,7 @@ import com.dchernykh.chronometer.source.SourceEvent
 import com.dchernykh.chronometer.source.board.BlePorts
 import com.dchernykh.chronometer.source.board.UsbBoardPorts
 import com.dchernykh.chronometer.source.builtInSource
+import com.dchernykh.chronometer.time.ClockKeeper
 
 /** Holds the app-wide singletons (manual dependency injection). */
 class ChronometerApp : Application() {
@@ -38,6 +39,9 @@ class ChronometerApp : Application() {
 
     val beamRepository by lazy { BeamRepository(database, settingsStore, backupWriter, cutoffRepository) }
 
+    /** The phone's clock kept to world time: every cutoff is stamped on it (spec 003). */
+    val clockKeeper by lazy { ClockKeeper() }
+
     /**
      * The cutoff source timing mode runs: beam breaks go to the queue that waits for numbers,
      * chip reads to their passes.
@@ -46,6 +50,7 @@ class ChronometerApp : Application() {
         SourceController(
             settingsStore,
             SystemClock::elapsedRealtime,
+            stamp = { system -> system?.let(clockKeeper.clock::fromSystem) ?: clockKeeper.clock.nowMs() },
             competition = { cutoffRepository.competition },
         ) { batch, takenIn, firstTry ->
             beamRepository.add(batch.filterIsInstance<SourceEvent.BeamBreak>(), takenIn, rawToo = firstTry)

@@ -141,4 +141,17 @@
     <string name="source_board_break_missing">Срабатывание луча %1$d не пришло: проверьте этот финиш иначе</string>
     <string name="source_board_breaks_missing">Срабатывания луча с %1$d по %2$d не пришли: проверьте эти финиши иначе</string>
     <string name="source_board_clock_not_read">Часы платы не прочитаны; по времени прихода записано срабатываний: %1$d</string>
+
+    <!-- The phone's clock against world time (spec 003). -->
+    <string name="clock_line_system">Часы: телефона, не проверены</string>
+    <string name="clock_line_internet">Часы: по интернету, точность %1$d мс</string>
+    <string name="clock_line_gnss">Часы: по GNSS, точность %1$d мс</string>
+    <string name="clock_source_system">часы телефона</string>
+    <string name="clock_source_internet">интернет</string>
+    <string name="clock_source_gnss">GNSS</string>
+    <string name="clock_news_corrected">Часы поправлены на %1$s с (%2$s): отсечки до этого были по старым часам</string>
+    <string name="clock_news_gnss_unsteady">Время GNSS не принято: скачет от замера к замеру (глушат или подменяют?)</string>
+    <string name="clock_news_gnss_far_internet">Время GNSS не принято: расходится с интернетом больше чем на секунду (подмена?)</string>
+    <string name="clock_news_gnss_far_system">Время GNSS не принято: расходится с часами телефона больше чем на минуту (подмена?)</string>
+    <string name="clock_news_no_location">GNSS не используется: нет доступа к геолокации</string>
 </resources>

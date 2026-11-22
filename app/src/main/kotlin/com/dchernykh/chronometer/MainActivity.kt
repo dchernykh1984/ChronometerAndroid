@@ -47,6 +47,8 @@ class MainActivity : ComponentActivity() {
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         }
         setContent { AppRoot() }
+        // The clock kept to world time while the app runs: every cutoff is stamped on it.
+        (application as ChronometerApp).clockKeeper.keepMeasuring()
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 BluetoothLeave.asks.collect { bluetoothLeave.launch(BluetoothLeave.needed) }

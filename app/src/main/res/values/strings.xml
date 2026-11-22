@@ -141,4 +141,17 @@
     <string name="source_board_break_missing">Beam break %1$d never came: check that finish by other means</string>
     <string name="source_board_breaks_missing">Beam breaks %1$d to %2$d never came: check those finishes by other means</string>
     <string name="source_board_clock_not_read">The board clock was not read: %1$d beam break(s) timed by when they came</string>
+
+    <!-- The phone's clock against world time (spec 003). -->
+    <string name="clock_line_system">Clock: the phone\'s, not checked</string>
+    <string name="clock_line_internet">Clock: the internet, within %1$d ms</string>
+    <string name="clock_line_gnss">Clock: GNSS, within %1$d ms</string>
+    <string name="clock_source_system">the phone\'s</string>
+    <string name="clock_source_internet">the internet</string>
+    <string name="clock_source_gnss">GNSS</string>
+    <string name="clock_news_corrected">Clock corrected by %1$s s (%2$s): the cutoffs before it were on the old clock</string>
+    <string name="clock_news_gnss_unsteady">GNSS time not taken: it jumps from fix to fix (jammed or spoofed?)</string>
+    <string name="clock_news_gnss_far_internet">GNSS time not taken: over a second off the internet\'s (spoofed?)</string>
+    <string name="clock_news_gnss_far_system">GNSS time not taken: over a minute off the phone\'s clock (spoofed?)</string>
+    <string name="clock_news_no_location">GNSS not used: the location is not allowed</string>
 </resources>
