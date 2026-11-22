@@ -1,6 +1,8 @@
 package com.dchernykh.chronometer.source.board
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BoardPicksTest {
@@ -27,5 +29,17 @@ class BoardPicksTest {
             ),
             boardRows(found, listOf(near, gone)),
         )
+    }
+
+    @Test
+    fun aBoardPickedByItsNameBeforeIsTheBoardFoundOfThatNameListedOnce() {
+        val byName = BoardPick(BoardLink.BLE, "BEAM-7C1C", "BEAM-7C1C") // the Bluetooth beam's typed name
+        assertEquals(
+            listOf(BoardRow(BoardFound(near, rssi = -61), picked = true, here = true)),
+            boardRows(listOf(BoardFound(near, rssi = -61)), listOf(byName)),
+        )
+        assertTrue(byName.isBoard(near))
+        assertFalse(byName.isBoard(usb))
+        assertFalse(BoardPick(BoardLink.USB, "beam-7c1c", "x").isBoard(near)) // a name is the radio's
     }
 }
