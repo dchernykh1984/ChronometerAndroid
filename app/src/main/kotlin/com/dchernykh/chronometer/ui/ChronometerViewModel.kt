@@ -175,7 +175,9 @@ class ChronometerViewModel(
         number: String,
         reason: String = "",
     ) {
-        viewModelScope.launch { repository.record(number, CutoffEvent.dsq(reason)) }
+        // The tap's moment on the clock kept to world time, as every cutoff's (spec 003, FR-008).
+        val tappedAt = app.clockKeeper.clock.nowMs()
+        viewModelScope.launch { repository.record(number, CutoffEvent.dsq(reason), tappedAt) }
     }
 
     /** Correct the number/time of an already-recorded cutoff, keeping its event. */
