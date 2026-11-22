@@ -4,10 +4,12 @@ import com.dchernykh.chronometer.source.BoardTrouble
 import com.dchernykh.chronometer.source.CutoffSource
 import com.dchernykh.chronometer.source.SourceEvent
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.retryWhen
 
 /**
  * The beam boards picked (ChronometerPython's spec 003), read at once: each over its own link,
@@ -32,8 +34,13 @@ class BoardsSource(
         }
         return picks
             .distinctBy(BoardPick::key)
-            .map { pick -> sources.getValue(pick.key).events().map { it.named(pick.name) } }
-            .merge()
+            .map { pick ->
+                sources
+                    .getValue(pick.key)
+                    .events()
+                    .map { it.named(pick.name) }
+                    .isolated(pick.name)
+            }.merge()
     }
 
     /** The board of [key] blinked; null when it is not one of these, false when not connected. */
@@ -54,3 +61,14 @@ class BoardsSource(
 }
 
 private fun SourceEvent.named(name: String): SourceEvent = if (this is SourceEvent.Board) copy(board = name) else this
+
+/** A board that failed is looked for again this soon. */
+private const val AGAIN_MS = 2_000L
+
+/** A board's failure kept to it: said, and that board looked for again, the others read on (FR-005). */
+private fun Flow<SourceEvent>.isolated(name: String): Flow<SourceEvent> =
+    retryWhen { cause, _ ->
+        emit(SourceEvent.Error("$name: ${cause.message ?: cause.javaClass.simpleName}"))
+        delay(AGAIN_MS)
+        true
+    }

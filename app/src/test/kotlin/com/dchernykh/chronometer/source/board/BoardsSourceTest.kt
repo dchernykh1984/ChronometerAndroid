@@ -141,6 +141,46 @@ class BoardsSourceTest {
         }
 
     @Test
+    fun aBoardsFailureIsItsOwnTheOthersReadOn() =
+        runTest {
+            val io = StandardTestDispatcher(testScheduler)
+            val a = LinkedBoard("aaaa")
+            var fails = 1
+            val source =
+                BoardsSource(listOf(PICK_A, PICK_B)) { pick, claim ->
+                    val ports =
+                        if (pick == PICK_A) {
+                            BoardPorts { FoundBoard(permitted = true, ask = {}, open = { a }) }
+                        } else {
+                            BoardPorts {
+                                if (fails-- > 0) throw SecurityException("leave taken back")
+                                null
+                            }
+                        }
+                    BoardBeamSource(
+                        ports,
+                        clock = { BASE_MS + testScheduler.currentTime },
+                        monotonic = { testScheduler.currentTime },
+                        io = io,
+                        picked = claim,
+                    )
+                }
+            val events = mutableListOf<SourceEvent>()
+            backgroundScope.launch(io) { source.events().toList(events) }
+            advanceTimeBy(500)
+            a.say("BREAK 1 2500000")
+            advanceTimeBy(3_000)
+            assertEquals(
+                listOf(SourceEvent.Error("beam-rp2040: leave taken back")),
+                events.filterIsInstance<SourceEvent.Error>(),
+            )
+            assertEquals(listOf(BASE_MS + 500), events.filterIsInstance<SourceEvent.BeamBreak>().map { it.timeMs })
+            assertEquals(1, a.written.count { it.startsWith("HOLDOFF") }) // opened once: never started again
+            // The board that failed is looked for again.
+            assertTrue(events.filterIsInstance<SourceEvent.Board>().any { it.board == "beam-rp2040" })
+        }
+
+    @Test
     fun noBoardPickedIsSaid() =
         runTest {
             val (_, events) = boards()
