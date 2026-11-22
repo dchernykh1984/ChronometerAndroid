@@ -45,7 +45,7 @@ class RaceService : Service() {
         RaceNotification.ensureChannel(this)
         val notification = RaceNotification.build(this)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(RaceNotification.ID, notification, foregroundTypes(this))
+            goForeground(foregroundTypes(this)) { types -> startForeground(RaceNotification.ID, notification, types) }
         } else {
             startForeground(RaceNotification.ID, notification)
         }
@@ -97,4 +97,20 @@ internal fun foregroundTypes(context: Context): Int {
     val located = context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
     val location = if (located == PackageManager.PERMISSION_GRANTED) ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION else 0
     return ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE or location
+}
+
+/**
+ * Foreground with [types]; refused the location's, as the system restarts the service in the
+ * background (START_STICKY) where it may not read it, with the special use alone: timing goes
+ * on, GNSS's time waiting until the app is on screen again.
+ */
+internal fun goForeground(
+    types: Int,
+    start: (Int) -> Unit,
+) {
+    try {
+        start(types)
+    } catch (_: SecurityException) {
+        start(ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+    }
 }
