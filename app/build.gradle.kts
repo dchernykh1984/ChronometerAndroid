@@ -167,11 +167,11 @@ dependencies {
     constraints {
         // Robolectric's provider is test-only, never shipped. Keep it patched for
         // GHSA-9pwp-9qqc-pr26 / GHSA-qp49-qgx5-5m26 and earlier advisories.
-        testImplementation("org.bouncycastle:bcprov-jdk18on:1.86") {
+        testImplementation("org.bouncycastle:bcprov-jdk18on:1.87") {
             because("Fix known vulnerabilities in Robolectric's test-only provider")
         }
         // Guava comes in for the unit tests only, never shipped: patched for GHSA-xxph-c9ww-hj94.
-        testImplementation("com.google.guava:guava:33.7.2-jre") {
+        testImplementation("com.google.guava:guava:33.8.0-jre") {
             because("Fix a known vulnerability in the test classpath's Guava")
         }
     }
