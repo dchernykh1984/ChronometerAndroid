@@ -54,6 +54,11 @@ updates:
       # does; 2.8.7 is the highest that stays on the pinned compileSdk-36 train.
       - dependency-name: "androidx.lifecycle:*"
         versions: [">=2.9"]
+      # mockwebserver 5.5's okhttp does not start under Robolectric's SDK 34
+      # (NoClassDefFoundError: android/net/ssl/InvalidEchDataException) and 19
+      # unit tests fail, so 5.4.0 is kept. Try again with 5.6.
+      - dependency-name: "com.squareup.okhttp3:mockwebserver"
+        versions: ["[5.5,5.6)"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
