@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.2](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.11.1...chronometer-android-v0.11.2) (2026-11-24)
+
+
+### Bug Fixes
+
+* **cutoffs:** a DSQ reason loses every line break a reader splits at, as a number does ([dcb24a3](https://github.com/dchernykh1984/ChronometerAndroid/commit/dcb24a30e7e675fee0c0173ad9aa4f53aff37b12))
+
 ## [0.11.1](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.11.0...chronometer-android-v0.11.1) (2026-11-22)
 
 
