@@ -39,4 +39,12 @@ class CutoffEventTest {
     fun dsqReasonLineBreaksAreStripped() {
         assertEquals("DSQ: l1 l2 l3", CutoffEvent.dsq("l1\nl2\rl3"))
     }
+
+    @Test
+    fun dsqReasonLosesEveryLineBreakPythonSplitsAt() {
+        // FinishProtocolGenerator reads results.txt with str.splitlines(), which splits at each.
+        "\u000B\u000C\u001C\u001D\u001E\u0085\u2028\u2029".forEach {
+            assertEquals("U+${it.code.toString(16)}", "DSQ: fell off", CutoffEvent.dsq("fell${it}off"))
+        }
+    }
 }

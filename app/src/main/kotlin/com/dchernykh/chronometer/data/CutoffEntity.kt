@@ -2,6 +2,7 @@ package com.dchernykh.chronometer.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.dchernykh.chronometer.io.RawFiles
 
 /** Cutoff event kinds, written verbatim into the `number#time#event#` line. */
 object CutoffEvent {
@@ -19,16 +20,12 @@ object CutoffEvent {
 
     /**
      * The disqualification event: bare [DSQ] when no reason is given (backward compatible)
-     * or `DSQ: <reason>`. `#` and line breaks are stripped from the reason so it can never
-     * break the `#`-delimited `number#time#event#` record; surrounding space is trimmed.
+     * or `DSQ: <reason>`. `#` and every line break a reader may split at are stripped from
+     * the reason, as from a number, so it can never break the `#`-delimited
+     * `number#time#event#` record; surrounding space is trimmed.
      */
     fun dsq(reason: String = ""): String {
-        val cleaned =
-            reason
-                .replace('#', ' ')
-                .replace('\n', ' ')
-                .replace('\r', ' ')
-                .trim()
+        val cleaned = RawFiles.field(reason)
         return if (cleaned.isEmpty()) DSQ else "$DSQ: $cleaned"
     }
 }
