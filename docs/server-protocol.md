@@ -66,6 +66,12 @@ Remote-point uploads also include:
 Each item is a protocol line in the existing desktop-tool format:
 `number#time#event#`.
 
+The number and a DSQ reason (`DSQ: <reason>`) keep at most 200 characters each:
+the app's fields stop there, and every cutoff made or edited is cut to them, an
+edit cutting a reason stored before the cap too. An item so stays far below the
+2000 characters the site takes; one longer is refused with HTTP 400, and with it
+every later upload of the device, as each sends the whole snapshot.
+
 ## Idempotency
 
 The client sends the whole current snapshot for the device and point, not

@@ -449,6 +449,20 @@ class MainFlowTest {
     }
 
     @Test
+    fun theNumberTheReasonAndTheEditedNumberStopAt200Characters() {
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            composeRule.onNodeWithTag("numberField").performTextReplacement("1".repeat(250))
+            numberFieldText() == "1".repeat(200)
+        }
+        composeRule.onNodeWithTag("dsqReasonField").performTextReplacement("x".repeat(250))
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) { dsqReasonFieldText() == "x".repeat(200) }
+        recordAndAwait("cutoffButton", "70800")
+        enterEditMode()
+        composeRule.onNodeWithTag("editNumberField").performTextReplacement("2".repeat(250))
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) { editableTextOf("editNumberField") == "2".repeat(200) }
+    }
+
+    @Test
     fun opensSettingsScreen() {
         openSettings()
     }

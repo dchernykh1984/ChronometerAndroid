@@ -202,6 +202,14 @@ class ChipRepositoryTest {
         }
 
     @Test
+    fun aBibOver200CharactersMakesACutoffOfItsFirst200() =
+        runTest {
+            File(folder, "start.txt").writeText("${"7".repeat(250)}#R#M#3#1#1990#T#C##0 0:0:0.000#r#A1#\n")
+            chips().apply(listOf(read("A1", 0)))
+            assertEquals(listOf("7".repeat(200) to time(0)), made())
+        }
+
+    @Test
     fun aRetriedBatchStoresItsReadsWithoutWritingTheirRawLinesAgain() =
         runTest {
             startTxt("A1")

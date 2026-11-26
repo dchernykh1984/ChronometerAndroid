@@ -6,6 +6,7 @@ import com.dchernykh.chronometer.data.CutoffEntity
 import com.dchernykh.chronometer.data.CutoffRepository
 import com.dchernykh.chronometer.data.PendingBreakEntity
 import com.dchernykh.chronometer.data.SettingsStore
+import com.dchernykh.chronometer.data.cutoffText
 import com.dchernykh.chronometer.io.BackupWriter
 import com.dchernykh.chronometer.io.RawFiles
 import com.dchernykh.chronometer.io.RawLog
@@ -82,8 +83,8 @@ class BeamRepository(
         number: String,
         event: String,
     ): Boolean {
-        // No `#` or line break may reach the `number#time#event#` line.
-        val trimmed = RawFiles.field(number)
+        // No `#` or line break may reach the `number#time#event#` line, nor a number past the cap.
+        val trimmed = cutoffText(number)
         if (trimmed.isEmpty()) {
             return false
         }

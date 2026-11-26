@@ -83,6 +83,27 @@ class BeamRepositoryTest {
         }
 
     @Test
+    fun aNumberGivenToABreakKeepsAtMost200Characters() =
+        runTest {
+            val beam = beam()
+            beam.add(listOf(BeamBreak(1, T0)))
+            val shown =
+                beam.pending
+                    .first()
+                    .single()
+                    .id
+            assertTrue(beam.assign(shown, "9".repeat(250), CutoffEvent.NEXT_LAP))
+            assertEquals(
+                "9".repeat(200),
+                db
+                    .cutoffDao()
+                    .getAll()
+                    .single()
+                    .number,
+            )
+        }
+
+    @Test
     fun aSecondQuickTapTakesTheBreakAfterTheOneTheFirstTook() =
         runTest {
             val beam = beam()
