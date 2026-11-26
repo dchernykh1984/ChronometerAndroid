@@ -248,6 +248,21 @@ class CutoffRepositoryTest {
         }
 
     @Test
+    fun editChangesOnlyTheRowItIsGiven() =
+        runTest {
+            configure(sendEnabled = false)
+            repository.record("11", CutoffEvent.NEXT_LAP)
+            repository.record("22", CutoffEvent.NEXT_LAP)
+            val second = db.cutoffDao().getAll()[1]
+
+            assertTrue(repository.editCutoff(second.id, "23", second.timeStr))
+
+            val rows = db.cutoffDao().getAll()
+            assertEquals(listOf("11", "23"), rows.map { it.number })
+            assertEquals(rows.joinToString("") { it.toItem() + "\n" }, File(folder, "results.txt").readText())
+        }
+
+    @Test
     fun editStripsHashFromNumberSoItCannotBreakTheRecord() =
         runTest {
             configure(sendEnabled = false)
