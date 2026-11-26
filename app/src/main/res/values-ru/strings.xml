@@ -28,6 +28,9 @@
     <string name="theme_dark">Тёмная</string>
     <string name="new_competition">Новое соревнование</string>
     <string name="new_competition_confirm">Список отсечек, ожидающие срабатывания луча, чтения чипов и токен отправки будут очищены, номер точки сброшен на 0. start.txt, chip_reads.txt и beam_breaks.txt переносятся в backup/. Файлы бэкапов останутся на месте.</string>
+    <string name="new_competition_upload_not_through">Неотправленные отсечки ещё отправляются. Если продолжить, эта отправка будет удалена и они не будут отправлены. Подождать или сбросить?</string>
+    <string name="new_competition_wait">Подождать</string>
+    <string name="new_competition_reset">Сбросить</string>
     <string name="new_competition_failed">Не удалось перенести файлы соревнования в backup/ или сбросить results.txt. Проверьте доступ к файлам и повторите.</string>
     <string name="data_folder_size">Размер папки с данными: %1$s</string>
     <string name="confirm">Подтвердить</string>

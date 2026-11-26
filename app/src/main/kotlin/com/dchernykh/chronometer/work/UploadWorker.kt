@@ -3,6 +3,7 @@ package com.dchernykh.chronometer.work
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import com.dchernykh.chronometer.ChronometerApp
 import com.dchernykh.chronometer.data.CutoffRepository
 import com.dchernykh.chronometer.data.isUploadReady
@@ -16,7 +17,9 @@ import kotlinx.coroutines.sync.withLock
  * so it runs off the UI thread and is retried automatically when the network
  * returns (even after the app was closed). Transient failures return retry;
  * permanent (configuration) failures return failure so WorkManager stops
- * retrying them.
+ * retrying them. Only a snapshot the site took is a success saying [SENT]; nothing
+ * to send -- sending turned off, the token gone with a new competition -- is a
+ * success without it, shown as no upload.
  */
 class UploadWorker(
     context: Context,
@@ -50,9 +53,14 @@ class UploadWorker(
         currentCoroutineContext().ensureActive()
         outcome.error?.let { app.uploadErrorStore.record(id.toString(), it) }
         return when (outcome.result) {
-            UploadResult.SUCCESS -> Result.success()
+            UploadResult.SUCCESS -> Result.success(workDataOf(SENT to true))
             UploadResult.RETRY -> Result.retry()
             UploadResult.GIVE_UP -> Result.failure()
         }
+    }
+
+    companion object {
+        /** True in a success's output when the site took the snapshot. */
+        const val SENT = "sent"
     }
 }
