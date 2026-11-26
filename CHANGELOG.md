@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.11.3](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.11.2...chronometer-android-v0.11.3) (2026-11-26)
+
+
+### Bug Fixes
+
+* **cutoffs:** a number and a DSQ reason keep 200 characters, in the fields and wherever a cutoff is made or edited ([52c12b8](https://github.com/dchernykh1984/ChronometerAndroid/commit/52c12b8ad1cbabe086d27e249e1be6afabac8d28))
+* **cutoffs:** Save in the edit row is offered only for a number the save keeps, never for a lone U+0085 ([1cd118c](https://github.com/dchernykh1984/ChronometerAndroid/commit/1cd118c3463129d614558a48ddbc1d70c9f14beb))
+* **upload:** New competition asks before it drops an upload not through, and nothing sent never shows as sent ([a2dcd60](https://github.com/dchernykh1984/ChronometerAndroid/commit/a2dcd6075c9e3c6b1a452b3b8a240e8cacb5d3d5))
+* **upload:** turning sending off cancels the upload not through, so New competition has none to wait for ([f047638](https://github.com/dchernykh1984/ChronometerAndroid/commit/f04763854c7cc2403948b9882d394119ae468227))
+
 ## [0.11.2](https://github.com/dchernykh1984/ChronometerAndroid/compare/chronometer-android-v0.11.1...chronometer-android-v0.11.2) (2026-11-24)
 
 
