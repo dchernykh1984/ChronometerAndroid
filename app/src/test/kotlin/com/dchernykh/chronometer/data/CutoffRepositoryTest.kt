@@ -141,6 +141,16 @@ class CutoffRepositoryTest {
         }
 
     @Test
+    fun aNumberAndADsqReasonAreStoredAt200CharactersAtMost() =
+        runTest {
+            configure(sendEnabled = false)
+            repository.record("7".repeat(250), CutoffEvent.dsq("x".repeat(3000)))
+            val row = db.cutoffDao().getAll().single()
+            assertEquals("7".repeat(200), row.number)
+            assertEquals("DSQ: " + "x".repeat(200), row.event)
+        }
+
+    @Test
     fun recordIgnoresABlankNumber() =
         runTest {
             configure(sendEnabled = false)
@@ -218,6 +228,23 @@ class CutoffRepositoryTest {
 
             val after = db.cutoffDao().getAll().single()
             assertEquals("42", after.number)
+        }
+
+    @Test
+    fun editCapsTheNumberAndCutsAReasonStoredBeforeTheCap() =
+        runTest {
+            configure(sendEnabled = false)
+            // As a version without the cap stored it: a reason the site refuses every upload over.
+            val id =
+                db.cutoffDao().insert(
+                    CutoffEntity(number = "15", timeStr = "t", event = "DSQ: " + "x".repeat(2500), createdAt = 1),
+                )
+
+            assertTrue(repository.editCutoff(id, "8".repeat(300), "1 2:3:4.005"))
+
+            val edited = db.cutoffDao().getAll().single()
+            assertEquals(CutoffEntity(id, "8".repeat(200), "1 2:3:4.005", "DSQ: " + "x".repeat(200), 1), edited)
+            assertEquals(edited.toItem() + "\n", File(folder, "results.txt").readText())
         }
 
     @Test

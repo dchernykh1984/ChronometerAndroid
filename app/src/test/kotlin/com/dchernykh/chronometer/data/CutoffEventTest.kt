@@ -47,4 +47,25 @@ class CutoffEventTest {
             assertEquals("U+${it.code.toString(16)}", "DSQ: fell off", CutoffEvent.dsq("fell${it}off"))
         }
     }
+
+    @Test
+    fun aDsqReasonKeepsAtMost200Characters() {
+        assertEquals("DSQ: " + "a".repeat(200), CutoffEvent.dsq("a".repeat(2500)))
+        // No space is kept where the cut falls.
+        assertEquals("DSQ: " + "a".repeat(199), CutoffEvent.dsq("a".repeat(199) + " b"))
+    }
+
+    @Test
+    fun aNumberKeepsAtMost200CharactersOfOneField() {
+        assertEquals("7".repeat(200), cutoffText("7".repeat(201)))
+        assertEquals("12 A", cutoffText(" 12#A\n"))
+    }
+
+    @Test
+    fun anEditCutsAReasonStoredBeforeTheCapAndKeepsEveryOtherEvent() {
+        assertEquals("DSQ: " + "a".repeat(200), CutoffEvent.capped("DSQ: " + "a".repeat(1970)))
+        for (event in listOf("DSQ", "DSQ: rude", "nextLap", "finish")) {
+            assertEquals(event, CutoffEvent.capped(event))
+        }
+    }
 }

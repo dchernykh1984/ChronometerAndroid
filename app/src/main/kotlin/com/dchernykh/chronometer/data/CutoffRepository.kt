@@ -66,8 +66,8 @@ class CutoffRepository(
         /** The tap's moment, taken before anything that may wait for [mutationMutex]. */
         now: Long = System.currentTimeMillis(),
     ) {
-        // No `#` or line break may reach the `number#time#event#` line.
-        val trimmed = RawFiles.field(number)
+        // No `#` or line break may reach the `number#time#event#` line, nor a number past the cap.
+        val trimmed = cutoffText(number)
         if (trimmed.isEmpty()) {
             return
         }
@@ -124,9 +124,10 @@ class CutoffRepository(
     /**
      * Correct a mis-recorded cutoff: overwrite its number and time, then run the
      * same durable-file + upload sequence a fresh cutoff does. Only the number and
-     * time change; the event, id and original createdAt stay. Returns false (row
-     * left untouched) when the number is blank or the time is not a valid
-     * "D H:M:S.mmm" string. `#` and line breaks are stripped from the number so an
+     * time change; the event, id and original createdAt stay, but for a DSQ reason
+     * stored before the cap, cut to [CUTOFF_TEXT_LIMIT] characters as the number is.
+     * Returns false (row left untouched) when the number is blank or the time is not a
+     * valid "D H:M:S.mmm" string. `#` and line breaks are stripped from the number so an
      * edit can never break the `#`-delimited record.
      *
      * The snapshot is written under the row id, so it lands next to the original as
@@ -138,14 +139,16 @@ class CutoffRepository(
         number: String,
         timeStr: String,
     ): Boolean {
-        val cleanedNumber = RawFiles.field(number)
+        val cleanedNumber = cutoffText(number)
         val cleanedTime = timeStr.trim()
         if (cleanedNumber.isEmpty() || !TimeFormatter.isValidTimeString(cleanedTime)) {
             return false
         }
 
         return mutationMutex.withLock {
-            dao.updateNumberAndTime(id, cleanedNumber, cleanedTime)
+            dao.getAll().firstOrNull { it.id == id }?.let {
+                dao.update(it.copy(number = cleanedNumber, timeStr = cleanedTime, event = CutoffEvent.capped(it.event)))
+            }
             afterChange(id)
             true
         }

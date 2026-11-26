@@ -12,6 +12,7 @@ import com.dchernykh.chronometer.data.PassDao
 import com.dchernykh.chronometer.data.PassEntity
 import com.dchernykh.chronometer.data.Settings
 import com.dchernykh.chronometer.data.SettingsStore
+import com.dchernykh.chronometer.data.cutoffText
 import com.dchernykh.chronometer.data.hasAllowedUploadScheme
 import com.dchernykh.chronometer.io.BackupWriter
 import com.dchernykh.chronometer.io.RawFiles
@@ -315,7 +316,12 @@ class ChipRepository(
         bib: String,
         timeStr: String,
         finishMode: Boolean,
-    ) = CutoffEntity(number = bib, timeStr = timeStr, event = CutoffEvent.lapEvent(finishMode), createdAt = now())
+    ) = CutoffEntity(
+        number = cutoffText(bib),
+        timeStr = timeStr,
+        event = CutoffEvent.lapEvent(finishMode),
+        createdAt = now(),
+    )
 }
 
 /** Reads sorted by time, joined wherever less than the dead time apart. */

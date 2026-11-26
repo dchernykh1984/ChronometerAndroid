@@ -3,6 +3,7 @@ package com.dchernykh.chronometer.data
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -10,13 +11,9 @@ interface CutoffDao {
     @Insert
     suspend fun insert(cutoff: CutoffEntity): Long
 
-    /** Correct a mis-recorded crossing: only the number and time are editable. */
-    @Query("UPDATE cutoffs SET number = :number, timeStr = :timeStr WHERE id = :id")
-    suspend fun updateNumberAndTime(
-        id: Long,
-        number: String,
-        timeStr: String,
-    )
+    /** Correct a mis-recorded crossing (CutoffRepository.editCutoff says what changes). */
+    @Update
+    suspend fun update(cutoff: CutoffEntity)
 
     @Query("DELETE FROM cutoffs WHERE id = :id")
     suspend fun deleteById(id: Long): Int

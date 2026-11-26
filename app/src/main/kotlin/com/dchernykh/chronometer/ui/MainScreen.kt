@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dchernykh.chronometer.R
+import com.dchernykh.chronometer.data.CUTOFF_TEXT_LIMIT
 import com.dchernykh.chronometer.data.CutoffEntity
 import com.dchernykh.chronometer.data.CutoffEvent
 import com.dchernykh.chronometer.service.RaceService
@@ -185,7 +186,8 @@ fun MainScreen(
             OutlinedTextField(
                 value = number,
                 onValueChange = { input ->
-                    onNumberChange(if (settings.numericInput) input.filter(Char::isDigit) else input)
+                    val typed = if (settings.numericInput) input.filter(Char::isDigit) else input
+                    onNumberChange(typed.take(CUTOFF_TEXT_LIMIT))
                 },
                 label = { Text(stringResource(R.string.number)) },
                 singleLine = true,
@@ -234,7 +236,7 @@ fun MainScreen(
             ) {
                 OutlinedTextField(
                     value = dsqReason,
-                    onValueChange = { onDsqReasonChange(it) },
+                    onValueChange = { onDsqReasonChange(it.take(CUTOFF_TEXT_LIMIT)) },
                     placeholder = { Text(stringResource(R.string.dsq_reason_hint)) },
                     singleLine = true,
                     modifier =
@@ -429,7 +431,7 @@ private fun CutoffRow(
             OutlinedTextField(
                 value = draftNumber,
                 onValueChange = { input ->
-                    draftNumber = if (numericInput) input.filter(Char::isDigit) else input
+                    draftNumber = (if (numericInput) input.filter(Char::isDigit) else input).take(CUTOFF_TEXT_LIMIT)
                 },
                 singleLine = true,
                 isError = !numberValid,

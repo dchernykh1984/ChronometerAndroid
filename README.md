@@ -178,7 +178,10 @@ leaves the idle line, never "sent".
 On the main screen, **Enable timing mode** starts the foreground service (keeping
 the app alive and the screen awake for the race) and reminds you to turn on Do
 Not Disturb; **Finish timing mode** stops it. Type a number and tap **Cutoff**
-(or press Enter); the small button records a **DSQ**.
+(or press Enter); the small button records a **DSQ**, with the reason typed
+beside it. A number and a reason keep at most 200 characters each: the fields
+stop there, and a cutoff made or edited is cut to them, as the site refuses a
+much longer line (see [docs/server-protocol.md](docs/server-protocol.md)).
 
 **Cutoff source** in the settings picks by hand, the light beam or chips and
 the device; a test device marks its cutoffs as test data on the main screen.
