@@ -1250,6 +1250,26 @@ class MainFlowTest {
     }
 
     @Test
+    fun editWithALoneLineBreakCannotBeSaved() {
+        // Digits-only input drops U+0085 before the check: text input lets it through.
+        openSettings()
+        setToggle("numericInputSwitch", enabled = false)
+        saveSettings()
+        recordAndAwait("cutoffButton", "A1")
+        enterEditMode()
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            composeRule.onNodeWithTag("editNumberField").performTextReplacement("\u0085")
+            editableTextOf("editNumberField") == "\u0085"
+        }
+        composeRule.onNodeWithTag("editSaveButton").assertIsNotEnabled()
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            composeRule.onNodeWithTag("editNumberField").performTextReplacement("7")
+            editableTextOf("editNumberField") == "7"
+        }
+        composeRule.onNodeWithTag("editSaveButton").assertIsEnabled()
+    }
+
+    @Test
     fun newCutoffsCanBeRecordedWhileAnotherRowIsBeingEdited() {
         recordAndAwait("cutoffButton", "70330")
         enterEditMode()
