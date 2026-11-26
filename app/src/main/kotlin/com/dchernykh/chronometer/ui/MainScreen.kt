@@ -61,6 +61,7 @@ import com.dchernykh.chronometer.R
 import com.dchernykh.chronometer.data.CUTOFF_TEXT_LIMIT
 import com.dchernykh.chronometer.data.CutoffEntity
 import com.dchernykh.chronometer.data.CutoffEvent
+import com.dchernykh.chronometer.data.keepsANumber
 import com.dchernykh.chronometer.service.RaceService
 import com.dchernykh.chronometer.util.TimeFormatter
 
@@ -413,9 +414,9 @@ private fun CutoffRow(
         return
     }
 
-    // Enabled only when something survives the same #/whitespace cleaning the
-    // repository applies, so Save is never offered for input the save would drop.
-    val numberValid = draftNumber.any { !it.isWhitespace() && it != '#' }
+    // Enabled only when something survives the cleaning the repository applies,
+    // so Save is never offered for input the save would drop.
+    val numberValid = keepsANumber(draftNumber)
     val timeValid = TimeFormatter.isValidTimeString(draftTime.trim())
     Column(
         modifier =
