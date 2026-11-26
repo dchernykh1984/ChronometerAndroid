@@ -184,13 +184,15 @@ class CutoffRepository(
     /**
      * Enqueue an upload for cutoffs already stored in Room. Called after the user
      * turns on or fixes the upload settings, so data recorded while sending was
-     * off/misconfigured is pushed without waiting for the next new cutoff.
+     * off/misconfigured is pushed without waiting for the next new cutoff. Settings that
+     * cannot send drop the upload not through yet, which would run only to send nothing:
+     * no upload waits then, and turning sending on again queues the whole snapshot.
      */
     suspend fun uploadPendingCutoffs() =
         mutationMutex.withLock {
-            if (settingsStore.load().isUploadReady &&
-                (dao.getAll().isNotEmpty() || settingsStore.allowsEmptySnapshot())
-            ) {
+            if (!settingsStore.load().isUploadReady) {
+                cancelUpload(context)
+            } else if (dao.getAll().isNotEmpty() || settingsStore.allowsEmptySnapshot()) {
                 enqueueUpload()
             }
         }
@@ -222,9 +224,8 @@ class CutoffRepository(
                     }
                 val started = moved != null && clearTables(folder, moved)
                 if (started) {
-                    // The upload not through yet goes too; one not cancelled sends nothing without the token.
-                    runCatching { WorkManager.getInstance(context).cancelUniqueWork(UPLOAD_WORK) }
-                        .onFailure { Log.w(TAG, "upload not cancelled", it) }
+                    // The upload not through yet goes too: the settings asked before it does.
+                    cancelUpload(context)
                     settingsStore.resetForNewCompetition()
                     competition++
                     newCompetitionListeners.forEach { it() }
@@ -309,6 +310,12 @@ class CutoffRepository(
 
         /** One competition's files, moved into backup/ by a new competition. */
         private val SET_ASIDE = listOf(StartProtocolFile.NAME, RawFiles.CHIP_READS, RawFiles.BEAM_BREAKS)
+
+        /** The upload not through yet dropped; one that cannot be is logged, and finds nothing to send. */
+        private fun cancelUpload(context: Context) {
+            runCatching { WorkManager.getInstance(context).cancelUniqueWork(UPLOAD_WORK) }
+                .onFailure { Log.w(TAG, "upload not cancelled", it) }
+        }
     }
 }
 

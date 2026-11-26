@@ -171,9 +171,9 @@ uploads require a URL and a token.
 
 The upload line on the main screen says whether the snapshot is queued (waiting
 for the network or a retry), uploading, sent (the site took it) or failed; a
-failure or a retry shows its reason. An upload that sent nothing - cancelled by
-"New competition", or dropped because sending was turned off before it ran -
-leaves the idle line, never "sent".
+failure or a retry shows its reason. Turning sending off cancels an upload not
+through yet (turning it on again queues the whole snapshot), and an upload
+cancelled so or by "New competition" leaves the idle line, never "sent".
 
 On the main screen, **Enable timing mode** starts the foreground service (keeping
 the app alive and the screen awake for the race) and reminds you to turn on Do

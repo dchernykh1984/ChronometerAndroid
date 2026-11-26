@@ -18,8 +18,8 @@ import kotlinx.coroutines.sync.withLock
  * returns (even after the app was closed). Transient failures return retry;
  * permanent (configuration) failures return failure so WorkManager stops
  * retrying them. Only a snapshot the site took is a success saying [SENT]; nothing
- * to send -- sending turned off, the token gone with a new competition -- is a
- * success without it, shown as no upload.
+ * to send -- a fresh empty list, or settings that no longer send where the work was
+ * not cancelled -- is a success without it, shown as no upload.
  */
 class UploadWorker(
     context: Context,
