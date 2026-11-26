@@ -13,6 +13,9 @@ const val CUTOFF_TEXT_LIMIT = 200
 /** [text] as a cutoff's number or DSQ reason: one field of the line ([RawFiles.field]), cut to [CUTOFF_TEXT_LIMIT]. */
 fun cutoffText(text: String): String = RawFiles.field(text).take(CUTOFF_TEXT_LIMIT).trimEnd()
 
+/** True when [text] keeps a number through [cutoffText]: an edit's Save is offered for nothing else. */
+fun keepsANumber(text: String): Boolean = cutoffText(text).isNotEmpty()
+
 /** Cutoff event kinds, written verbatim into the `number#time#event#` line. */
 object CutoffEvent {
     /** A regular crossing at a control point (a lap). */

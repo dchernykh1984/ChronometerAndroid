@@ -1,6 +1,8 @@
 package com.dchernykh.chronometer.data
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CutoffEventTest {
@@ -67,5 +69,16 @@ class CutoffEventTest {
         for (event in listOf("DSQ", "DSQ: rude", "nextLap", "finish")) {
             assertEquals(event, CutoffEvent.capped(event))
         }
+    }
+
+    @Test
+    fun noNumberIsKeptOfWhatTheSaveTurnsIntoSpace() {
+        // Every line break a reader splits at among it: Save is never offered for one alone.
+        val breaks = "\r\n\u000B\u000C\u001C\u001D\u001E\u0085\u2028\u2029"
+        for (text in listOf("", " ", "#", "# #") + breaks.map(Char::toString)) {
+            assertFalse(text.map { "U+%04X".format(it.code) }.toString(), keepsANumber(text))
+        }
+        assertTrue(keepsANumber("7"))
+        assertTrue(keepsANumber(" A#\u0085"))
     }
 }
