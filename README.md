@@ -169,6 +169,12 @@ control-point number, the data folder, the number input type, finish mode, theme
 and language, and to grant file access. Recording works without any of this;
 uploads require a URL and a token.
 
+The upload line on the main screen says whether the snapshot is queued (waiting
+for the network or a retry), uploading, sent (the site took it) or failed; a
+failure or a retry shows its reason. An upload that sent nothing - cancelled by
+"New competition", or dropped because sending was turned off before it ran -
+leaves the idle line, never "sent".
+
 On the main screen, **Enable timing mode** starts the foreground service (keeping
 the app alive and the screen awake for the race) and reminds you to turn on Do
 Not Disturb; **Finish timing mode** stops it. Type a number and tap **Cutoff**
@@ -253,7 +259,10 @@ and passes, the upload token and the point number, and moves `start.txt`,
 `chip_reads.txt` and `beam_breaks.txt` into `backup/<name>-<millis>.txt`, so the
 next competition starts without the last one's chip map. It **keeps the
 backups**; settings show the data folder's size so you can clean old backups up
-manually.
+manually. While an upload has not gone through (queued, running or waiting to
+retry), it asks first: the cutoffs not sent yet are still being uploaded, and
+going on deletes that upload, so they are never sent. **Wait** closes the question
+and changes nothing; **Reset** cancels the upload and starts the new competition.
 
 ## Continuous integration and releases
 

@@ -2,9 +2,20 @@ package com.dchernykh.chronometer.ui
 
 import androidx.work.WorkInfo
 import com.dchernykh.chronometer.data.UploadError
+import com.dchernykh.chronometer.work.UploadWorker
 
 /** Coarse upload state shown in the on-screen diagnostics (never blocks cutoffs). */
-enum class UploadStatus { IDLE, PENDING, RUNNING, SENT, FAILED }
+enum class UploadStatus {
+    IDLE,
+    PENDING,
+    RUNNING,
+    SENT,
+    FAILED,
+    ;
+
+    /** An upload not through yet: queued, waiting to retry or running. */
+    val notThrough: Boolean get() = this == PENDING || this == RUNNING
+}
 
 data class UploadDiagnostics(
     val status: UploadStatus = UploadStatus.IDLE,
@@ -16,7 +27,7 @@ fun uploadDiagnosticsOf(
     infos: List<WorkInfo>,
     error: UploadError?,
 ): UploadDiagnostics {
-    val status = uploadStatusOf(infos.map { it.state })
+    val status = uploadStatusOf(infos)
     val relevantError =
         infos.any {
             it.id.toString() == error?.workId &&
@@ -34,15 +45,17 @@ fun uploadDiagnosticsOf(
  *
  * WorkManager can return several [WorkInfo] for one unique work (terminal history
  * plus a current attempt). An active attempt wins first; among terminal results a
- * SUCCEEDED wins over a FAILED, so an older failed upload does not mask a later
- * successful one (each upload sends the whole snapshot, so any success means the
- * data got through).
+ * snapshot sent wins over a FAILED, so an older failed upload does not mask a later
+ * successful one (each upload sends the whole snapshot, so any snapshot sent means the
+ * data got through). A success that sent nothing ([UploadWorker.SENT] not set) is no
+ * upload, as a cancelled one: the idle line, never "sent".
  */
-fun uploadStatusOf(states: List<WorkInfo.State>): UploadStatus =
+fun uploadStatusOf(infos: List<WorkInfo>): UploadStatus =
     when {
-        states.any { it == WorkInfo.State.RUNNING } -> UploadStatus.RUNNING
-        states.any { it == WorkInfo.State.ENQUEUED || it == WorkInfo.State.BLOCKED } -> UploadStatus.PENDING
-        states.any { it == WorkInfo.State.SUCCEEDED } -> UploadStatus.SENT
-        states.any { it == WorkInfo.State.FAILED } -> UploadStatus.FAILED
+        infos.any { it.state == WorkInfo.State.RUNNING } -> UploadStatus.RUNNING
+        infos.any { it.state == WorkInfo.State.ENQUEUED || it.state == WorkInfo.State.BLOCKED } -> UploadStatus.PENDING
+        infos.any { it.state == WorkInfo.State.SUCCEEDED && it.outputData.getBoolean(UploadWorker.SENT, false) } ->
+            UploadStatus.SENT
+        infos.any { it.state == WorkInfo.State.FAILED } -> UploadStatus.FAILED
         else -> UploadStatus.IDLE
     }

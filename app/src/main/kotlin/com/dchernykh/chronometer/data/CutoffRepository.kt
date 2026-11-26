@@ -195,10 +195,11 @@ class CutoffRepository(
     /**
      * Start a new competition (spec FR-016): `start.txt` and the raw device files move into
      * `backup/`, `results.txt` is emptied, the cutoffs and what the sources left -- pending
-     * beam breaks, chip reads, passes -- are cleared in one transaction, the token dropped and
-     * the point number reset; the revision counter keeps counting. Backups on disk are
-     * preserved. What registered with [whenANewCompetitionStarts] starts over under the same
-     * lock, so no source event is applied with the last competition's chip map.
+     * beam breaks, chip reads, passes -- are cleared in one transaction, the upload not through
+     * yet cancelled (the settings ask before it is), the token dropped and the point number
+     * reset; the revision counter keeps counting. Backups on disk are preserved. What
+     * registered with [whenANewCompetitionStarts] starts over under the same lock, so no
+     * source event is applied with the last competition's chip map.
      *
      * The files go first. If one cannot be moved or `results.txt` cannot be reset, the files
      * moved are put back and the Room/settings state is kept intact, so the referee does not
@@ -218,6 +219,9 @@ class CutoffRepository(
                     }
                 val started = moved != null && clearTables(folder, moved)
                 if (started) {
+                    // The upload not through yet goes too; one not cancelled sends nothing without the token.
+                    runCatching { WorkManager.getInstance(context).cancelUniqueWork(UPLOAD_WORK) }
+                        .onFailure { Log.w(TAG, "upload not cancelled", it) }
                     settingsStore.resetForNewCompetition()
                     competition++
                     newCompetitionListeners.forEach { it() }

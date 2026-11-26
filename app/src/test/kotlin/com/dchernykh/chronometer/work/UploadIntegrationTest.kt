@@ -5,6 +5,7 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
+import androidx.work.workDataOf
 import com.dchernykh.chronometer.ChronometerApp
 import com.dchernykh.chronometer.data.CutoffEvent
 import com.dchernykh.chronometer.data.CutoffRepository
@@ -49,6 +50,7 @@ import java.util.concurrent.TimeUnit
  */
 @RunWith(RobolectricTestRunner::class)
 class UploadIntegrationTest {
+    private val snapshotSent = ListenableWorker.Result.success(workDataOf(UploadWorker.SENT to true))
     private lateinit var app: ChronometerApp
     private lateinit var repository: CutoffRepository
     private lateinit var server: MockWebServer
@@ -85,14 +87,24 @@ class UploadIntegrationTest {
     private fun runWorker(): ListenableWorker.Result =
         runBlocking { TestListenableWorkerBuilder<UploadWorker>(app).build().doWork() }
 
-    private fun uploadStatus(): UploadStatus =
-        uploadStatusOf(
-            WorkManager
-                .getInstance(app)
-                .getWorkInfosForUniqueWork("chronometer_upload")
-                .get()
-                .map { it.state },
-        )
+    private fun uploadWork(): List<WorkInfo> =
+        WorkManager
+            .getInstance(app)
+            .getWorkInfosForUniqueWork("chronometer_upload")
+            .get()
+
+    private fun uploadStatus(): UploadStatus = uploadStatusOf(uploadWork())
+
+    /** The network back: the upload queued runs, as WorkManager runs it, to its end. */
+    private fun networkBack() {
+        val driver = checkNotNull(WorkManagerTestInitHelper.getTestDriver(app))
+        uploadWork().filterNot { it.state.isFinished }.forEach { driver.setAllConstraintsMet(it.id) }
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+        while (uploadWork().any { !it.state.isFinished }) {
+            check(System.nanoTime() < deadline) { "upload still ${uploadWork().map { it.state }}" }
+            Thread.sleep(10)
+        }
+    }
 
     @Test
     fun recordsWriteTheFullResultsFileAndQueueTheUpload() =
@@ -118,7 +130,7 @@ class UploadIntegrationTest {
             repository.record("11", CutoffEvent.NEXT_LAP)
             repository.record("22", CutoffEvent.NEXT_LAP)
 
-            assertEquals(ListenableWorker.Result.success(), runWorker())
+            assertEquals(snapshotSent, runWorker())
 
             val request = server.takeRequest(5, TimeUnit.SECONDS)
             assertNotNull(request)
@@ -148,7 +160,7 @@ class UploadIntegrationTest {
                 assertTrue(repository.deleteCutoff(row.id))
                 server.enqueue(MockResponse().setResponseCode(204))
 
-                assertEquals(ListenableWorker.Result.success(), runWorker())
+                assertEquals(snapshotSent, runWorker())
 
                 val request = server.takeRequest(5, TimeUnit.SECONDS)!!
                 val endpoint = if (point == 0) "finish-times" else "remote-points"
@@ -178,10 +190,54 @@ class UploadIntegrationTest {
                 app.settingsStore.allowEmptySnapshot()
                 revision = app.settingsStore.nextClientRevision()
             }
-            assertEquals(ListenableWorker.Result.success(), upload.await())
+            assertEquals(snapshotSent, upload.await())
             val body = server.takeRequest(5, TimeUnit.SECONDS)!!.body.readUtf8()
             assertTrue(body.contains("\"items\":[]"))
             assertTrue(body.contains("\"client_revision\":$revision"))
+        }
+
+    @Test
+    fun anUploadTheSiteTookIsSent() =
+        runTest {
+            server.enqueue(MockResponse().setResponseCode(204))
+            configureUpload(pointNumber = 0)
+            repository.record("11", CutoffEvent.NEXT_LAP)
+
+            networkBack()
+
+            assertEquals(1, server.requestCount)
+            assertEquals(UploadStatus.SENT, uploadStatus())
+        }
+
+    @Test
+    fun aNewCompetitionCancelsTheUploadQueuedOfflineAndSaysNoUpload() =
+        runTest {
+            configureUpload(pointNumber = 0)
+            repository.record("11", CutoffEvent.NEXT_LAP)
+            assertEquals(UploadStatus.PENDING, uploadStatus())
+
+            assertTrue(repository.startNewCompetition())
+            networkBack()
+
+            assertEquals(listOf(WorkInfo.State.CANCELLED), uploadWork().map { it.state })
+            assertEquals(0, server.requestCount)
+            assertEquals(UploadStatus.IDLE, uploadStatus())
+        }
+
+    @Test
+    fun anUploadQueuedWhenSendingIsTurnedOffEndsAsNoUploadNotSent() =
+        runTest {
+            configureUpload(pointNumber = 0)
+            repository.record("11", CutoffEvent.NEXT_LAP)
+            app.settingsStore.save(app.settingsStore.load().copy(sendEnabled = false))
+            // What saving the settings runs.
+            repository.uploadPendingCutoffs()
+
+            networkBack()
+
+            assertEquals(listOf(WorkInfo.State.SUCCEEDED), uploadWork().map { it.state })
+            assertEquals(0, server.requestCount)
+            assertEquals(UploadStatus.IDLE, uploadStatus())
         }
 
     @Test
@@ -200,10 +256,10 @@ class UploadIntegrationTest {
             repository.record("11", CutoffEvent.NEXT_LAP)
 
             assertEquals(ListenableWorker.Result.failure(), runWorker())
-            // A failed worker maps to the on-screen "Upload: error" status.
-            assertEquals(UploadStatus.FAILED, uploadStatusOf(listOf(WorkInfo.State.FAILED)))
             val error = app.uploadErrorStore.error.value!!
             val info = WorkInfo(UUID.fromString(error.workId), WorkInfo.State.FAILED, emptySet())
+            // A failed worker maps to the on-screen "Upload: error" status.
+            assertEquals(UploadStatus.FAILED, uploadStatusOf(listOf(info)))
             assertTrue(uploadDiagnosticsOf(listOf(info), error).error!!.contains("HTTP 400"))
             assertTrue(error.message.contains("Unknown competition token"))
         }
@@ -246,11 +302,11 @@ class UploadIntegrationTest {
             repository.record("11", CutoffEvent.NEXT_LAP)
 
             assertEquals(ListenableWorker.Result.retry(), runWorker())
-            // A retry goes back to the queue, shown as "Upload: queued".
-            assertEquals(UploadStatus.PENDING, uploadStatusOf(listOf(WorkInfo.State.ENQUEUED)))
             // WorkManager clears progress when retrying, so the reason is durable.
             val error = UploadErrorStore(app).error.value!!
             val info = WorkInfo(UUID.fromString(error.workId), WorkInfo.State.ENQUEUED, emptySet())
+            // A retry goes back to the queue, shown as "Upload: queued".
+            assertEquals(UploadStatus.PENDING, uploadStatusOf(listOf(info)))
             assertTrue(uploadDiagnosticsOf(listOf(info), error).error!!.contains("HTTP 500"))
         }
 }

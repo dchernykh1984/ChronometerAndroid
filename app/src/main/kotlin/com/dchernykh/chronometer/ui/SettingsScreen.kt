@@ -76,6 +76,7 @@ fun SettingsScreen(
     var newCompetitionFailed by remember { mutableStateOf(false) }
     var showUnsavedDialog by remember { mutableStateOf(false) }
     val download by viewModel.download.collectAsStateWithLifecycle()
+    val uploadDiagnostics by viewModel.uploadDiagnostics.collectAsStateWithLifecycle()
 
     val manageLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -330,6 +331,7 @@ fun SettingsScreen(
 
         SettingsDialogs(
             confirmNewCompetition = confirmNewCompetition,
+            uploadNotThrough = uploadDiagnostics.status.notThrough,
             showUnsavedDialog = showUnsavedDialog,
             saveEnabled = canSave,
             onConfirmNewCompetition = {
@@ -362,6 +364,7 @@ fun SettingsScreen(
 @Composable
 private fun SettingsDialogs(
     confirmNewCompetition: Boolean,
+    uploadNotThrough: Boolean,
     showUnsavedDialog: Boolean,
     saveEnabled: Boolean,
     onConfirmNewCompetition: () -> Unit,
@@ -371,18 +374,24 @@ private fun SettingsDialogs(
     onDismissUnsaved: () -> Unit,
 ) {
     if (confirmNewCompetition) {
+        // An upload not through yet is cancelled by the reset: Wait keeps it, and everything else.
+        val message =
+            if (uploadNotThrough) R.string.new_competition_upload_not_through else R.string.new_competition_confirm
         AlertDialog(
             onDismissRequest = onDismissNewCompetition,
             title = { Text(stringResource(R.string.new_competition)) },
-            text = { Text(stringResource(R.string.new_competition_confirm)) },
+            text = { Text(stringResource(message)) },
             confirmButton = {
                 TextButton(onClick = onConfirmNewCompetition, modifier = Modifier.testTag("confirmNewCompetition")) {
-                    Text(stringResource(R.string.confirm))
+                    Text(stringResource(if (uploadNotThrough) R.string.new_competition_reset else R.string.confirm))
                 }
             },
             dismissButton = {
-                TextButton(onClick = onDismissNewCompetition) { Text(stringResource(R.string.cancel)) }
+                TextButton(onClick = onDismissNewCompetition, modifier = Modifier.testTag("dismissNewCompetition")) {
+                    Text(stringResource(if (uploadNotThrough) R.string.new_competition_wait else R.string.cancel))
+                }
             },
+            modifier = Modifier.testTag("newCompetitionDialog"),
         )
     }
     if (showUnsavedDialog) {

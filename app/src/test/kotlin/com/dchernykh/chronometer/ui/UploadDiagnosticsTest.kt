@@ -1,7 +1,9 @@
 package com.dchernykh.chronometer.ui
 
 import androidx.work.WorkInfo
+import androidx.work.workDataOf
 import com.dchernykh.chronometer.data.UploadError
+import com.dchernykh.chronometer.work.UploadWorker
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -59,7 +61,12 @@ class UploadDiagnosticsTest {
         val infos =
             listOf(
                 WorkInfo(id, WorkInfo.State.FAILED, emptySet()),
-                WorkInfo(UUID.randomUUID(), WorkInfo.State.SUCCEEDED, emptySet()),
+                WorkInfo(
+                    UUID.randomUUID(),
+                    WorkInfo.State.SUCCEEDED,
+                    emptySet(),
+                    outputData = workDataOf(UploadWorker.SENT to true),
+                ),
             )
         assertEquals(UploadDiagnostics(UploadStatus.SENT), uploadDiagnosticsOf(infos, error))
     }

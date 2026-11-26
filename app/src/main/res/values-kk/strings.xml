@@ -28,6 +28,9 @@
     <string name="theme_dark">Күңгірт</string>
     <string name="new_competition">Жаңа жарыс</string>
     <string name="new_competition_confirm">Белгілер тізімі, күтудегі сәуле іске қосылулары, чип оқулары мен жіберу токені тазаланады, нүкте нөмірі 0-ге қайтарылады. start.txt, chip_reads.txt және beam_breaks.txt backup/ қалтасына көшеді. Сақтық көшірме файлдары сақталады.</string>
+    <string name="new_competition_upload_not_through">Жіберілмеген белгілер әлі жіберілуде. Жалғастырсаңыз, бұл жіберу жойылады да, олар жіберілмейді. Күтесіз бе, әлде тазалайсыз ба?</string>
+    <string name="new_competition_wait">Күту</string>
+    <string name="new_competition_reset">Тазалау</string>
     <string name="new_competition_failed">Жарыс файлдарын backup/ қалтасына көшіру не results.txt файлын тазалау мүмкін болмады. Файлдарға рұқсатты тексеріп, қайталаңыз.</string>
     <string name="data_folder_size">Деректер қалтасының өлшемі: %1$s</string>
     <string name="confirm">Растау</string>

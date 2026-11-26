@@ -29,6 +29,7 @@ import androidx.compose.ui.test.performTextReplacement
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.dchernykh.chronometer.data.AppLanguage
 import com.dchernykh.chronometer.data.CutoffEvent
@@ -647,6 +648,8 @@ class MainFlowTest {
 
         openSettings()
         composeRule.onNodeWithTag("newCompetitionButton").performScrollTo().performClick()
+        // Nothing waits to be sent: the confirmation as it always was.
+        waitForText(localizedString(AppLanguage.EN, R.string.new_competition_confirm))
         composeRule.onNodeWithTag("confirmNewCompetition").performClick()
         composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
             val settings = SettingsStore(context).load()
@@ -662,6 +665,65 @@ class MainFlowTest {
         composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
             composeRule.onAllNodesWithText(number).fetchSemanticsNodes().isEmpty()
         }
+    }
+
+    private fun uploadWork(): List<WorkInfo> =
+        WorkManager.getInstance(appContext()).getWorkInfosForUniqueWork("chronometer_upload").get()
+
+    /** New competition tapped until its dialog shows [text]: a single tap can be dropped on the slow tablet. */
+    private fun openNewCompetitionDialog(text: String) {
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            val open = composeRule.onAllNodesWithTag("newCompetitionDialog").fetchSemanticsNodes().isNotEmpty()
+            if (!open) composeRule.onNodeWithTag("newCompetitionButton").performScrollTo().performClick()
+            open
+        }
+        waitForText(text)
+    }
+
+    /** A button of the New competition dialog tapped until the dialog is gone. */
+    private fun closeNewCompetitionDialogWith(buttonTag: String) {
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            val open = composeRule.onAllNodesWithTag("newCompetitionDialog").fetchSemanticsNodes().isNotEmpty()
+            // A tap as the dialog closes finds no window to go to: a try, not a failure.
+            if (open) runCatching { composeRule.onNodeWithTag(buttonTag).performClick() }
+            !open
+        }
+    }
+
+    @Test
+    fun newCompetitionWithAnUploadNotThroughAsksToWaitOrReset() {
+        // A refused connection: the upload waits to retry, not through.
+        configureTestUpload("http://127.0.0.1:1")
+        recordAndAwait("cutoffButton", "70700")
+        waitForTag("uploadError")
+        openSettings()
+        val notThrough = localizedString(AppLanguage.EN, R.string.new_competition_upload_not_through)
+
+        openNewCompetitionDialog(notThrough)
+        composeRule
+            .onNodeWithTag("dismissNewCompetition")
+            .assertTextContains(localizedString(AppLanguage.EN, R.string.new_competition_wait))
+        composeRule
+            .onNodeWithTag("confirmNewCompetition")
+            .assertTextContains(localizedString(AppLanguage.EN, R.string.new_competition_reset))
+        closeNewCompetitionDialogWith("dismissNewCompetition")
+        // Wait changes nothing: the token, the cutoff and its upload stay.
+        assertEquals("ui-secret", SettingsStore(appContext()).load().token)
+        assertEquals(listOf("70700"), storedCutoffs().map { it.number })
+        assertTrue(uploadWork().none { it.state.isFinished })
+
+        openNewCompetitionDialog(notThrough)
+        closeNewCompetitionDialogWith("confirmNewCompetition")
+        // Reset drops the upload and starts the new competition.
+        composeRule.waitUntil(timeoutMillis = AWAIT_MS) {
+            SettingsStore(appContext()).load().token.isEmpty() &&
+                uploadWork().all { it.state == WorkInfo.State.CANCELLED }
+        }
+        assertTrue(storedCutoffs().isEmpty())
+        composeRule.onNodeWithTag("backButton").performClick()
+        val idle = localizedString(AppLanguage.EN, R.string.diag_upload_idle)
+        waitForText(idle)
+        composeRule.onNodeWithTag("uploadStatus").assertTextContains(idle)
     }
 
     @Test
