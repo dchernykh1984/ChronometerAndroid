@@ -225,19 +225,35 @@ class UploadIntegrationTest {
         }
 
     @Test
-    fun anUploadQueuedWhenSendingIsTurnedOffEndsAsNoUploadNotSent() =
+    fun turningSendingOffCancelsTheQueuedUploadAndTurningItOnQueuesTheWholeSnapshot() =
         runTest {
             configureUpload(pointNumber = 0)
             repository.record("11", CutoffEvent.NEXT_LAP)
+            assertTrue(uploadStatus().notThrough)
             app.settingsStore.save(app.settingsStore.load().copy(sendEnabled = false))
             // What saving the settings runs.
             repository.uploadPendingCutoffs()
 
-            networkBack()
-
-            assertEquals(listOf(WorkInfo.State.SUCCEEDED), uploadWork().map { it.state })
-            assertEquals(0, server.requestCount)
+            assertEquals(listOf(WorkInfo.State.CANCELLED), uploadWork().map { it.state })
             assertEquals(UploadStatus.IDLE, uploadStatus())
+            // So New competition has no upload to wait for: it asks as when nothing is queued.
+            assertFalse(uploadStatus().notThrough)
+            networkBack()
+            assertEquals(0, server.requestCount)
+
+            // Nothing is lost: sending on again queues the whole snapshot.
+            server.enqueue(MockResponse().setResponseCode(204))
+            app.settingsStore.save(app.settingsStore.load().copy(sendEnabled = true))
+            repository.uploadPendingCutoffs()
+            networkBack()
+            assertTrue(
+                server
+                    .takeRequest(5, TimeUnit.SECONDS)!!
+                    .body
+                    .readUtf8()
+                    .contains("11#"),
+            )
+            assertEquals(UploadStatus.SENT, uploadStatus())
         }
 
     @Test
